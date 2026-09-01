@@ -26,7 +26,8 @@ async def seed_world(session: AsyncSession) -> None:
                 )
 
     for item in world["items"].values():
-        if await session.get(ItemRecord, item.id) is None:
+        record = await session.get(ItemRecord, item.id)
+        if record is None:
             session.add(
                 ItemRecord(
                     id=item.id,
@@ -34,5 +35,13 @@ async def seed_world(session: AsyncSession) -> None:
                     description=item.description,
                     room_id=item.room_id,
                     owner_id=None,
+                    can_open=item.can_open,
+                    is_open=item.is_open,
+                    can_use=item.can_use,
+                    use_message=item.use_message,
                 )
             )
+        else:
+            record.can_open = item.can_open
+            record.can_use = item.can_use
+            record.use_message = item.use_message

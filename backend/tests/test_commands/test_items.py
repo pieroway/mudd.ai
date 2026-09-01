@@ -22,6 +22,9 @@ def world_and_player():
         ("drop torch", "drop", "torch"),
         ("examine torch", "examine", "torch"),
         ("inspect torch", "examine", "torch"),
+        ("open chest", "open", "chest"),
+        ("close chest", "close", "chest"),
+        ("use torch", "use", "torch"),
     ],
 )
 def test_item_commands_are_parsed_with_aliases(raw, action, target):
@@ -92,6 +95,9 @@ def test_player_can_examine_room_item_or_carried_item(world_and_player):
         ("take", "Take what?"),
         ("drop", "Drop what?"),
         ("examine", "Examine what?"),
+        ("open", "Open what?"),
+        ("close", "Close what?"),
+        ("use", "Use what?"),
     ],
 )
 def test_item_commands_require_a_target(world_and_player, raw, output):
@@ -101,3 +107,37 @@ def test_item_commands_require_a_target(world_and_player, raw, output):
 
     assert result == {"success": False, "output": output}
 
+
+def test_player_can_open_and_close_an_openable_item(world_and_player):
+    world, player = world_and_player
+
+    opened = execute_command(parse_command("open chest"), player, world)
+    opened_again = execute_command(parse_command("open chest"), player, world)
+    closed = execute_command(parse_command("close chest"), player, world)
+
+    assert opened == {"success": True, "output": "You open the chest."}
+    assert opened_again == {"success": False, "output": "The chest is already open."}
+    assert closed == {"success": True, "output": "You close the chest."}
+    assert world["items"]["chest"].is_open is False
+
+
+def test_player_cannot_open_an_item_without_that_capability(world_and_player):
+    world, player = world_and_player
+
+    result = execute_command(parse_command("open torch"), player, world)
+
+    assert result == {"success": False, "output": "The torch cannot be opened."}
+
+
+def test_player_must_carry_an_item_to_use_it(world_and_player):
+    world, player = world_and_player
+
+    not_carried = execute_command(parse_command("use torch"), player, world)
+    execute_command(parse_command("take torch"), player, world)
+    used = execute_command(parse_command("use torch"), player, world)
+
+    assert not_carried == {
+        "success": False,
+        "output": "You need to be carrying the torch to use it.",
+    }
+    assert used == {"success": True, "output": "The torch casts a steady pool of light."}

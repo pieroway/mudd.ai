@@ -74,7 +74,7 @@ class GameService:
             raise KeyError(f"No active player session: {session_id}")
 
         command = parse_command(raw_command)
-        lock_items = command.get("action") in {"take", "drop"}
+        lock_items = command.get("action") in {"take", "drop", "open", "close"}
         async with self.session_factory() as session:
             async with session.begin():
                 repository = GameRepository(session)

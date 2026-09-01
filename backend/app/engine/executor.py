@@ -93,12 +93,51 @@ def execute_command(command, player, world):
 
         return {"success": True, "output": item.description}
 
+    if action in {"open", "close"}:
+        target = command.get("target")
+        verb = action.capitalize()
+        if not target:
+            return {"success": False, "output": f"{verb} what?"}
+
+        item = _find_item(world["items"], target)
+        item_is_accessible = item is not None and (
+            item.is_in_room(player.current_room_id)
+            or (item.id in player.inventory and item.owned_by == player.id)
+        )
+        if not item_is_accessible:
+            return {"success": False, "output": f"You do not see a {target} here."}
+        if not item.can_open:
+            return {"success": False, "output": f"The {item.name} cannot be opened."}
+        if action == "open" and item.is_open:
+            return {"success": False, "output": f"The {item.name} is already open."}
+        if action == "close" and not item.is_open:
+            return {"success": False, "output": f"The {item.name} is already closed."}
+
+        item.is_open = action == "open"
+        return {"success": True, "output": f"You {action} the {item.name}."}
+
+    if action == "use":
+        target = command.get("target")
+        if not target:
+            return {"success": False, "output": "Use what?"}
+
+        item = _find_item(world["items"], target)
+        if item is None or item.id not in player.inventory or item.owned_by != player.id:
+            return {
+                "success": False,
+                "output": f"You need to be carrying the {target} to use it.",
+            }
+        if not item.can_use:
+            return {"success": False, "output": f"The {item.name} cannot be used."}
+
+        return {"success": True, "output": item.use_message or f"You use the {item.name}."}
+
     if action == "help":
         return {
             "success": True,
             "output": (
                 "Available commands: look, north, south, east, west, inventory, "
-                "take, drop, examine, help"
+                "take, drop, examine, open, close, use, help"
             ),
         }
 

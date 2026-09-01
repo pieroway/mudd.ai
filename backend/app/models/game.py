@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import CheckConstraint, ForeignKey, String, Text
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -45,6 +45,7 @@ class ItemRecord(Base):
             "(room_id IS NULL AND owner_id IS NOT NULL)",
             name="ck_items_exactly_one_location",
         ),
+        CheckConstraint("NOT is_open OR can_open", name="ck_items_open_requires_capability"),
     )
 
     id: Mapped[str] = mapped_column(String(50), primary_key=True)
@@ -56,3 +57,7 @@ class ItemRecord(Base):
     owner_id: Mapped[str | None] = mapped_column(
         ForeignKey("players.id", ondelete="RESTRICT"), nullable=True, index=True
     )
+    can_open: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_open: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    can_use: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    use_message: Mapped[str | None] = mapped_column(Text, nullable=True)

@@ -49,3 +49,22 @@ async def test_only_one_player_can_take_a_shared_item_concurrently(session_facto
     first_inventory = await service.inventory_for_player(first_player.id)
     second_inventory = await service.inventory_for_player(second_player.id)
     assert sorted(first_inventory + second_inventory) == ["torch"]
+
+
+@pytest.mark.asyncio
+async def test_open_item_state_survives_service_restart(session_factory):
+    service = GameService(session_factory)
+    await service.connect_player("connection-1", "Alan")
+
+    result = await service.execute("connection-1", "open chest")
+    await service.disconnect_player("connection-1")
+
+    restarted_service = GameService(session_factory)
+    await restarted_service.connect_player("connection-2", "Alan")
+    repeated_result = await restarted_service.execute("connection-2", "open chest")
+
+    assert result == {"success": True, "output": "You open the chest."}
+    assert repeated_result == {
+        "success": False,
+        "output": "The chest is already open.",
+    }

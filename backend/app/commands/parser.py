@@ -29,6 +29,8 @@ def parse_command(raw: str):
         return {"action": "drop", "target": target, "raw": text}
     if command in {"examine", "inspect"}:
         return {"action": "examine", "target": target, "raw": text}
+    if command in {"open", "close", "use"}:
+        return {"action": command, "target": target, "raw": text}
     if command in {"help"}:
         return {"action": "help", "raw": text}
 

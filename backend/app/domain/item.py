@@ -10,6 +10,10 @@ class Item:
     description: str
     room_id: str | None = None
     owned_by: str | None = None
+    can_open: bool = False
+    is_open: bool = False
+    can_use: bool = False
+    use_message: str | None = None
 
     def is_in_room(self, room_id: str) -> bool:
         return self.room_id == room_id and self.owned_by is None

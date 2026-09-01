@@ -69,6 +69,10 @@ class GameRepository:
                 description=record.description,
                 room_id=record.room_id,
                 owned_by=record.owner_id,
+                can_open=record.can_open,
+                is_open=record.is_open,
+                can_use=record.can_use,
+                use_message=record.use_message,
             )
             for record in item_records
         }
@@ -100,6 +104,7 @@ class GameRepository:
             domain_item = domain_items[record.id]
             record.room_id = domain_item.room_id
             record.owner_id = domain_item.owned_by
+            record.is_open = domain_item.is_open
 
     async def load_player(self, player_id: str) -> Player:
         player_record = await self.session.get(PlayerRecord, player_id)

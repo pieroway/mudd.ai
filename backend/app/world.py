@@ -53,6 +53,8 @@ def create_world() -> dict[str, Any]:
             name="torch",
             description="A flickering torch.",
             room_id="town_square",
+            can_use=True,
+            use_message="The torch casts a steady pool of light.",
         ),
         "mushroom": Item(
             id="mushroom",
@@ -72,7 +74,13 @@ def create_world() -> dict[str, Any]:
             description="A brass key.",
             room_id="inn",
         ),
+        "chest": Item(
+            id="chest",
+            name="chest",
+            description="A stout wooden chest reinforced with iron bands.",
+            room_id="town_square",
+            can_open=True,
+        ),
     }
 
     return {"rooms": rooms, "items": items, "players": {}}
-
