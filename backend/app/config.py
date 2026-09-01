@@ -1,10 +1,13 @@
 """Application configuration from environment variables."""
 
+from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment."""
+
+    model_config = ConfigDict(env_file=".env", case_sensitive=False)
 
     # App
     app_env: str = "development"
@@ -26,7 +29,3 @@ class Settings(BaseSettings):
     ai_narration_enabled: bool = False
     ai_command_interpretation_enabled: bool = False
     ai_world_generation_enabled: bool = False
-
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
