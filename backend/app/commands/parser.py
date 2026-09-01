@@ -23,6 +23,12 @@ def parse_command(raw: str):
         return {"action": "move", "direction": "west", "raw": text}
     if command in {"inventory", "i"}:
         return {"action": "inventory", "raw": text}
+    if command in {"get", "take"}:
+        return {"action": "take", "target": target, "raw": text}
+    if command == "drop":
+        return {"action": "drop", "target": target, "raw": text}
+    if command in {"examine", "inspect"}:
+        return {"action": "examine", "target": target, "raw": text}
     if command in {"help"}:
         return {"action": "help", "raw": text}
 

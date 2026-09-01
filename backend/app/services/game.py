@@ -24,7 +24,14 @@ class GameService:
         return player
 
     def disconnect_player(self, session_id: str) -> None:
-        self.world["players"].pop(session_id, None)
+        player = self.world["players"].pop(session_id, None)
+        if player is None:
+            return
+
+        for item_id in player.inventory:
+            item = self.world["items"].get(item_id)
+            if item is not None and item.owned_by == session_id:
+                item.drop_in(player.current_room_id)
 
     def execute(self, session_id: str, raw_command: str) -> dict[str, Any]:
         player = self.world["players"].get(session_id)
