@@ -7,7 +7,12 @@ def execute_command(command, player, world):
 
     if action == "look":
         room = world["rooms"][player.current_room_id]
-        return {"success": True, "output": room.look(), "room_id": room.id}
+        # Find items in this room
+        items_here = [
+            item.name for item in world["items"].values()
+            if item.is_in_room(player.current_room_id)
+        ]
+        return {"success": True, "output": room.look(items_here), "room_id": room.id}
 
     if action == "move":
         direction = command.get("direction")
@@ -18,9 +23,14 @@ def execute_command(command, player, world):
 
         player.move(next_room_id)
         destination = world["rooms"][next_room_id]
+        # Find items in destination room
+        items_here = [
+            item.name for item in world["items"].values()
+            if item.is_in_room(next_room_id)
+        ]
         return {
             "success": True,
-            "output": f"You move {direction}.\n{destination.look()}",
+            "output": f"You move {direction}.\n{destination.look(items_here)}",
             "room_id": destination.id,
         }
 

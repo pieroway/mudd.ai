@@ -12,7 +12,17 @@ class Room:
     exits: Dict[str, str] = field(default_factory=dict)
     items: list[str] = field(default_factory=list)
 
-    def look(self) -> str:
-        """Return a human-readable description for the room."""
+    def look(self, items_in_room: list[str] = None) -> str:
+        """Return a human-readable description for the room, including items."""
+        if items_in_room is None:
+            items_in_room = []
+        
         exits_text = ", ".join(sorted(self.exits.keys())) if self.exits else "none"
-        return f"{self.name}\n{self.description}\nExits: {exits_text}"
+        
+        description = f"{self.name}\n{self.description}\nExits: {exits_text}"
+        
+        if items_in_room:
+            items_text = ", ".join(items_in_room)
+            description += f"\n\nYou see: {items_text}"
+        
+        return description

@@ -30,3 +30,4 @@ def test_look_command_returns_room_description():
     assert result["success"] is True
     assert "Town Square" in result["output"]
     assert "marketplace" in result["output"].lower()
+    assert "torch" in result["output"]  # Item in room should be listed
