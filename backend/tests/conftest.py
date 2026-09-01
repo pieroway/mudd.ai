@@ -43,3 +43,10 @@ async def websocket_client():
     """Create a WebSocket test client."""
     # To be implemented with WebSocket testing utils
     pass
+
+
+@pytest.fixture
+def seeded_world():
+    """Create a deterministic test world for gameplay tests."""
+    from .fixtures.world import seed_world
+    return seed_world()

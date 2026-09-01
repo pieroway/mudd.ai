@@ -29,7 +29,7 @@ build:
 
 test:
 	@echo "🧪 Running unit tests..."
-	./scripts/test.sh
+	@cmd /c scripts\test.bat
 
 e2e:
 	@echo "🎭 Running E2E tests..."

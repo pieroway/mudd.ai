@@ -1,4 +1,4 @@
-from tests.fixtures.world import seed_world
+from ..fixtures.world import seed_world
 from app.commands.parser import parse_command
 from app.engine.executor import execute_command
 
