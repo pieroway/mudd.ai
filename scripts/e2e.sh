@@ -1,24 +1,16 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-echo "🎭 Running end-to-end tests with Playwright..."
+echo "Building and starting the application stack..."
+docker compose up -d --build --wait
 
-# Install dependencies if needed
-if [ ! -d "e2e/node_modules" ]; then
-  echo "📦 Installing e2e dependencies..."
-  cd e2e
-  npm install
-  cd ..
-fi
+echo "Building the Playwright test image..."
+docker build -t muddai-e2e ./e2e
 
-# Run Playwright tests
-cd e2e
-npx playwright test
+echo "Running browser tests..."
+docker run --rm \
+  --add-host=host.docker.internal:host-gateway \
+  -e E2E_BASE_URL=http://host.docker.internal:5173 \
+  muddai-e2e
 
-if [ $? -ne 0 ]; then
-  echo "❌ E2E tests FAILED"
-  exit 1
-fi
-
-echo "✅ E2E tests passed!"
-exit 0
+echo "Playwright tests passed."

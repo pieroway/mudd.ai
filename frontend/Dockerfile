@@ -21,6 +21,6 @@ USER node
 EXPOSE 5173
 
 HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
-  CMD wget --quiet --tries=1 --spider http://localhost:5173/ || exit 1
+  CMD wget --quiet --tries=1 --spider http://127.0.0.1:5173/ || exit 1
 
 CMD ["http-server", "dist", "-p", "5173", "-c-1"]

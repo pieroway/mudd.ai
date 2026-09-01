@@ -22,8 +22,14 @@ export default function Terminal({ username }: TerminalProps) {
 
   useEffect(() => {
     // Connect to WebSocket
-    const wsUrl = `ws://${window.location.hostname}:8000/ws?username=${encodeURIComponent(username)}`
-    const websocket = new WebSocket(wsUrl)
+    const apiUrl = new URL(import.meta.env.VITE_API_URL ?? `http://${window.location.hostname}:8000`)
+    if (apiUrl.hostname === 'localhost' && window.location.hostname !== 'localhost') {
+      apiUrl.hostname = window.location.hostname
+    }
+    apiUrl.protocol = apiUrl.protocol === 'https:' ? 'wss:' : 'ws:'
+    apiUrl.pathname = '/ws'
+    apiUrl.search = new URLSearchParams({ username }).toString()
+    const websocket = new WebSocket(apiUrl.toString())
 
     websocket.onopen = () => {
       setConnected(true)

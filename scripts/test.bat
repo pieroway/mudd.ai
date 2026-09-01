@@ -1,25 +1,32 @@
 @echo off
-REM Test script for Windows (equivalent to scripts/test.sh)
+setlocal
 
-echo Building test containers...
-docker compose -f compose.test.yaml build
-if errorlevel 1 goto error
+echo Building test images...
+docker compose -f compose.test.yaml build backend_test frontend_test
+if errorlevel 1 goto failure
 
-echo Running backend unit tests...
+echo Running backend unit and integration tests...
 docker compose -f compose.test.yaml run --rm backend_test
-set BACKEND_EXIT=%errorlevel%
+if errorlevel 1 goto failure
 
-echo Stopping test services...
+echo Running backend lint...
+docker compose -f compose.test.yaml run --rm backend_test ruff check app tests
+if errorlevel 1 goto failure
+
+echo Running backend type checking...
+docker compose -f compose.test.yaml run --rm backend_test mypy app
+if errorlevel 1 goto failure
+
+echo Running frontend lint, type checking, unit tests, and build...
+docker compose -f compose.test.yaml run --rm frontend_test
+if errorlevel 1 goto failure
+
 docker compose -f compose.test.yaml down
-
-if %BACKEND_EXIT% neq 0 (
-    echo FAILED: Unit tests failed. Deployment blocked.
-    exit /b 1
-)
-
-echo SUCCESS: All unit tests passed!
+echo All required unit checks passed.
 exit /b 0
 
-:error
-echo ERROR: Docker compose build failed
-exit /b 1
+:failure
+set TEST_EXIT=%errorlevel%
+docker compose -f compose.test.yaml down
+echo Test gate failed. Deployment blocked.
+exit /b %TEST_EXIT%

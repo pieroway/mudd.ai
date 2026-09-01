@@ -33,10 +33,10 @@ test:
 
 e2e:
 	@echo "🎭 Running E2E tests..."
-	./scripts/e2e.sh
+	@cmd /c scripts\e2e.bat
 
-deploy: test build dev
-	@echo "✅ Deployment complete!"
+deploy:
+	@cmd /c scripts\deploy.bat
 
 clean:
 	@echo "🧹 Cleaning up..."
