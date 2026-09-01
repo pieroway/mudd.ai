@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from typing import Any
+
 from app.domain.item import Item
-from app.domain.player import Player
 from app.domain.room import Room
 
 
-def seed_world():
-    """Create a deterministic 5-room world for MUD tests."""
+def create_world() -> dict[str, Any]:
+    """Create the deterministic shared world used by the game service."""
     rooms = {
         "town_square": Room(
             id="town_square",
@@ -47,14 +48,31 @@ def seed_world():
     rooms["docks"].exits = {"north": "town_square"}
 
     items = {
-        "torch": Item(id="torch", name="torch", description="A flickering torch.", room_id="town_square"),
-        "mushroom": Item(id="mushroom", name="mushroom", description="A small forest mushroom.", room_id="forest"),
-        "sword": Item(id="sword", name="sword", description="A sturdy iron sword.", room_id="blacksmith"),
-        "key": Item(id="key", name="key", description="A brass key.", room_id="inn"),
+        "torch": Item(
+            id="torch",
+            name="torch",
+            description="A flickering torch.",
+            room_id="town_square",
+        ),
+        "mushroom": Item(
+            id="mushroom",
+            name="mushroom",
+            description="A small forest mushroom.",
+            room_id="forest",
+        ),
+        "sword": Item(
+            id="sword",
+            name="sword",
+            description="A sturdy iron sword.",
+            room_id="blacksmith",
+        ),
+        "key": Item(
+            id="key",
+            name="key",
+            description="A brass key.",
+            room_id="inn",
+        ),
     }
 
-    players = {
-        "alan": Player(id="alan", name="alan", current_room_id="town_square"),
-    }
+    return {"rooms": rooms, "items": items, "players": {}}
 
-    return {"rooms": rooms, "items": items, "players": players}

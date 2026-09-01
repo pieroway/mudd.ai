@@ -1,31 +1,30 @@
 """WebSocket endpoints for the MUD game."""
 
 import logging
-import json
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from typing import Set, Dict, Any
+from uuid import uuid4
 
-from app.commands.parser import parse_command
-from app.engine.executor import execute_command
-from tests.fixtures.world import seed_world
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from typing import Set
+
+from app.services.game import GameService
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Active WebSocket connections (temporary, single-player for now)
 active_connections: Set[WebSocket] = set()
-
-# Game world state (shared across all connections for now)
-# TODO: Make this per-player once we add auth and persistence
-game_world: Dict[str, Any] = seed_world()
+game_service = GameService()
 
 
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for MUD game communication."""
+    session_id = str(uuid4())
+    username = websocket.query_params.get("username", "Guest")
+
     await websocket.accept()
     active_connections.add(websocket)
+    game_service.connect_player(session_id, username)
 
     try:
         # Send welcome message
@@ -43,9 +42,7 @@ async def websocket_endpoint(websocket: WebSocket):
             logger.debug(f"Received command: {data}")
 
             try:
-                # Parse and execute command
-                parsed = parse_command(data)
-                result = execute_command(parsed, game_world["players"]["alan"], game_world)
+                result = game_service.execute(session_id, data)
 
                 # Send result to client
                 response = {
@@ -66,7 +63,8 @@ async def websocket_endpoint(websocket: WebSocket):
 
     except WebSocketDisconnect:
         logger.info("Client disconnected")
-        active_connections.discard(websocket)
     except Exception as e:
-        logger.error(f"WebSocket error: {e}")
+        logger.error("WebSocket error: %s", e)
+    finally:
         active_connections.discard(websocket)
+        game_service.disconnect_player(session_id)

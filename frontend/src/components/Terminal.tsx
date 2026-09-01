@@ -22,7 +22,7 @@ export default function Terminal({ username }: TerminalProps) {
 
   useEffect(() => {
     // Connect to WebSocket
-    const wsUrl = `ws://${window.location.hostname}:8000/ws`
+    const wsUrl = `ws://${window.location.hostname}:8000/ws?username=${encodeURIComponent(username)}`
     const websocket = new WebSocket(wsUrl)
 
     websocket.onopen = () => {
@@ -65,7 +65,7 @@ export default function Terminal({ username }: TerminalProps) {
         websocket.close()
       }
     }
-  }, [])
+  }, [username])
 
   // Auto-scroll to bottom
   useEffect(() => {

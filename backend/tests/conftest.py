@@ -16,16 +16,16 @@ async def db_session():
     # For now, use in-memory SQLite
     # Later: use PostgreSQL test container
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
-    
+
     async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    
-    async with engine.begin() as conn:
+
+    async with engine.begin() as _conn:
         # Create tables (will add Base.metadata.create_all later)
         pass
-    
+
     async with async_session() as session:
         yield session
-    
+
     await engine.dispose()
 
 
@@ -34,7 +34,7 @@ def test_client():
     """Create a FastAPI test client."""
     from fastapi.testclient import TestClient
     from app.main import app
-    
+
     return TestClient(app)
 
 
@@ -48,5 +48,6 @@ async def websocket_client():
 @pytest.fixture
 def seeded_world():
     """Create a deterministic test world for gameplay tests."""
-    from .fixtures.world import seed_world
-    return seed_world()
+    from app.world import create_world
+
+    return create_world()
