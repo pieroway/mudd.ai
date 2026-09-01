@@ -1,0 +1,219 @@
+# AI-Enhanced MUD
+
+A persistent multiplayer text-based game (MUD) with a deterministic authoritative game engine and controlled AI layers.
+
+**Status:** Milestone One (Skeleton Phase) — Foundation in progress
+
+## Quick Start
+
+### Prerequisites
+- Docker Desktop (includes Docker and Docker Compose)
+- Git
+
+### First Time Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/mudd.ai.git
+cd mudd.ai
+
+# Copy environment template
+cp .env.example .env
+
+# Build and start services
+make dev
+```
+
+### Access the Game
+
+- **Frontend (MUD Client):** http://localhost:5173
+- **Backend (API):** http://localhost:8000
+- **Health Check:** http://localhost:8000/health
+- **Database (psql):** `psql -h localhost -U muduser -d muddb` (password: mudpass)
+
+## Development Commands
+
+```bash
+# Start development environment
+make dev
+
+# Stop all services
+make down
+
+# Run unit tests (backend)
+make test
+
+# Run E2E tests (Playwright)
+make e2e
+
+# Full pipeline: test, build, deploy
+make deploy
+
+# View backend logs
+make logs
+
+# Clean up containers and volumes
+make clean
+```
+
+## Project Structure
+
+```
+mudd.ai/
+├── backend/              # Python FastAPI backend
+│   ├── app/             # Application code
+│   ├── tests/           # Unit and integration tests
+│   ├── alembic/         # Database migrations
+│   ├── Dockerfile
+│   └── pyproject.toml   # Dependencies
+│
+├── frontend/            # TypeScript React client
+│   ├── src/
+│   │   ├── components/  # React components
+│   │   ├── styles/      # CSS
+│   │   └── App.tsx      # Main app
+│   ├── Dockerfile
+│   └── package.json
+│
+├── e2e/                 # Playwright end-to-end tests
+│   ├── tests/
+│   └── playwright.config.ts
+│
+├── scripts/             # Utility scripts
+├── compose.yaml         # Development Docker Compose
+├── compose.test.yaml    # Test Docker Compose
+├── Makefile            # Common commands
+├── README.md
+├── AGENTS.md           # AI agent guidance
+├── CLAUDE.md           # Claude project instructions (future)
+└── AI_MUD_CLAUDE_PROJECT_PROMPT.md  # Full specification
+```
+
+## Architecture Overview
+
+The game consists of layers:
+
+1. **Domain** — Pure game logic (rooms, players, items)
+2. **Engine** — Command execution and validation
+3. **Commands** — Parsing and routing
+4. **Services** — Orchestration (game service + narration)
+5. **API** — FastAPI routes and WebSocket
+6. **Database** — PostgreSQL (authoritative store)
+7. **AI** — Abstraction layer (FakeAIProvider for development)
+
+**Core Principle:** THE GAME ENGINE OWNS REALITY. AI may propose, interpret, or describe, but never directly decides authoritative game state.
+
+## Database Setup
+
+PostgreSQL runs in Docker. No local installation needed.
+
+```bash
+# Connect to the database
+psql -h localhost -U muduser -d muddb
+
+# Run migrations (when implemented)
+docker compose exec backend alembic upgrade head
+
+# Reset the database
+docker compose down -v  # Removes volumes
+make dev  # Rebuilds fresh
+```
+
+## Testing
+
+### Unit Tests (Backend)
+
+```bash
+# Run all tests
+make test
+
+# Run specific test file
+docker compose -f compose.test.yaml run --rm backend_test pytest tests/test_parser.py -v
+
+# Run with coverage
+docker compose -f compose.test.yaml run --rm backend_test pytest --cov=app -v
+```
+
+### E2E Tests (Playwright)
+
+```bash
+make e2e
+```
+
+## Configuration
+
+Edit `.env` to customize:
+
+```env
+APP_ENV=development              # development, test, production
+LOG_LEVEL=INFO                   # DEBUG, INFO, WARNING, ERROR
+
+DATABASE_URL=postgresql+...      # Database connection
+REDIS_URL=redis://...            # Redis connection
+
+AI_PROVIDER=fake                 # fake, anthropic, openai
+AI_NARRATION_ENABLED=false       # Enable AI narration
+```
+
+## Development Workflow
+
+1. **Make a small change** to backend or frontend
+2. **Run tests** — `make test`
+3. **Check the app** — visit http://localhost:5173
+4. **Commit and push** when tests pass
+
+**Never deploy without passing tests.**
+
+## Troubleshooting
+
+### Containers won't start
+```bash
+docker compose down -v
+docker system prune -f
+make dev
+```
+
+### Database connection error
+```bash
+docker compose exec postgres psql -U muduser -d muddb -c "SELECT 1"
+```
+
+### Port already in use
+```bash
+# Kill process on port 8000 (backend)
+lsof -ti:8000 | xargs kill -9
+
+# Kill process on port 5173 (frontend)
+lsof -ti:5173 | xargs kill -9
+
+make dev
+```
+
+### Rebuild containers
+```bash
+docker compose build --no-cache
+make dev
+```
+
+## Milestones
+
+- **M1** (Current): Deterministic 5-room MUD with terminal client
+- **M2**: AI natural-language command interpretation
+- **M3**: AI narration
+- **M4**: One AI-powered NPC with personality/memory
+- **M5**: Controlled AI world generation
+
+## Documentation
+
+- [AI_MUD_CLAUDE_PROJECT_PROMPT.md](AI_MUD_CLAUDE_PROJECT_PROMPT.md) — Complete specification
+- [MILESTONE_ONE_PLAN.md](MILESTONE_ONE_PLAN.md) — M1 roadmap
+- [AGENTS.md](AGENTS.md) — AI agent operating guide
+- [CLAUDE.md](CLAUDE.md) — Claude project instructions (to be created)
+
+## License
+
+TBD
+
+## Contributing
+
+See contributing guide (to be created).
