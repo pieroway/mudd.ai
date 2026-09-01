@@ -1,2 +1,5 @@
-# models module
+from app.models.base import Base
+from app.models.game import ExitRecord, ItemRecord, PlayerRecord, RoomRecord
+
+__all__ = ["Base", "ExitRecord", "ItemRecord", "PlayerRecord", "RoomRecord"]
 

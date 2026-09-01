@@ -1,53 +1,50 @@
-"""Pytest configuration and fixtures."""
+"""Pytest configuration and PostgreSQL fixtures."""
+
+import os
 
 import pytest
-import os
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import delete
 
-# Load test environment
 os.environ.setdefault("APP_ENV", "test")
-os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+
+from app.db import get_session_factory  # noqa: E402
+from app.db.seed import seed_world  # noqa: E402
+from app.models import ExitRecord, ItemRecord, PlayerRecord, RoomRecord  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+async def reset_persistent_database():
+    """Give every test a deterministic PostgreSQL world."""
+    factory = get_session_factory()
+    async with factory() as session:
+        async with session.begin():
+            await session.execute(delete(ItemRecord))
+            await session.execute(delete(PlayerRecord))
+            await session.execute(delete(ExitRecord))
+            await session.execute(delete(RoomRecord))
+            await seed_world(session)
+    yield
 
 
 @pytest.fixture
-async def db_session():
-    """Create a test database session."""
-    # For now, use in-memory SQLite
-    # Later: use PostgreSQL test container
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
-
-    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-
-    async with engine.begin() as _conn:
-        # Create tables (will add Base.metadata.create_all later)
-        pass
-
-    async with async_session() as session:
-        yield session
-
-    await engine.dispose()
+def session_factory():
+    return get_session_factory()
 
 
 @pytest.fixture
 def test_client():
-    """Create a FastAPI test client."""
+    """Create a client that runs the FastAPI lifespan hooks."""
     from fastapi.testclient import TestClient
+
     from app.main import app
 
-    return TestClient(app)
-
-
-@pytest.fixture
-async def websocket_client():
-    """Create a WebSocket test client."""
-    # To be implemented with WebSocket testing utils
-    pass
+    with TestClient(app) as client:
+        yield client
 
 
 @pytest.fixture
 def seeded_world():
-    """Create a deterministic test world for gameplay tests."""
+    """Create a deterministic in-memory world for pure engine tests."""
     from app.world import create_world
 
     return create_world()

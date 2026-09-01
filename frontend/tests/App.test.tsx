@@ -77,4 +77,28 @@ describe('App', () => {
     expect(socket.send).toHaveBeenCalledWith('north')
     expect(screen.getByText('> north')).toBeInTheDocument()
   })
+
+  it('shows server errors in the transcript', () => {
+    render(<App />)
+    fireEvent.change(screen.getByTestId('username-input'), { target: { value: 'Alan' } })
+    fireEvent.click(screen.getByTestId('login-button'))
+
+    act(() => {
+      MockWebSocket.instances[0].receive({ type: 'error', text: 'Username is unavailable.' })
+    })
+
+    expect(screen.getByText('[ERROR] Username is unavailable.')).toBeInTheDocument()
+  })
+
+  it('closes a socket that finishes connecting after unmount', () => {
+    const view = render(<App />)
+    fireEvent.change(screen.getByTestId('username-input'), { target: { value: 'Alan' } })
+    fireEvent.click(screen.getByTestId('login-button'))
+    const socket = MockWebSocket.instances[0]
+
+    view.unmount()
+    socket.open()
+
+    expect(socket.close).toHaveBeenCalledOnce()
+  })
 })

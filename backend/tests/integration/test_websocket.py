@@ -34,3 +34,15 @@ def test_only_one_websocket_player_can_take_a_shared_item(test_client):
             assert first_result["text"] == "You take the torch."
             assert second_result["success"] is False
             assert second_result["text"] == "You do not see a torch here."
+
+
+def test_duplicate_connected_username_is_rejected(test_client):
+    with test_client.websocket_connect("/ws?username=Alan") as first:
+        first.receive_json()
+        with test_client.websocket_connect("/ws?username=%20ALAN%20") as second:
+            error = second.receive_json()
+
+            assert error == {
+                "type": "error",
+                "text": "That username is already connected.",
+            }

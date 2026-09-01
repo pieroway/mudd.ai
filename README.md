@@ -111,13 +111,17 @@ PostgreSQL runs in Docker. No local installation needed.
 # Connect to the database
 psql -h localhost -U muduser -d muddb
 
-# Run migrations (when implemented)
+# Run migrations manually (backend startup also runs this automatically)
 docker compose exec backend alembic upgrade head
 
 # Reset the database
 docker compose down -v  # Removes volumes
 make dev  # Rebuilds fresh
 ```
+
+Player location and inventory are stored in PostgreSQL. Usernames are normalized
+case-insensitively and must be unique. Milestone One does not provide passwords or
+account authentication, so usernames are persistent identities but are not yet secure accounts.
 
 ## Testing
 

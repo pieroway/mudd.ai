@@ -5,6 +5,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import Settings
+from app.db import get_session_factory
+from app.db.seed import seed_world
 from app.api.websocket import router as ws_router
 from app.api.health import router as health_router
 
@@ -17,6 +19,9 @@ settings = Settings()
 async def lifespan(app: FastAPI):
     """Manage app startup and shutdown."""
     logger.info("🎮 MUD Server starting...")
+    async with get_session_factory()() as session:
+        async with session.begin():
+            await seed_world(session)
     yield
     logger.info("🎮 MUD Server shutting down...")
 

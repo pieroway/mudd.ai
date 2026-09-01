@@ -1,48 +1,51 @@
-from app.services.game import GameService
+import asyncio
+
+import pytest
+
+from app.services.game import GameService, UsernameInUseError
 
 
-def test_connected_players_have_independent_positions():
-    service = GameService()
-    first_player = service.connect_player("connection-1", "Alan")
-    second_player = service.connect_player("connection-2", "Robin")
+@pytest.mark.asyncio
+async def test_reconnect_restores_player_location_and_inventory(session_factory):
+    service = GameService(session_factory)
+    first_connection = await service.connect_player("connection-1", "Alan")
+    await service.execute("connection-1", "take torch")
+    await service.execute("connection-1", "north")
+    await service.disconnect_player("connection-1")
 
-    result = service.execute("connection-1", "north")
+    restarted_service = GameService(session_factory)
+    second_connection = await restarted_service.connect_player("connection-2", "alan")
 
-    assert result["success"] is True
-    assert first_player.current_room_id == "forest"
-    assert second_player.current_room_id == "town_square"
-
-
-def test_disconnect_removes_player_session():
-    service = GameService()
-    service.connect_player("connection-1", "Alan")
-
-    service.disconnect_player("connection-1")
-
-    assert "connection-1" not in service.world["players"]
+    assert second_connection.id == first_connection.id
+    assert second_connection.current_room_id == "forest"
+    assert second_connection.inventory == ["torch"]
 
 
-def test_only_one_player_can_take_a_shared_item():
-    service = GameService()
-    first_player = service.connect_player("connection-1", "Alan")
-    second_player = service.connect_player("connection-2", "Robin")
+@pytest.mark.asyncio
+async def test_normalized_username_must_be_unique_while_connected(session_factory):
+    service = GameService(session_factory)
+    await service.connect_player("connection-1", "Alan")
 
-    first_result = service.execute("connection-1", "take torch")
-    second_result = service.execute("connection-2", "take torch")
-
-    assert first_result["success"] is True
-    assert second_result == {"success": False, "output": "You do not see a torch here."}
-    assert first_player.inventory == ["torch"]
-    assert second_player.inventory == []
+    with pytest.raises(UsernameInUseError):
+        await service.connect_player("connection-2", "  ALAN  ")
 
 
-def test_disconnect_returns_carried_items_to_the_room():
-    service = GameService()
-    service.connect_player("connection-1", "Alan")
-    service.execute("connection-1", "take torch")
+@pytest.mark.asyncio
+async def test_only_one_player_can_take_a_shared_item_concurrently(session_factory):
+    service = GameService(session_factory)
+    first_player = await service.connect_player("connection-1", "Alan")
+    second_player = await service.connect_player("connection-2", "Robin")
 
-    service.disconnect_player("connection-1")
+    first_result, second_result = await asyncio.gather(
+        service.execute("connection-1", "take torch"),
+        service.execute("connection-2", "take torch"),
+    )
 
-    torch = service.world["items"]["torch"]
-    assert torch.owned_by is None
-    assert torch.room_id == "town_square"
+    successes = [result for result in (first_result, second_result) if result["success"]]
+    failures = [result for result in (first_result, second_result) if not result["success"]]
+    assert len(successes) == 1
+    assert failures == [{"success": False, "output": "You do not see a torch here."}]
+
+    first_inventory = await service.inventory_for_player(first_player.id)
+    second_inventory = await service.inventory_for_player(second_player.id)
+    assert sorted(first_inventory + second_inventory) == ["torch"]

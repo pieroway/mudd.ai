@@ -47,6 +47,8 @@ export default function Terminal({ username }: TerminalProps) {
         }
       } else if (message.type === 'game_output') {
         output = message.text || ''
+      } else if (message.type === 'error') {
+        output = `[ERROR] ${message.text || 'Unknown server error'}`
       }
 
       if (output) {
@@ -67,6 +69,13 @@ export default function Terminal({ username }: TerminalProps) {
     setWs(websocket)
 
     return () => {
+      websocket.onmessage = null
+      websocket.onerror = null
+      websocket.onclose = null
+      if (websocket.readyState === WebSocket.CONNECTING) {
+        websocket.onopen = () => websocket.close()
+        return
+      }
       if (websocket.readyState === WebSocket.OPEN) {
         websocket.close()
       }

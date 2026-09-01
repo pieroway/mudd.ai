@@ -39,7 +39,7 @@ services:
         condition: service_healthy
       redis_test:
         condition: service_healthy
-    command: pytest --cov=app --cov-report=term-missing -v
+    command: sh -lc "alembic upgrade head && pytest --cov=app --cov-report=term-missing -v"
 
   frontend_test:
     build:

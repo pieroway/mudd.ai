@@ -1,12 +1,12 @@
 """WebSocket endpoints for the MUD game."""
 
 import logging
+from typing import Set
 from uuid import uuid4
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from typing import Set
 
-from app.services.game import GameService
+from app.services.game import GameService, InvalidUsernameError, UsernameInUseError
 
 logger = logging.getLogger(__name__)
 
@@ -18,53 +18,63 @@ game_service = GameService()
 
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    """WebSocket endpoint for MUD game communication."""
+    """WebSocket endpoint for persistent game sessions."""
     session_id = str(uuid4())
-    username = websocket.query_params.get("username", "Guest")
+    username = websocket.query_params.get("username", "")
+    connected = False
 
     await websocket.accept()
     active_connections.add(websocket)
-    game_service.connect_player(session_id, username)
 
     try:
-        # Send welcome message
-        welcome_msg = {
-            "type": "system",
-            "text": "Welcome to the MUD! You stand in the Town Square.",
-            "room_name": "Town Square",
-            "room_description": "A bustling marketplace at the heart of the town.",
-        }
-        await websocket.send_json(welcome_msg)
+        try:
+            player = await game_service.connect_player(session_id, username)
+            connected = True
+        except UsernameInUseError:
+            await websocket.send_json(
+                {"type": "error", "text": "That username is already connected."}
+            )
+            await websocket.close(code=1008)
+            return
+        except InvalidUsernameError as error:
+            await websocket.send_json({"type": "error", "text": str(error)})
+            await websocket.close(code=1008)
+            return
 
-        # Listen for client messages
+        room = await game_service.room_for_player(player.id)
+        await websocket.send_json(
+            {
+                "type": "system",
+                "text": f"Welcome to the MUD! You stand in the {room.name}.",
+                "room_name": room.name,
+                "room_description": room.description,
+            }
+        )
+
         while True:
             data = await websocket.receive_text()
-            logger.debug(f"Received command: {data}")
+            logger.debug("Received command: %s", data)
 
             try:
-                result = game_service.execute(session_id, data)
-
-                # Send result to client
-                response = {
-                    "type": "game_output",
-                    "success": result.get("success", False),
-                    "text": result.get("output", ""),
-                    "room_id": result.get("room_id"),
-                }
-                await websocket.send_json(response)
-
-            except Exception as e:
-                logger.error(f"Command execution error: {e}")
-                error_response = {
-                    "type": "error",
-                    "text": f"An error occurred: {str(e)}",
-                }
-                await websocket.send_json(error_response)
-
+                result = await game_service.execute(session_id, data)
+                await websocket.send_json(
+                    {
+                        "type": "game_output",
+                        "success": result.get("success", False),
+                        "text": result.get("output", ""),
+                        "room_id": result.get("room_id"),
+                    }
+                )
+            except Exception:
+                logger.exception("Command execution error")
+                await websocket.send_json(
+                    {"type": "error", "text": "An internal error occurred."}
+                )
     except WebSocketDisconnect:
         logger.info("Client disconnected")
-    except Exception as e:
-        logger.error("WebSocket error: %s", e)
+    except Exception:
+        logger.exception("WebSocket error")
     finally:
         active_connections.discard(websocket)
-        game_service.disconnect_player(session_id)
+        if connected:
+            await game_service.disconnect_player(session_id)
