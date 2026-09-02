@@ -1,0 +1,64 @@
+services:
+  postgres_e2e:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: muduser
+      POSTGRES_PASSWORD: mudpass
+      POSTGRES_DB: muddb_e2e
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U muduser -d muddb_e2e"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis_e2e:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend_e2e:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "18000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://muduser:mudpass@postgres_e2e:5432/muddb_e2e
+      REDIS_URL: redis://redis_e2e:6379
+      AI_PROVIDER: fake
+      APP_ENV: test
+      LOG_LEVEL: WARNING
+    depends_on:
+      postgres_e2e:
+        condition: service_healthy
+      redis_e2e:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  frontend_e2e:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: builder
+    ports:
+      - "15173:5173"
+    environment:
+      VITE_API_URL: http://localhost:18000
+    depends_on:
+      backend_e2e:
+        condition: service_healthy
+    command: npm run dev -- --host 0.0.0.0
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:5173/"]
+      interval: 5s
+      timeout: 5s
+      retries: 5

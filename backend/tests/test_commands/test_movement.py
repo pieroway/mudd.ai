@@ -38,3 +38,14 @@ def test_look_command_returns_room_description():
     assert "Town Square" in result["output"]
     assert "marketplace" in result["output"].lower()
     assert "torch" in result["output"]  # Item in room should be listed
+
+
+def test_help_lists_gameplay_and_client_slash_commands():
+    world = make_world_with_player()
+    player = world["players"]["alan"]
+
+    result = execute_command(parse_command("help"), player, world)
+
+    assert result["success"] is True
+    assert "Available commands: look" in result["output"]
+    assert "Slash commands: /theme light | dark | techo" in result["output"]

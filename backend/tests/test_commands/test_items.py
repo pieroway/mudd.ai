@@ -34,6 +34,24 @@ def test_item_commands_are_parsed_with_aliases(raw, action, target):
     assert command["target"] == target
 
 
+@pytest.mark.parametrize("verb", ["take", "get"])
+def test_take_from_container_command_is_parsed(verb):
+    command = parse_command(f"{verb} torch from chest")
+
+    assert command["action"] == "take_from"
+    assert command["target"] == "torch"
+    assert command["container"] == "chest"
+
+
+@pytest.mark.parametrize("preposition", ["in", "into"])
+def test_put_in_container_command_is_parsed(preposition):
+    command = parse_command(f"put torch {preposition} chest")
+
+    assert command["action"] == "put"
+    assert command["target"] == "torch"
+    assert command["container"] == "chest"
+
+
 def test_player_can_take_item_from_current_room(world_and_player):
     world, player = world_and_player
 
@@ -141,3 +159,37 @@ def test_player_must_carry_an_item_to_use_it(world_and_player):
         "output": "You need to be carrying the torch to use it.",
     }
     assert used == {"success": True, "output": "The torch casts a steady pool of light."}
+
+
+def test_player_can_put_an_item_in_an_open_container_and_take_it_back(world_and_player):
+    world, player = world_and_player
+    execute_command(parse_command("take torch"), player, world)
+    execute_command(parse_command("open chest"), player, world)
+
+    put_result = execute_command(parse_command("put torch in chest"), player, world)
+    take_result = execute_command(parse_command("take torch from chest"), player, world)
+
+    assert put_result == {"success": True, "output": "You put the torch in the chest."}
+    assert take_result == {"success": True, "output": "You take the torch from the chest."}
+    assert player.inventory == ["torch"]
+    assert world["items"]["torch"].owned_by == player.id
+    assert world["items"]["torch"].container_id is None
+
+
+def test_player_cannot_use_a_closed_container(world_and_player):
+    world, player = world_and_player
+    execute_command(parse_command("take torch"), player, world)
+
+    result = execute_command(parse_command("put torch in chest"), player, world)
+
+    assert result == {"success": False, "output": "The chest is closed."}
+    assert player.inventory == ["torch"]
+
+
+def test_player_can_only_put_carried_items_in_containers(world_and_player):
+    world, player = world_and_player
+    execute_command(parse_command("open chest"), player, world)
+
+    result = execute_command(parse_command("put torch in chest"), player, world)
+
+    assert result == {"success": False, "output": "You are not carrying a torch."}

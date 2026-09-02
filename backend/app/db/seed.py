@@ -35,6 +35,7 @@ async def seed_world(session: AsyncSession) -> None:
                     description=item.description,
                     room_id=item.room_id,
                     owner_id=None,
+                    container_id=None,
                     can_open=item.can_open,
                     is_open=item.is_open,
                     can_use=item.can_use,

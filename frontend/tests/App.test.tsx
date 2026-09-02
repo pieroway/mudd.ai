@@ -39,6 +39,7 @@ class MockWebSocket {
 describe('App', () => {
   beforeEach(() => {
     MockWebSocket.instances = []
+    window.localStorage.clear()
     vi.stubGlobal('WebSocket', MockWebSocket)
   })
 
@@ -76,6 +77,36 @@ describe('App', () => {
 
     expect(socket.send).toHaveBeenCalledWith('north')
     expect(screen.getByText('> north')).toBeInTheDocument()
+  })
+
+  it('applies theme slash commands locally without sending them to the server', () => {
+    render(<App />)
+    fireEvent.change(screen.getByTestId('username-input'), { target: { value: 'Alan' } })
+    fireEvent.click(screen.getByTestId('login-button'))
+
+    const socket = MockWebSocket.instances[0]
+    act(() => socket.open())
+
+    fireEvent.change(screen.getByTestId('command-input'), { target: { value: '/theme light' } })
+    fireEvent.submit(screen.getByTestId('command-input').closest('form')!)
+
+    expect(document.documentElement).toHaveAttribute('data-theme', 'light')
+    expect(window.localStorage.getItem('mudd-theme')).toBe('light')
+    expect(screen.getByText('Theme changed to light.')).toBeInTheDocument()
+    expect(socket.send).not.toHaveBeenCalled()
+  })
+
+  it('explains valid options for an invalid theme', () => {
+    render(<App />)
+    fireEvent.change(screen.getByTestId('username-input'), { target: { value: 'Alan' } })
+    fireEvent.click(screen.getByTestId('login-button'))
+    act(() => MockWebSocket.instances[0].open())
+
+    fireEvent.change(screen.getByTestId('command-input'), { target: { value: '/theme sepia' } })
+    fireEvent.submit(screen.getByTestId('command-input').closest('form')!)
+
+    expect(screen.getByText('Usage: /theme light | dark | techo')).toBeInTheDocument()
+    expect(MockWebSocket.instances[0].send).not.toHaveBeenCalled()
   })
 
   it('shows server errors in the transcript', () => {

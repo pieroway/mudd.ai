@@ -10,6 +10,7 @@ class Item:
     description: str
     room_id: str | None = None
     owned_by: str | None = None
+    container_id: str | None = None
     can_open: bool = False
     is_open: bool = False
     can_use: bool = False
@@ -20,8 +21,15 @@ class Item:
 
     def take_by(self, player_id: str) -> None:
         self.room_id = None
+        self.container_id = None
         self.owned_by = player_id
 
     def drop_in(self, room_id: str) -> None:
         self.owned_by = None
+        self.container_id = None
         self.room_id = room_id
+
+    def put_in(self, container_id: str) -> None:
+        self.room_id = None
+        self.owned_by = None
+        self.container_id = container_id

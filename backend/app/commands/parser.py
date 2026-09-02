@@ -11,6 +11,34 @@ def parse_command(raw: str):
     command = parts[0]
     target = " ".join(parts[1:]) if len(parts) > 1 else None
 
+    if command in {"get", "take"} and "from" in parts[1:]:
+        separator = parts.index("from", 1)
+        return {
+            "action": "take_from",
+            "target": " ".join(parts[1:separator]) or None,
+            "container": " ".join(parts[separator + 1 :]) or None,
+            "raw": text,
+        }
+    if command == "put":
+        put_separator: int | None = None
+        for index in range(1, len(parts)):
+            if parts[index] in {"in", "into"}:
+                put_separator = index
+                break
+        if put_separator is None:
+            return {
+                "action": "put",
+                "target": target,
+                "container": None,
+                "raw": text,
+            }
+        return {
+            "action": "put",
+            "target": " ".join(parts[1:put_separator]) or None,
+            "container": " ".join(parts[put_separator + 1 :]) or None,
+            "raw": text,
+        }
+
     if command in {"look", "l"}:
         return {"action": "look", "raw": text}
     if command in {"north", "n"}:

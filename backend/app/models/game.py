@@ -41,8 +41,9 @@ class ItemRecord(Base):
     __tablename__ = "items"
     __table_args__ = (
         CheckConstraint(
-            "(room_id IS NOT NULL AND owner_id IS NULL) OR "
-            "(room_id IS NULL AND owner_id IS NOT NULL)",
+            "(room_id IS NOT NULL AND owner_id IS NULL AND container_id IS NULL) OR "
+            "(room_id IS NULL AND owner_id IS NOT NULL AND container_id IS NULL) OR "
+            "(room_id IS NULL AND owner_id IS NULL AND container_id IS NOT NULL)",
             name="ck_items_exactly_one_location",
         ),
         CheckConstraint("NOT is_open OR can_open", name="ck_items_open_requires_capability"),
@@ -56,6 +57,9 @@ class ItemRecord(Base):
     )
     owner_id: Mapped[str | None] = mapped_column(
         ForeignKey("players.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    container_id: Mapped[str | None] = mapped_column(
+        ForeignKey("items.id", ondelete="RESTRICT"), nullable=True, index=True
     )
     can_open: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_open: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

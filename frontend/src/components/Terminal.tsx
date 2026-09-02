@@ -14,11 +14,27 @@ interface TerminalProps {
   username: string
 }
 
+type Theme = 'light' | 'dark' | 'techo'
+
+const THEME_STORAGE_KEY = 'mudd-theme'
+const themes: Theme[] = ['light', 'dark', 'techo']
+
+function getSavedTheme(): Theme {
+  const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY)
+  return themes.includes(savedTheme as Theme) ? (savedTheme as Theme) : 'dark'
+}
+
 export default function Terminal({ username }: TerminalProps) {
   const [transcript, setTranscript] = useState<string[]>([])
   const [ws, setWs] = useState<WebSocket | null>(null)
   const [connected, setConnected] = useState(false)
+  const [theme, setTheme] = useState<Theme>(getSavedTheme)
   const transcriptEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme)
+  }, [theme])
 
   useEffect(() => {
     // Connect to WebSocket
@@ -88,6 +104,20 @@ export default function Terminal({ username }: TerminalProps) {
   }, [transcript])
 
   const handleCommand = (command: string) => {
+    const slashCommand = command.trim().toLowerCase().split(/\s+/)
+    if (slashCommand[0] === '/theme') {
+      const requestedTheme = slashCommand[1]
+      setTranscript((prev) => [...prev, `> ${command}`])
+
+      if (slashCommand.length === 2 && themes.includes(requestedTheme as Theme)) {
+        setTheme(requestedTheme as Theme)
+        setTranscript((prev) => [...prev, `Theme changed to ${requestedTheme}.`])
+      } else {
+        setTranscript((prev) => [...prev, 'Usage: /theme light | dark | techo'])
+      }
+      return
+    }
+
     if (ws && connected) {
       setTranscript((prev) => [...prev, `> ${command}`])
       ws.send(command)
@@ -95,7 +125,7 @@ export default function Terminal({ username }: TerminalProps) {
   }
 
   return (
-    <div className="terminal" data-testid="terminal">
+    <div className="terminal" data-testid="terminal" data-theme={theme}>
       <div className="terminal-header">
         <h2>{username}'s Journey</h2>
         <span className={`status ${connected ? 'connected' : 'disconnected'}`}>

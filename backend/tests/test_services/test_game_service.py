@@ -68,3 +68,25 @@ async def test_open_item_state_survives_service_restart(session_factory):
         "success": False,
         "output": "The chest is already open.",
     }
+
+
+@pytest.mark.asyncio
+async def test_container_contents_survive_service_restart(session_factory):
+    service = GameService(session_factory)
+    await service.connect_player("connection-1", "Alan")
+    await service.execute("connection-1", "take torch")
+    await service.execute("connection-1", "open chest")
+    put_result = await service.execute("connection-1", "put torch in chest")
+    await service.disconnect_player("connection-1")
+
+    restarted_service = GameService(session_factory)
+    await restarted_service.connect_player("connection-2", "Alan")
+    take_result = await restarted_service.execute(
+        "connection-2", "take torch from chest"
+    )
+
+    assert put_result == {"success": True, "output": "You put the torch in the chest."}
+    assert take_result == {
+        "success": True,
+        "output": "You take the torch from the chest.",
+    }
