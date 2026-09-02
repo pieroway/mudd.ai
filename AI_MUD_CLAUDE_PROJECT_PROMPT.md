@@ -8,7 +8,7 @@ This project will be developed locally and run using Docker Desktop.
 
 ---
 
-# 1. Core Project Goals
+## 1. Core Project Goals
 
 Build a persistent multiplayer text-based MUD in which:
 
@@ -27,7 +27,7 @@ Build a persistent multiplayer text-based MUD in which:
 
 ---
 
-# 2. Primary Technology Stack
+## 2. Primary Technology Stack
 
 Use this stack unless there is a compelling technical reason to recommend a change.
 
@@ -78,7 +78,7 @@ AI:
 
 ---
 
-# 3. Architectural Principle
+## 3. Architectural Principle
 
 The most important rule in the application is:
 
@@ -129,7 +129,7 @@ This principle applies to:
 
 ---
 
-# 4. High-Level Architecture
+## 4. High-Level Architecture
 
 Use a layered architecture similar to:
 
@@ -179,7 +179,7 @@ Do not treat these as one giant unrestricted AI agent.
 
 ---
 
-# 5. Required Services
+## 5. Required Services
 
 Initially design Docker Compose with at least:
 
@@ -204,7 +204,7 @@ Prefer a modular monolith initially unless splitting a service has a clear benef
 
 ---
 
-# 6. Docker Requirements
+## 6. Docker Requirements
 
 Everything required to run the application must be containerized.
 
@@ -240,7 +240,7 @@ Testing should also be executable through Docker.
 
 ---
 
-# 7. Mandatory Build and Deployment Gate
+## 7. Mandatory Build and Deployment Gate
 
 THIS REQUIREMENT IS NON-NEGOTIABLE.
 
@@ -308,7 +308,7 @@ Do not rely solely on developer discipline.
 
 ---
 
-# 8. Unit Testing Requirements
+## 8. Unit Testing Requirements
 
 Unit testing is mandatory for new logic.
 
@@ -350,7 +350,7 @@ For each significant feature:
 
 ---
 
-# 9. Playwright Requirements
+## 9. Playwright Requirements
 
 Playwright is the default browser automation framework for end-to-end testing.
 
@@ -387,7 +387,7 @@ Do not write fragile CSS-path-based automation where avoidable.
 
 ---
 
-# 9A. Future Browser UI / Command-Driven Panels
+## 9A. Future Browser UI / Command-Driven Panels
 
 The browser interface is primarily a command-driven MUD terminal, but the frontend architecture must be designed from the beginning to support richer UI components later.
 
@@ -449,7 +449,7 @@ The main transcript and command prompt must remain fully usable even when every 
 
 ---
 
-# 9B. Command-Controlled UI
+## 9B. Command-Controlled UI
 
 The game should eventually support commands that control browser UI state.
 
@@ -517,7 +517,7 @@ into an approved UI-related command, but it must not generate arbitrary JavaScri
 
 ---
 
-# 9C. Map UI Requirements
+## 9C. Map UI Requirements
 
 The architecture should support an interactive map later.
 
@@ -547,7 +547,7 @@ The client is responsible only for rendering it.
 
 ---
 
-# 9D. Frontend State Architecture
+## 9D. Frontend State Architecture
 
 Design the frontend so game state and UI layout state are separate concepts.
 
@@ -592,7 +592,7 @@ and separately render narrative text if desired.
 
 ---
 
-# 9E. Future UI Testing
+## 9E. Future UI Testing
 
 As richer browser components are introduced, Playwright coverage should include:
 
@@ -613,7 +613,7 @@ Do not make these future components a Milestone One requirement unless explicitl
 
 ---
 
-# 10. Testing Pyramid
+## 10. Testing Pyramid
 
 Use the following testing philosophy:
 
@@ -638,7 +638,7 @@ Do not use slow browser tests to verify logic that can be tested quickly with un
 
 ---
 
-# 11. Initial Game Domain Model
+## 11. Initial Game Domain Model
 
 Start with a small domain model.
 
@@ -649,6 +649,7 @@ World
 Region
 
 Room
+
 - id
 - name
 - description
@@ -657,6 +658,7 @@ Room
 - metadata
 
 Exit
+
 - direction
 - destination
 - requirements
@@ -664,6 +666,7 @@ Exit
 - hidden state
 
 Player
+
 - id
 - name
 - current room
@@ -674,6 +677,7 @@ Player
 - reputation
 
 NPC
+
 - id
 - name
 - current room
@@ -686,6 +690,7 @@ NPC
 - memories
 
 Item
+
 - id
 - name
 - description
@@ -707,7 +712,7 @@ Do not over-engineer the initial schema.
 
 ---
 
-# 12. Initial Supported Commands
+## 12. Initial Supported Commands
 
 Implement a traditional parser first.
 
@@ -758,7 +763,7 @@ Traditional commands should execute without AI whenever possible.
 
 ---
 
-# 13. Natural-Language Command Processing
+## 13. Natural-Language Command Processing
 
 If the classic parser cannot confidently interpret a command, send the command to the AI command interpreter.
 
@@ -799,7 +804,7 @@ The AI must never issue SQL, mutate the database directly, or invoke unrestricte
 
 ---
 
-# 14. AI Provider Interface
+## 14. AI Provider Interface
 
 Create an abstraction similar conceptually to:
 
@@ -830,7 +835,7 @@ Use environment variables and .env.example.
 
 ---
 
-# 15. AI Narration
+## 15. AI Narration
 
 The authoritative game engine should return structured results.
 
@@ -864,7 +869,7 @@ unless those events were provided by the game engine.
 
 ---
 
-# 16. NPC AI
+## 16. NPC AI
 
 NPCs should have bounded context.
 
@@ -893,7 +898,7 @@ The game engine validates any action before it occurs.
 
 ---
 
-# 17. NPC Memory
+## 17. NPC Memory
 
 Use persistent NPC memory.
 
@@ -924,7 +929,7 @@ Memory updates must be structured and validated.
 
 ---
 
-# 18. RAG / Context Retrieval
+## 18. RAG / Context Retrieval
 
 Design AI context retrieval so only relevant data is supplied to the AI.
 
@@ -948,7 +953,7 @@ A vector store can be introduced later when justified.
 
 ---
 
-# 19. AI World Generation
+## 19. AI World Generation
 
 AI world generation comes after the core deterministic MUD works.
 
@@ -988,7 +993,7 @@ Generated content is not canonical until accepted by the authoritative applicati
 
 ---
 
-# 20. Expandable World
+## 20. Expandable World
 
 The architecture should support generation-on-exploration later.
 
@@ -1012,7 +1017,7 @@ Once accepted, it is persistent canonical world state.
 
 ---
 
-# 21. Database Rules
+## 21. Database Rules
 
 Use PostgreSQL as the authoritative persistent store.
 
@@ -1039,7 +1044,7 @@ PostgreSQL remains canonical.
 
 ---
 
-# 22. Repository Structure
+## 22. Repository Structure
 
 Begin with a clean monorepo similar to:
 
@@ -1089,7 +1094,7 @@ Adjust only where there is a clear benefit.
 
 ---
 
-# 23. Development Workflow
+## 23. Development Workflow
 
 For every feature:
 
@@ -1110,7 +1115,7 @@ If a test cannot be executed, explicitly state why.
 
 ---
 
-# 24. Deployment Workflow
+## 24. Deployment Workflow
 
 Create an automated local deployment command.
 
@@ -1136,7 +1141,7 @@ Deployment must not proceed after test failure.
 
 ---
 
-# 25. CI-Friendly Design
+## 25. CI-Friendly Design
 
 Even though initial development uses Docker Desktop, structure the commands so the same build/test pipeline can later run in CI systems such as:
 
@@ -1150,7 +1155,7 @@ The authoritative test commands should work both locally and in CI.
 
 ---
 
-# 26. Observability
+## 26. Observability
 
 Add structured logging early.
 
@@ -1183,7 +1188,7 @@ Eventually support:
 
 ---
 
-# 27. Security
+## 27. Security
 
 Treat all player input as hostile.
 
@@ -1212,7 +1217,7 @@ Protect against prompt injection that attempts to make the AI reveal hidden worl
 
 ---
 
-# 28. Cost Controls
+## 28. Cost Controls
 
 AI should not be used where deterministic code is sufficient.
 
@@ -1241,7 +1246,7 @@ Allow local development with FakeAIProvider so normal development and tests do n
 
 ---
 
-# 29. Configuration
+## 29. Configuration
 
 Provide sensible environment configuration.
 
@@ -1268,7 +1273,7 @@ Never commit actual credentials.
 
 ---
 
-# 30. First Milestone
+## 30. First Milestone
 
 Do NOT start by building the complete AI world generator.
 
@@ -1309,7 +1314,7 @@ Use deterministic seed data.
 
 ---
 
-# 31. Second Milestone
+## 31. Second Milestone
 
 After milestone one is stable:
 
@@ -1341,7 +1346,7 @@ Add Playwright coverage for natural-language commands.
 
 ---
 
-# 32. Third Milestone
+## 32. Third Milestone
 
 Add AI narration.
 
@@ -1355,7 +1360,7 @@ Tests must verify that narration cannot alter authoritative game state.
 
 ---
 
-# 33. Fourth Milestone
+## 33. Fourth Milestone
 
 Add one AI-powered NPC.
 
@@ -1375,7 +1380,7 @@ Add tests proving the NPC does not receive unauthorized world knowledge.
 
 ---
 
-# 34. Fifth Milestone
+## 34. Fifth Milestone
 
 Add controlled AI world generation.
 
@@ -1389,7 +1394,7 @@ Add automated tests around generation validation.
 
 ---
 
-# 35. Definition of Done
+## 35. Definition of Done
 
 A feature is not done until:
 
@@ -1406,7 +1411,7 @@ A feature is not done until:
 
 ---
 
-# 36. Claude Operating Rules
+## 36. Claude Operating Rules
 
 When working on this project:
 
@@ -1441,7 +1446,7 @@ DO NOT:
 
 ---
 
-# 37. Coding Style
+## 37. Coding Style
 
 Prefer:
 
@@ -1461,7 +1466,7 @@ Comments should explain WHY, not restate obvious code.
 
 ---
 
-# 38. Documentation
+## 38. Documentation
 
 Maintain:
 
@@ -1490,7 +1495,7 @@ The README should eventually include:
 
 ---
 
-# 39. Initial Assignment
+## 39. Initial Assignment
 
 Begin by reviewing this entire specification.
 
@@ -1517,7 +1522,7 @@ Milestone One must be stable, tested, and deployable before moving to AI command
 
 ---
 
-# 40. Permanent Project Principle
+## 40. Permanent Project Principle
 
 Whenever there is uncertainty about whether an operation belongs to AI or deterministic application logic, default to deterministic application logic.
 
@@ -1525,7 +1530,7 @@ AI should make the game feel intelligent.
 
 The engine must keep the game true.
 
-# 41. Collaboration Style: Challenge Assumptions, Do Not Be a Yes-Man
+## 41. Collaboration Style: Challenge Assumptions, Do Not Be a Yes-Man
 
 Claude must act as a thoughtful senior engineering partner, not as an assistant that automatically agrees with every request.
 
@@ -1583,7 +1588,7 @@ Claude must never silently follow a technically harmful instruction simply becau
 
 ---
 
-# 42. Treat This Project as a Learning Project
+## 42. Treat This Project as a Learning Project
 
 This project is not only about producing working software.
 
@@ -1635,7 +1640,7 @@ Avoid turning routine changes into lengthy theoretical lectures.
 
 ---
 
-# 43. Periodic Understanding Checks
+## 43. Periodic Understanding Checks
 
 Occasionally ask the user short questions to confirm understanding and reinforce learning.
 
@@ -1684,7 +1689,7 @@ The purpose is retention, not examination.
 
 ---
 
-# 44. Special Teaching Focus: Python
+## 44. Special Teaching Focus: Python
 
 Assume the user is relatively new to Python.
 
@@ -1720,7 +1725,7 @@ Avoid introducing advanced Python features unless they offer a clear benefit.
 
 ---
 
-# 45. Special Teaching Focus: pytest
+## 45. Special Teaching Focus: pytest
 
 Assume the user is relatively new to pytest.
 
@@ -1762,7 +1767,7 @@ Avoid deeply nested fixture dependency chains unless justified.
 
 ---
 
-# 46. Special Teaching Focus: Playwright
+## 46. Special Teaching Focus: Playwright
 
 Assume the user is relatively new to Playwright.
 
@@ -1802,7 +1807,7 @@ When a feature does not need Playwright coverage, say why.
 
 ---
 
-# 47. Special Teaching Focus: Docker
+## 47. Special Teaching Focus: Docker
 
 Because the entire project uses containers, use Docker work as a teaching opportunity.
 
@@ -1838,7 +1843,7 @@ When debugging Docker problems, explain whether the problem belongs to:
 
 ---
 
-# 48. Explain Tests Before Hiding Them Behind Automation
+## 48. Explain Tests Before Hiding Them Behind Automation
 
 Automation scripts such as:
 
@@ -1878,7 +1883,7 @@ After the user understands them, normal work may use the convenient wrapper comm
 
 ---
 
-# 49. Prefer Incremental Code Changes for Learning
+## 49. Prefer Incremental Code Changes for Learning
 
 Avoid dropping enormous unexplained implementations into the repository.
 
@@ -1901,7 +1906,7 @@ Each increment should still be clean and intentional.
 
 ---
 
-# 50. Architecture Walkthroughs
+## 50. Architecture Walkthroughs
 
 At useful checkpoints, Claude should provide a short "where we are now" architecture explanation.
 
@@ -1941,7 +1946,7 @@ This is particularly important after:
 
 ---
 
-# 51. Code Review Mode
+## 51. Code Review Mode
 
 Claude should review its own work as a senior engineer would review a pull request.
 
@@ -1963,7 +1968,7 @@ If Claude identifies a concern, it should explain and address it rather than qui
 
 ---
 
-# 52. Learning Notes
+## 52. Learning Notes
 
 Maintain a lightweight project learning document:
 
@@ -2002,7 +2007,7 @@ Record concepts that are useful for learning and future reference.
 
 ---
 
-# 53. User Experience and Future Browser UI
+## 53. User Experience and Future Browser UI
 
 The browser application is command-first.
 
@@ -2045,7 +2050,7 @@ Design the frontend so they can be added without rebuilding the primary command 
 
 ---
 
-# 54. Command-Driven UI
+## 54. Command-Driven UI
 
 Eventually commands may control browser UI.
 
@@ -2082,7 +2087,7 @@ It does not change player location or world state.
 
 ---
 
-# 55. Structured UI Messages
+## 55. Structured UI Messages
 
 Do not make the frontend infer important state by parsing narration text.
 
@@ -2122,7 +2127,7 @@ but visual components should consume structured state.
 
 ---
 
-# 56. Separate Game State from UI State
+## 56. Separate Game State from UI State
 
 Authoritative game state and browser layout state are different concerns.
 
@@ -2148,7 +2153,7 @@ Persist UI preferences separately if persistence is later desired.
 
 ---
 
-# 57. Future Map Design
+## 57. Future Map Design
 
 Design map-related APIs so a richer visual map can be added later.
 
@@ -2176,7 +2181,7 @@ The backend should only send map information the player is permitted to know.
 
 ---
 
-# 58. Final Collaboration Principle
+## 58. Final Collaboration Principle
 
 Claude's role is not:
 
@@ -2194,7 +2199,7 @@ The project should produce both:
 1. a working AI-enhanced MUD
 2. a stronger developer who understands how it was built
 
-# 59. Multiplayer Is a Core Requirement
+## 59. Multiplayer Is a Core Requirement
 
 This is a persistent multi-user game.
 
@@ -2220,7 +2225,7 @@ Do not design the game as a single-player application that is later retrofitted 
 
 ---
 
-# 60. Player Presence
+## 60. Player Presence
 
 The game must maintain authoritative player presence.
 
@@ -2248,7 +2253,7 @@ AI may improve narration later, but it must not decide whether the movement actu
 
 ---
 
-# 61. Natural Player-to-Player Conversation
+## 61. Natural Player-to-Player Conversation
 
 Players who are in the same room should be able to talk naturally to one another with minimal game interference.
 
@@ -2290,7 +2295,7 @@ Room-local conversation is the first priority.
 
 ---
 
-# 62. Speech Versus Commands
+## 62. Speech Versus Commands
 
 The command system must clearly distinguish between:
 
@@ -2329,7 +2334,7 @@ Do not let AI accidentally transform casual player conversation into a gameplay 
 
 ---
 
-# 63. Shared Room State
+## 63. Shared Room State
 
 Rooms are shared persistent spaces.
 
@@ -2365,7 +2370,7 @@ This must be represented as real persistent world state, not generated narration
 
 ---
 
-# 64. Item Transfer Between Players
+## 64. Item Transfer Between Players
 
 Players in the same eligible location should be able to exchange items.
 
@@ -2402,7 +2407,7 @@ At no point should the item legitimately exist in both inventories.
 
 ---
 
-# 65. Concurrency and Race Conditions
+## 65. Concurrency and Race Conditions
 
 Because multiple users can act at nearly the same time, concurrency must be designed deliberately.
 
@@ -2441,7 +2446,7 @@ Tests should deliberately exercise important concurrency cases.
 
 ---
 
-# 66. Real-Time Multiplayer Events
+## 66. Real-Time Multiplayer Events
 
 Use the WebSocket layer to distribute relevant real-time events.
 
@@ -2478,7 +2483,7 @@ Only add audience types when they become useful.
 
 ---
 
-# 67. Perception and Visibility
+## 67. Perception and Visibility
 
 Being in the same room does not automatically mean every player can perceive every action forever.
 
@@ -2508,7 +2513,7 @@ Do not overbuild these systems in Milestone One, but avoid architectural assumpt
 
 ---
 
-# 68. Persistent Environmental Interaction
+## 68. Persistent Environmental Interaction
 
 Players should be able to leave meaningful effects in the shared world.
 
@@ -2535,7 +2540,7 @@ Do not let AI arbitrarily decide persistence.
 
 ---
 
-# 69. Player-to-Player Emotes and Actions
+## 69. Player-to-Player Emotes and Actions
 
 Support an extensible concept of social actions.
 
@@ -2568,7 +2573,7 @@ Mechanical player-versus-player actions, if later supported, must go through exp
 
 ---
 
-# 70. Player Agency
+## 70. Player Agency
 
 Never allow AI narration to take control of a human player's character.
 
@@ -2596,7 +2601,7 @@ This principle applies broadly to player agency.
 
 ---
 
-# 71. Multiplayer Interaction Model
+## 71. Multiplayer Interaction Model
 
 Useful initial deterministic multiplayer actions should eventually include:
 
@@ -2626,7 +2631,7 @@ Design the command/action model so they fit naturally later.
 
 ---
 
-# 72. Trading
+## 72. Trading
 
 Eventually consider a consensual trade workflow for valuable exchanges.
 
@@ -2649,7 +2654,7 @@ Do not build this until basic inventory transfer is stable.
 
 ---
 
-# 73. Multiplayer NPC Interaction
+## 73. Multiplayer NPC Interaction
 
 NPCs exist in the same shared world as players.
 
@@ -2668,7 +2673,7 @@ NPC knowledge and memory retrieval must be scoped carefully.
 
 ---
 
-# 74. Multiplayer AI Boundaries
+## 74. Multiplayer AI Boundaries
 
 AI must not become an unofficial shared-state synchronization mechanism.
 
@@ -2692,7 +2697,7 @@ The server remains authoritative.
 
 ---
 
-# 75. Event Architecture
+## 75. Event Architecture
 
 As multiplayer functionality grows, prefer a clear internal game-event model.
 
@@ -2729,7 +2734,7 @@ Claude should challenge premature use of Kafka, RabbitMQ, or similar infrastruct
 
 ---
 
-# 76. Multiplayer Test Strategy
+## 76. Multiplayer Test Strategy
 
 Multiplayer functionality requires dedicated automated tests.
 
@@ -2760,7 +2765,7 @@ Use real PostgreSQL in Docker for concurrency-sensitive integration tests where 
 
 ---
 
-# 77. Playwright Multiplayer Testing
+## 77. Playwright Multiplayer Testing
 
 Playwright must eventually test multiplayer behavior using separate isolated browser contexts or pages representing different users.
 
@@ -2792,7 +2797,7 @@ This more accurately models two independent users than simply opening two tabs i
 
 ---
 
-# 78. Multiplayer Seed/Test Users
+## 78. Multiplayer Seed/Test Users
 
 Automated tests must be able to create deterministic test users and characters.
 
@@ -2811,7 +2816,7 @@ Use unique identifiers and isolated database state where appropriate.
 
 ---
 
-# 79. Disconnects and Reconnects
+## 79. Disconnects and Reconnects
 
 Design for imperfect network connections.
 
@@ -2831,7 +2836,7 @@ Connection/session state and persistent character state are separate concerns.
 
 ---
 
-# 80. Multi-Instance Readiness
+## 80. Multi-Instance Readiness
 
 The initial local environment may run only one backend container.
 
@@ -2853,7 +2858,7 @@ Do not introduce distributed complexity prematurely, but document assumptions th
 
 ---
 
-# 81. Multiplayer Learning Focus
+## 81. Multiplayer Learning Focus
 
 Because multiplayer systems introduce important software-engineering concepts, use these features as teaching opportunities.
 
@@ -2882,7 +2887,7 @@ The purpose remains understanding, not examination.
 
 ---
 
-# 82. Multiplayer Guiding Principle
+## 82. Multiplayer Guiding Principle
 
 The world is shared.
 
@@ -2902,7 +2907,7 @@ WebSockets make the changes visible in real time.
 
 AI makes the shared world richer, more natural, and more expressive without becoming the source of truth.
 
-# 83. In-Game Economy
+## 83. In-Game Economy
 
 The game will have an authoritative in-game currency.
 
@@ -2941,7 +2946,7 @@ Avoid floating-point money calculations.
 
 ---
 
-# 84. Currency Design
+## 84. Currency Design
 
 The initial economy may use one canonical currency with display denominations.
 
@@ -2973,7 +2978,7 @@ but the initial implementation should stay simple.
 
 ---
 
-# 85. Buying and Selling at Stalls
+## 85. Buying and Selling at Stalls
 
 Players should be able to buy and sell items at shops, stalls, merchants, markets, or similar world entities.
 
@@ -3013,7 +3018,7 @@ The game engine decides:
 
 ---
 
-# 86. Merchant Inventory and Limited Stock
+## 86. Merchant Inventory and Limited Stock
 
 Stalls may have:
 
@@ -3035,7 +3040,7 @@ Do not duplicate limited items through race conditions.
 
 ---
 
-# 87. Direct Player-to-Player Sales
+## 87. Direct Player-to-Player Sales
 
 Players should be able to sell items directly to each other.
 
@@ -3076,7 +3081,7 @@ Never leave a partially completed confirmed trade.
 
 ---
 
-# 88. Trade Validation
+## 88. Trade Validation
 
 Before completing a trade, validate:
 
@@ -3096,7 +3101,7 @@ The final transaction must be server-authoritative.
 
 ---
 
-# 89. Rare Empowered Artifacts
+## 89. Rare Empowered Artifacts
 
 The world may occasionally contain rare items that grant unusually powerful abilities.
 
@@ -3132,7 +3137,7 @@ The system may occasionally create new empowered artifacts, but generated artifa
 
 ---
 
-# 90. Capability-Based Artifact Powers
+## 90. Capability-Based Artifact Powers
 
 Do not allow an empowered item to execute arbitrary code, arbitrary database mutations, or unrestricted natural-language world changes.
 
@@ -3169,7 +3174,7 @@ The engine determines whether the capability is allowed and what actually happen
 
 ---
 
-# 91. Example Empowered Artifact: The Examiner
+## 91. Example Empowered Artifact: The Examiner
 
 Example rare artifact:
 
@@ -3209,7 +3214,7 @@ Claude should challenge designs that make player inspection so complete or cheap
 
 ---
 
-# 92. Player Information Classification
+## 92. Player Information Classification
 
 Because empowered artifacts may reveal information about other players, classify player information.
 
@@ -3218,6 +3223,7 @@ Possible categories:
 PUBLIC
 
 Examples:
+
 - character name
 - visible appearance
 - obvious equipment
@@ -3226,6 +3232,7 @@ Examples:
 GAME-SENSITIVE
 
 Examples:
+
 - exact health
 - exact stats
 - hidden inventory
@@ -3236,6 +3243,7 @@ Examples:
 PRIVATE / NEVER EXPOSE THROUGH GAME POWERS
 
 Examples:
+
 - login credentials
 - email address
 - account identifiers not intended for gameplay
@@ -3251,7 +3259,7 @@ Never let AI decide this boundary dynamically.
 
 ---
 
-# 93. Environmental Powers
+## 93. Environmental Powers
 
 Some empowered artifacts may temporarily or permanently affect the environment.
 
@@ -3296,7 +3304,7 @@ Avoid global powers unless extremely rare and deliberately designed.
 
 ---
 
-# 94. Power Budget
+## 94. Power Budget
 
 Every empowered artifact should have a power budget.
 
@@ -3335,7 +3343,7 @@ A broken item remains broken even if only one player owns it.
 
 ---
 
-# 95. Artifact Charges, Cooldowns, and Recharge
+## 95. Artifact Charges, Cooldowns, and Recharge
 
 The item model should allow optional:
 
@@ -3366,7 +3374,7 @@ Use composable capability/effect models.
 
 ---
 
-# 96. Generated Empowered Artifacts
+## 96. Generated Empowered Artifacts
 
 The system may occasionally generate a new empowered artifact.
 
@@ -3402,7 +3410,7 @@ Rejected artifacts must never enter canonical game state.
 
 ---
 
-# 97. Rare Artifact Spawn Control
+## 97. Rare Artifact Spawn Control
 
 Do not allow AI to spontaneously create rare items simply because a player asks for one.
 
@@ -3432,7 +3440,7 @@ Potential safeguards:
 
 ---
 
-# 98. Rare Artifacts at Stalls
+## 98. Rare Artifacts at Stalls
 
 Selected stalls may occasionally sell empowered artifacts.
 
@@ -3457,7 +3465,7 @@ Claude should challenge economy designs that become pure "grind currency, buy po
 
 ---
 
-# 99. Item Valuation
+## 99. Item Valuation
 
 Every tradeable item may have values such as:
 
@@ -3484,7 +3492,7 @@ Dynamic economies may be considered later.
 
 ---
 
-# 100. Currency Creation and Economic Stability
+## 100. Currency Creation and Economic Stability
 
 Currency must enter and leave the game through deliberate mechanisms.
 
@@ -3523,7 +3531,7 @@ As the multiplayer population grows, add metrics for:
 
 ---
 
-# 101. Economic Exploit Prevention
+## 101. Economic Exploit Prevention
 
 Tests and validation must protect against duplication and economy exploits.
 
@@ -3551,7 +3559,7 @@ Use idempotency or transaction identifiers where appropriate for sensitive opera
 
 ---
 
-# 102. Audit Trail for Important Transactions
+## 102. Audit Trail for Important Transactions
 
 Maintain enough transaction history to debug meaningful economy problems.
 
@@ -3584,7 +3592,7 @@ Do not log sensitive account information unnecessarily.
 
 ---
 
-# 103. Artifact Ownership History
+## 103. Artifact Ownership History
 
 Rare empowered artifacts may have persistent provenance.
 
@@ -3613,7 +3621,7 @@ Do not let AI invent ownership history that never occurred.
 
 ---
 
-# 104. Death, Loss, and Rare Items
+## 104. Death, Loss, and Rare Items
 
 Before implementing player death, explicitly decide what happens to rare artifacts.
 
@@ -3634,7 +3642,7 @@ Do not implement punitive loss mechanics without deliberate design.
 
 ---
 
-# 105. Item Power Versus Player Power
+## 105. Item Power Versus Player Power
 
 Prefer interesting capabilities over simple numerical superiority.
 
@@ -3668,7 +3676,7 @@ Artifacts should create unusual possibilities rather than invalidate the rest of
 
 ---
 
-# 106. No True Unrestricted God Mode
+## 106. No True Unrestricted God Mode
 
 Players may sometimes feel extremely powerful, but they should never receive unrestricted administrative control.
 
@@ -3692,7 +3700,7 @@ It does not mean bypassing the game's security or authoritative architecture.
 
 ---
 
-# 107. Economy and Artifact Testing
+## 107. Economy and Artifact Testing
 
 Add unit tests for:
 
@@ -3735,7 +3743,7 @@ Add Playwright flows later for:
 
 ---
 
-# 108. Economy and Artifact Learning Focus
+## 108. Economy and Artifact Learning Focus
 
 Use this system to teach:
 
@@ -3764,7 +3772,7 @@ The authoritative server determines the price, validates balance and stock, then
 
 ---
 
-# 109. Economy and Power Guiding Principle
+## 109. Economy and Power Guiding Principle
 
 Currency, ownership, scarcity, and powers are shared-world facts.
 
@@ -3802,7 +3810,7 @@ AI makes power feel magical.
 
 The engine keeps it fair.
 
-# 110. Project Scope Discipline
+## 110. Project Scope Discipline
 
 This specification intentionally describes more features than should be built immediately.
 
@@ -3833,7 +3841,7 @@ Add only the minimum abstractions necessary to avoid obvious architectural dead 
 
 ---
 
-# 111. Four Project Layers
+## 111. Four Project Layers
 
 Organize the project roadmap into four broad layers:
 
@@ -3846,7 +3854,7 @@ Claude should use these categories when deciding whether a requested feature bel
 
 ---
 
-# 112. A. Core Architecture
+## 112. A. Core Architecture
 
 CORE ARCHITECTURE contains systems that must be designed correctly early because many later features depend on them.
 
@@ -3854,7 +3862,7 @@ These should be implemented incrementally during the earliest milestones.
 
 Core systems include:
 
-## Runtime and Infrastructure
+### Runtime and Infrastructure
 
 - Docker
 - Docker Compose
@@ -3869,7 +3877,7 @@ Core systems include:
 - database migrations
 - automated deployment gate
 
-## Backend Architecture
+### Backend Architecture
 
 - FastAPI
 - WebSockets
@@ -3883,7 +3891,7 @@ Core systems include:
 - validation
 - persistence
 
-## Frontend Architecture
+### Frontend Architecture
 
 - command-first browser interface
 - transcript
@@ -3893,7 +3901,7 @@ Core systems include:
 - future panel architecture
 - keyboard-first design
 
-## Testing Architecture
+### Testing Architecture
 
 - pytest
 - backend unit tests
@@ -3906,7 +3914,7 @@ Core systems include:
 - Dockerized test execution
 - test-gated deployment
 
-## Multiplayer Foundations
+### Multiplayer Foundations
 
 - players
 - sessions
@@ -3918,7 +3926,7 @@ Core systems include:
 - basic concurrency strategy
 - transaction safety
 
-## Persistent World Foundations
+### Persistent World Foundations
 
 - rooms
 - exits
@@ -3930,7 +3938,7 @@ Core systems include:
 - ownership
 - game events
 
-## Economy Foundations
+### Economy Foundations
 
 Architecture should permit:
 
@@ -3941,7 +3949,7 @@ Architecture should permit:
 
 But only basic economy behavior should be implemented when the roadmap reaches that milestone.
 
-## AI Boundaries
+### AI Boundaries
 
 Implement early:
 
@@ -3953,7 +3961,7 @@ Do not immediately implement every AI capability.
 
 ---
 
-# 113. Core Architecture Rule
+## 113. Core Architecture Rule
 
 If a future feature would require replacing a foundational assumption, consider it now.
 
@@ -3978,7 +3986,7 @@ Design the model so future holder types fit naturally.
 
 ---
 
-# 114. B. Early Gameplay
+## 114. B. Early Gameplay
 
 EARLY GAMEPLAY consists of features needed to prove the game is enjoyable and technically sound.
 
@@ -3988,7 +3996,7 @@ Suggested sequence follows.
 
 ---
 
-# 115. Early Gameplay Phase 1: Playable Shared World
+## 115. Early Gameplay Phase 1: Playable Shared World
 
 Create a small deterministic world.
 
@@ -4036,7 +4044,7 @@ This is the first meaningful vertical slice.
 
 ---
 
-# 116. Early Gameplay Phase 2: Natural Commands
+## 116. Early Gameplay Phase 2: Natural Commands
 
 Add AI command interpretation.
 
@@ -4056,7 +4064,7 @@ Do not yet add unrestricted AI-generated gameplay.
 
 ---
 
-# 117. Early Gameplay Phase 3: Player Interaction
+## 117. Early Gameplay Phase 3: Player Interaction
 
 Add:
 
@@ -4084,7 +4092,7 @@ Add tests for:
 
 ---
 
-# 118. Early Gameplay Phase 4: Basic Economy
+## 118. Early Gameplay Phase 4: Basic Economy
 
 Add the first in-game currency.
 
@@ -4112,7 +4120,7 @@ Prove transaction correctness first.
 
 ---
 
-# 119. Early Gameplay Phase 5: Direct Player Trading
+## 119. Early Gameplay Phase 5: Direct Player Trading
 
 After GIVE_ITEM and merchant transactions are stable, add:
 
@@ -4133,7 +4141,7 @@ Test heavily for:
 
 ---
 
-# 120. Early Gameplay Phase 6: First NPC
+## 120. Early Gameplay Phase 6: First NPC
 
 Implement one AI-supported NPC.
 
@@ -4152,7 +4160,7 @@ Use this one NPC to learn what works.
 
 ---
 
-# 121. Early Gameplay Phase 7: AI Narration
+## 121. Early Gameplay Phase 7: AI Narration
 
 Introduce optional AI narration.
 
@@ -4173,7 +4181,7 @@ This provides resilience when:
 
 ---
 
-# 122. Early Gameplay Phase 8: First Empowered Artifact
+## 122. Early Gameplay Phase 8: First Empowered Artifact
 
 Create ONE manually designed empowered artifact.
 
@@ -4209,7 +4217,7 @@ Only after this succeeds should generated artifacts be considered.
 
 ---
 
-# 123. Early Gameplay Phase 9: Basic Optional UI Panels
+## 123. Early Gameplay Phase 9: Basic Optional UI Panels
 
 Introduce optional browser panels while preserving the terminal interface.
 
@@ -4233,7 +4241,7 @@ Do not make visual panels mandatory.
 
 ---
 
-# 124. Early Gameplay Phase 10: Initial Map UI
+## 124. Early Gameplay Phase 10: Initial Map UI
 
 Add a basic visual map.
 
@@ -4257,7 +4265,7 @@ Do not send undiscovered secret locations to the browser.
 
 ---
 
-# 125. Early Gameplay Completion Criteria
+## 125. Early Gameplay Completion Criteria
 
 Before progressing into major later-game systems, the game should support a small group of real users who can:
 
@@ -4286,7 +4294,7 @@ Only after this point should development aggressively expand game mechanics.
 
 ---
 
-# 126. C. Later Gameplay
+## 126. C. Later Gameplay
 
 The following systems make sense but should not distract from validating the core game first.
 
@@ -4296,7 +4304,7 @@ Do NOT implement them prematurely.
 
 ---
 
-# 127. Later Gameplay: Character Development
+## 127. Later Gameplay: Character Development
 
 Potential systems:
 
@@ -4316,7 +4324,7 @@ Discuss the intended player experience first.
 
 ---
 
-# 128. Later Gameplay: Equipment
+## 128. Later Gameplay: Equipment
 
 Potential systems:
 
@@ -4333,7 +4341,7 @@ Possible equipment UI panel later.
 
 ---
 
-# 129. Later Gameplay: Containers
+## 129. Later Gameplay: Containers
 
 Support object containment:
 
@@ -4352,7 +4360,7 @@ Avoid pathological infinite nesting.
 
 ---
 
-# 130. Later Gameplay: Encumbrance
+## 130. Later Gameplay: Encumbrance
 
 Possible approaches:
 
@@ -4367,7 +4375,7 @@ Only implement if it improves gameplay.
 
 ---
 
-# 131. Later Gameplay: Durability and Item State
+## 131. Later Gameplay: Durability and Item State
 
 Possible states:
 
@@ -4385,7 +4393,7 @@ Avoid excessive maintenance mechanics unless they produce interesting decisions.
 
 ---
 
-# 132. Later Gameplay: Crafting
+## 132. Later Gameplay: Crafting
 
 Potential crafting flow:
 
@@ -4411,7 +4419,7 @@ Deterministic rules decide:
 
 ---
 
-# 133. Later Gameplay: Resource Gathering
+## 133. Later Gameplay: Resource Gathering
 
 Potential systems:
 
@@ -4433,7 +4441,7 @@ Avoid turning the game into repetitive resource grinding unless intentionally de
 
 ---
 
-# 134. Later Gameplay: Factions and Reputation
+## 134. Later Gameplay: Factions and Reputation
 
 Potential factions:
 
@@ -4459,7 +4467,7 @@ AI uses them when generating dialogue.
 
 ---
 
-# 135. Later Gameplay: Player Housing and Ownership
+## 135. Later Gameplay: Player Housing and Ownership
 
 Potential features:
 
@@ -4482,7 +4490,7 @@ Do not implement property systems until player persistence and economy are stabl
 
 ---
 
-# 136. Later Gameplay: Environmental Simulation
+## 136. Later Gameplay: Environmental Simulation
 
 Potential environmental systems:
 
@@ -4505,7 +4513,7 @@ Do not create a separate fake weather system only for artifacts.
 
 ---
 
-# 137. Later Gameplay: World Clock
+## 137. Later Gameplay: World Clock
 
 Decide later between:
 
@@ -4526,7 +4534,7 @@ World time may eventually affect:
 
 ---
 
-# 138. Later Gameplay: NPC Schedules
+## 138. Later Gameplay: NPC Schedules
 
 NPCs may eventually:
 
@@ -4544,7 +4552,7 @@ AI can help decide intentions within allowed rules.
 
 ---
 
-# 139. Later Gameplay: NPC Relationships
+## 139. Later Gameplay: NPC Relationships
 
 NPCs may have relationships with other NPCs.
 
@@ -4562,7 +4570,7 @@ These relationships can influence AI conversation while remaining persisted fact
 
 ---
 
-# 140. Later Gameplay: Rumours
+## 140. Later Gameplay: Rumours
 
 Create a distinction between:
 
@@ -4577,7 +4585,7 @@ AI can make rumours conversationally interesting while the system maintains trut
 
 ---
 
-# 141. Later Gameplay: Dynamic World Events
+## 141. Later Gameplay: Dynamic World Events
 
 Possible events:
 
@@ -4600,7 +4608,7 @@ AI narrates their consequences.
 
 ---
 
-# 142. Later Gameplay: Quests
+## 142. Later Gameplay: Quests
 
 Support separate concepts:
 
@@ -4624,7 +4632,7 @@ Multiple players may have different quests relating to the same event.
 
 ---
 
-# 143. Later Gameplay: Emergent Quests
+## 143. Later Gameplay: Emergent Quests
 
 Potential future system:
 
@@ -4651,7 +4659,7 @@ Do not let AI invent rewards outside allowed ranges.
 
 ---
 
-# 144. Later Gameplay: Crime and Law
+## 144. Later Gameplay: Crime and Law
 
 Potential systems:
 
@@ -4670,7 +4678,7 @@ Build only after player interaction rules are mature.
 
 ---
 
-# 145. Later Gameplay: PvP
+## 145. Later Gameplay: PvP
 
 PvP requires explicit policy.
 
@@ -4696,7 +4704,7 @@ have been deliberately designed.
 
 ---
 
-# 146. Later Gameplay: Death
+## 146. Later Gameplay: Death
 
 Before implementing death, define:
 
@@ -4713,7 +4721,7 @@ Death must not accidentally create duplication or permanent loss due to network 
 
 ---
 
-# 147. Later Gameplay: Parties
+## 147. Later Gameplay: Parties
 
 Potential party features:
 
@@ -4729,7 +4737,7 @@ Keep party membership deterministic.
 
 ---
 
-# 148. Later Gameplay: Guilds
+## 148. Later Gameplay: Guilds
 
 Potential guild systems:
 
@@ -4745,7 +4753,7 @@ Do not build before basic party/social systems prove useful.
 
 ---
 
-# 149. Later Gameplay: Followers and Companions
+## 149. Later Gameplay: Followers and Companions
 
 Possible:
 
@@ -4761,7 +4769,7 @@ Avoid creating entirely separate special-case actor systems.
 
 ---
 
-# 150. Later Gameplay: Travel Systems
+## 150. Later Gameplay: Travel Systems
 
 Possible:
 
@@ -4776,7 +4784,7 @@ Movement architecture should not assume all travel is a cardinal-direction room 
 
 ---
 
-# 151. Later Gameplay: Instancing
+## 151. Later Gameplay: Instancing
 
 Default philosophy:
 
@@ -4796,7 +4804,7 @@ Shared-world persistence is a core differentiator.
 
 ---
 
-# 152. Later Gameplay: Respawn and Reset Rules
+## 152. Later Gameplay: Respawn and Reset Rules
 
 Different entities may need explicit lifecycle policies.
 
@@ -4821,7 +4829,7 @@ Make lifecycle behavior explicit.
 
 ---
 
-# 153. Later Gameplay: Scarcity Classes
+## 153. Later Gameplay: Scarcity Classes
 
 Potential classifications:
 
@@ -4836,7 +4844,7 @@ Scarcity rules should be deterministic.
 
 ---
 
-# 154. Later Gameplay: Loot
+## 154. Later Gameplay: Loot
 
 Loot generation may combine:
 
@@ -4849,7 +4857,7 @@ AI must not determine unrestricted item power.
 
 ---
 
-# 155. Later Gameplay: Knowledge and Discovery
+## 155. Later Gameplay: Knowledge and Discovery
 
 Track separately:
 
@@ -4873,7 +4881,7 @@ This becomes especially important for AI context and map UI.
 
 ---
 
-# 156. Later Gameplay: Books, Notes, and Writing
+## 156. Later Gameplay: Books, Notes, and Writing
 
 Potential readable/writable objects:
 
@@ -4889,7 +4897,7 @@ User-generated content requires moderation and persistence design.
 
 ---
 
-# 157. Later Gameplay: World History
+## 157. Later Gameplay: World History
 
 This is a particularly important future feature.
 
@@ -4921,7 +4929,7 @@ AI may stylize facts but must not silently alter them.
 
 ---
 
-# 158. Later Gameplay: Achievements and Firsts
+## 158. Later Gameplay: Achievements and Firsts
 
 Possible recognition:
 
@@ -4934,7 +4942,7 @@ Avoid excessive gamified badges unless they fit the intended tone.
 
 ---
 
-# 159. Later Gameplay: In-Game Mail
+## 159. Later Gameplay: In-Game Mail
 
 Potential asynchronous communication:
 
@@ -4948,7 +4956,7 @@ Useful when players are not online simultaneously.
 
 ---
 
-# 160. Later Gameplay: Auction or Consignment
+## 160. Later Gameplay: Auction or Consignment
 
 Potential future economy systems:
 
@@ -4961,7 +4969,7 @@ Do not implement until the basic economy has enough player activity to justify t
 
 ---
 
-# 161. Later Gameplay: Admin and GM Tools
+## 161. Later Gameplay: Admin and GM Tools
 
 Administrative tools are mandatory before a real public launch.
 
@@ -4985,7 +4993,7 @@ Administrative privileges must remain entirely separate from empowered in-game a
 
 ---
 
-# 162. Later Gameplay: World Builder
+## 162. Later Gameplay: World Builder
 
 Eventually create an admin-facing world editor.
 
@@ -5006,7 +5014,7 @@ Avoid requiring direct SQL edits for normal content creation.
 
 ---
 
-# 163. Later Gameplay: Moderation
+## 163. Later Gameplay: Moderation
 
 Multiplayer requires moderation tools.
 
@@ -5025,7 +5033,7 @@ Do not treat this as optional before public deployment.
 
 ---
 
-# 164. Later Gameplay: AFK and Idle
+## 164. Later Gameplay: AFK and Idle
 
 Separate concepts:
 
@@ -5047,7 +5055,7 @@ Do not equate an open WebSocket with an actively participating player.
 
 ---
 
-# 165. Later Gameplay: Command Convenience
+## 165. Later Gameplay: Command Convenience
 
 Potential UI/command improvements:
 
@@ -5061,7 +5069,7 @@ Safeguard macros from becoming unattended automation/botting if that becomes a g
 
 ---
 
-# 166. Later Gameplay: Contextual References
+## 166. Later Gameplay: Contextual References
 
 Support conversational references such as:
 
@@ -5083,7 +5091,7 @@ The deterministic engine validates the resolved entity.
 
 ---
 
-# 167. Later Gameplay: Offline State
+## 167. Later Gameplay: Offline State
 
 Explicitly decide what continues while players are offline.
 
@@ -5101,7 +5109,7 @@ Do not accidentally infer offline behavior from connection state.
 
 ---
 
-# 168. Later Gameplay: Tutorial
+## 168. Later Gameplay: Tutorial
 
 Create onboarding that teaches both:
 
@@ -5112,7 +5120,7 @@ The tutorial should explain possibilities without requiring players to memorize 
 
 ---
 
-# 169. Later Gameplay: Contextual Help
+## 169. Later Gameplay: Contextual Help
 
 A future AI help system may explain deterministic game mechanics using current context.
 
@@ -5141,7 +5149,7 @@ It does not invent new rules.
 
 ---
 
-# 170. D. Experimental AI Features
+## 170. D. Experimental AI Features
 
 These features may become differentiators but should only be explored after the deterministic multiplayer foundation is reliable.
 
@@ -5149,7 +5157,7 @@ They are experiments, not initial requirements.
 
 ---
 
-# 171. Experimental AI: Generated World Expansion
+## 171. Experimental AI: Generated World Expansion
 
 Allow AI to propose new regions as players explore.
 
@@ -5182,7 +5190,7 @@ Do not regenerate locations after they become canonical.
 
 ---
 
-# 172. Experimental AI: Generated Artifacts
+## 172. Experimental AI: Generated Artifacts
 
 AI may propose rare artifacts.
 
@@ -5201,7 +5209,7 @@ Begin with human-reviewed generation if useful.
 
 ---
 
-# 173. Experimental AI: Emergent NPC Goals
+## 173. Experimental AI: Emergent NPC Goals
 
 NPCs may propose goals based on world conditions.
 
@@ -5219,7 +5227,7 @@ The deterministic system decides whether any resulting action is legal.
 
 ---
 
-# 174. Experimental AI: NPC-to-NPC Conversation
+## 174. Experimental AI: NPC-to-NPC Conversation
 
 NPCs may eventually converse when players are nearby or when simulation requires it.
 
@@ -5229,7 +5237,7 @@ Use event-driven activation and summarization.
 
 ---
 
-# 175. Experimental AI: Rumour Propagation
+## 175. Experimental AI: Rumour Propagation
 
 An interesting possible simulation:
 
@@ -5256,7 +5264,7 @@ This allows misinformation without corrupting canonical truth.
 
 ---
 
-# 176. Experimental AI: Living History
+## 176. Experimental AI: Living History
 
 Use recorded world history to generate:
 
@@ -5281,7 +5289,7 @@ IN_WORLD_RETELLING
 
 ---
 
-# 177. Experimental AI: Procedural Quests From Real Conditions
+## 177. Experimental AI: Procedural Quests From Real Conditions
 
 Instead of arbitrary:
 
@@ -5299,7 +5307,7 @@ Quest objectives and rewards remain validated.
 
 ---
 
-# 178. Experimental AI: Personalized Descriptions
+## 178. Experimental AI: Personalized Descriptions
 
 The same room might be described differently based on:
 
@@ -5329,7 +5337,7 @@ Narration reflects player perception.
 
 ---
 
-# 179. Experimental AI: Natural Multi-Step Intent
+## 179. Experimental AI: Natural Multi-Step Intent
 
 Eventually support:
 
@@ -5346,7 +5354,7 @@ Never let the AI pre-declare success.
 
 ---
 
-# 180. Experimental AI: AI Dungeon Master Layer
+## 180. Experimental AI: AI Dungeon Master Layer
 
 Eventually consider a bounded high-level AI system that notices interesting conditions and proposes:
 
@@ -5368,7 +5376,7 @@ Game engine disposes.
 
 ---
 
-# 181. Experimental AI: Adaptive Tutorial and Teaching
+## 181. Experimental AI: Adaptive Tutorial and Teaching
 
 The game itself may eventually observe that a player seems confused and offer contextual help.
 
@@ -5384,7 +5392,7 @@ Do not make assistance intrusive.
 
 ---
 
-# 182. Experimental AI: Player-Created Content Assistance
+## 182. Experimental AI: Player-Created Content Assistance
 
 Possible future tools allowing players to create:
 
@@ -5400,7 +5408,7 @@ User-created material requires moderation and ownership rules.
 
 ---
 
-# 183. Experimental AI Cost Rule
+## 183. Experimental AI Cost Rule
 
 Experimental AI features should not run continuously merely because they are possible.
 
@@ -5418,11 +5426,11 @@ AI must remain an enhancement rather than an operational dependency for core cor
 
 ---
 
-# 184. Implementation Priority Matrix
+## 184. Implementation Priority Matrix
 
 Use the following mental model.
 
-## BUILD EARLY
+### BUILD EARLY
 
 - Docker
 - FastAPI
@@ -5442,7 +5450,7 @@ Use the following mental model.
 - AI provider abstraction
 - FakeAIProvider
 
-## BUILD AFTER CORE IS STABLE
+### BUILD AFTER CORE IS STABLE
 
 - natural commands
 - player item transfer
@@ -5455,7 +5463,7 @@ Use the following mental model.
 - basic optional UI panels
 - map UI
 
-## DESIGN FOR BUT DEFER
+### DESIGN FOR BUT DEFER
 
 - progression
 - factions
@@ -5473,7 +5481,7 @@ Use the following mental model.
 - world builder
 - advanced moderation
 
-## EXPERIMENT MUCH LATER
+### EXPERIMENT MUCH LATER
 
 - dynamic world generation
 - generated artifacts
@@ -5486,7 +5494,7 @@ Use the following mental model.
 
 ---
 
-# 185. Anti-Overbuilding Rule
+## 185. Anti-Overbuilding Rule
 
 Claude must explicitly push back if the project begins implementing later-stage features before foundational systems are stable.
 
@@ -5514,7 +5522,7 @@ DO NOT expand multiplayer complexity aggressively.
 
 ---
 
-# 186. Promotion Criteria Between Phases
+## 186. Promotion Criteria Between Phases
 
 A system moves from experimental to normal development only after:
 
@@ -5531,7 +5539,7 @@ Do not promote a feature because a prototype merely "looks cool."
 
 ---
 
-# 187. Architecture Decision Records
+## 187. Architecture Decision Records
 
 For significant design choices, create lightweight Architecture Decision Records under:
 
@@ -5558,7 +5566,7 @@ These records are also teaching tools for the user.
 
 ---
 
-# 188. Feature Backlog Classification
+## 188. Feature Backlog Classification
 
 When the user proposes a new feature, Claude should classify it before implementation:
 
@@ -5587,7 +5595,7 @@ Do not use classification bureaucracy for trivial changes.
 
 ---
 
-# 189. Guiding Development Question
+## 189. Guiding Development Question
 
 Before building a feature, ask:
 
@@ -5600,7 +5608,7 @@ Core validation should take priority.
 
 ---
 
-# 190. Final Roadmap Principle
+## 190. Final Roadmap Principle
 
 The goal is not to build the largest possible MUD specification.
 
@@ -5625,7 +5633,7 @@ Prove the world is fun.
 
 Then let it grow.
 
-# 191. Developer Workflow Automation
+## 191. Developer Workflow Automation
 
 Create a small Windows-friendly developer tooling layer around Git, testing, Docker, database work, and local deployment.
 
@@ -5662,7 +5670,7 @@ CI may have equivalent Linux scripts later.
 
 ---
 
-# 192. Developer Script Location
+## 192. Developer Script Location
 
 Store developer workflow scripts under:
 
@@ -5703,7 +5711,7 @@ Add them when the corresponding workflow becomes real.
 
 ---
 
-# 193. Default Integration Branch
+## 193. Default Integration Branch
 
 Prefer:
 
@@ -5725,7 +5733,7 @@ Avoid scattering hard-coded `main` strings across many scripts.
 
 ---
 
-# 194. Feature Branch Workflow
+## 194. Feature Branch Workflow
 
 Use short-lived branches.
 
@@ -5752,7 +5760,7 @@ Do not introduce Git Flow unless the project later demonstrates a real need for 
 
 ---
 
-# 195. branch-new.bat
+## 195. branch-new.bat
 
 Create:
 
@@ -5786,7 +5794,7 @@ Do not automatically stash without clearly telling the user.
 
 ---
 
-# 196. branch-status.bat
+## 196. branch-status.bat
 
 Create:
 
@@ -5808,7 +5816,7 @@ Where appropriate, also show whether the current branch appears to have already 
 
 ---
 
-# 197. sync-main.bat
+## 197. sync-main.bat
 
 Create:
 
@@ -5832,7 +5840,7 @@ If fast-forward is impossible, stop and explain rather than silently merging.
 
 ---
 
-# 198. commit.bat
+## 198. commit.bat
 
 Create:
 
@@ -5867,7 +5875,7 @@ If no message is supplied, Claude may help generate one.
 
 ---
 
-# 199. Automatic Commit Message Generation
+## 199. Automatic Commit Message Generation
 
 Claude may generate commit messages when it has performed a coherent change.
 
@@ -5905,7 +5913,7 @@ Do not mention Claude or AI authorship in commit messages unless the user explic
 
 ---
 
-# 200. When Claude Should Suggest a Commit
+## 200. When Claude Should Suggest a Commit
 
 Claude should recognize natural commit boundaries.
 
@@ -5927,7 +5935,7 @@ A commit should represent a coherent idea that could reasonably be reviewed or r
 
 ---
 
-# 201. Claude May Commit When Appropriate
+## 201. Claude May Commit When Appropriate
 
 When operating directly in the development repository, Claude may create commits at sensible checkpoints if the user has authorized autonomous project work.
 
@@ -5951,7 +5959,7 @@ Do not push automatically unless explicitly authorized by the user or an establi
 
 ---
 
-# 202. Commit Safety Rules
+## 202. Commit Safety Rules
 
 Never commit:
 
@@ -5973,7 +5981,7 @@ If suspicious files are staged, stop and explain.
 
 ---
 
-# 203. test-unit.bat
+## 203. test-unit.bat
 
 Create:
 
@@ -5995,7 +6003,7 @@ The script must be suitable for use by other scripts as a quality gate.
 
 ---
 
-# 204. test-integration.bat
+## 204. test-integration.bat
 
 Create:
 
@@ -6012,7 +6020,7 @@ Do not run integration tests against the developer's normal persistent database.
 
 ---
 
-# 205. test-e2e.bat
+## 205. test-e2e.bat
 
 Create:
 
@@ -6037,7 +6045,7 @@ when they provide real value.
 
 ---
 
-# 206. test-all.bat
+## 206. test-all.bat
 
 Create:
 
@@ -6060,7 +6068,7 @@ This command should give high confidence before a feature is merged.
 
 ---
 
-# 207. test-changed.bat
+## 207. test-changed.bat
 
 Later create:
 
@@ -6094,7 +6102,7 @@ Full tests remain mandatory at merge/release gates.
 
 ---
 
-# 208. build.bat
+## 208. build.bat
 
 Create:
 
@@ -6112,7 +6120,7 @@ Building and deploying are separate concepts.
 
 ---
 
-# 209. deploy-local.bat
+## 209. deploy-local.bat
 
 Create:
 
@@ -6139,7 +6147,7 @@ If an emergency bypass is ever introduced, it must be explicit, highly visible, 
 
 ---
 
-# 210. up.bat and down.bat
+## 210. up.bat and down.bat
 
 Create convenience scripts:
 
@@ -6160,7 +6168,7 @@ Do not make `down.bat` delete the database.
 
 ---
 
-# 211. restart.bat
+## 211. restart.bat
 
 Create:
 
@@ -6180,7 +6188,7 @@ Prefer a simple restart for the default behavior.
 
 ---
 
-# 212. logs.bat
+## 212. logs.bat
 
 Create:
 
@@ -6198,7 +6206,7 @@ Allow Ctrl+C to stop following logs without stopping the containers.
 
 ---
 
-# 213. status.bat
+## 213. status.bat
 
 Create:
 
@@ -6217,7 +6225,7 @@ Keep output concise.
 
 ---
 
-# 214. db-shell.bat
+## 214. db-shell.bat
 
 Create:
 
@@ -6231,7 +6239,7 @@ Teach the user what command is being executed.
 
 ---
 
-# 215. db-migrate.bat
+## 215. db-migrate.bat
 
 Create:
 
@@ -6247,7 +6255,7 @@ Do not manually mutate schema as a substitute for migrations.
 
 ---
 
-# 216. db-reset.bat
+## 216. db-reset.bat
 
 Create:
 
@@ -6270,7 +6278,7 @@ Use an explicit environment check.
 
 ---
 
-# 217. seed.bat
+## 217. seed.bat
 
 Create:
 
@@ -6292,7 +6300,7 @@ Seeding should be idempotent where practical or clearly document whether it rese
 
 ---
 
-# 218. doctor.bat
+## 218. doctor.bat
 
 Create:
 
@@ -6319,7 +6327,7 @@ This is preferable to accumulating troubleshooting instructions that the user mu
 
 ---
 
-# 219. clean.bat
+## 219. clean.bat
 
 Create:
 
@@ -6344,7 +6352,7 @@ Provide a separate explicitly named destructive command if deep reset is ever ne
 
 ---
 
-# 220. finish-feature.bat
+## 220. finish-feature.bat
 
 Create:
 
@@ -6371,7 +6379,7 @@ The exact merge/rebase policy must be documented in an ADR or project Git workfl
 
 ---
 
-# 221. merge-main.bat
+## 221. merge-main.bat
 
 Create:
 
@@ -6406,7 +6414,7 @@ Do not automatically invent conflict resolutions without inspecting the conflict
 
 ---
 
-# 222. Merge Strategy
+## 222. Merge Strategy
 
 For this learning project, prefer a simple Git history.
 
@@ -6431,7 +6439,7 @@ Do not optimize Git history for aesthetics at the expense of losing useful reaso
 
 ---
 
-# 223. Automatic Feature Branch Creation
+## 223. Automatic Feature Branch Creation
 
 When Claude begins a coherent new feature while working directly in Git, it should consider whether a dedicated branch is appropriate.
 
@@ -6451,7 +6459,7 @@ Before creating a branch:
 
 ---
 
-# 224. Automatic Checkpoint Commits
+## 224. Automatic Checkpoint Commits
 
 During substantial development work, Claude may create checkpoint commits at sensible stable boundaries.
 
@@ -6480,7 +6488,7 @@ unless they are independently valuable.
 
 ---
 
-# 225. Pre-Commit Quality Checks
+## 225. Pre-Commit Quality Checks
 
 Do not depend only on optional Git hooks.
 
@@ -6505,7 +6513,7 @@ must independently enforce required gates.
 
 ---
 
-# 226. Optional Git Hooks
+## 226. Optional Git Hooks
 
 Later, if useful, add version-controlled hook templates under:
 
@@ -6524,20 +6532,23 @@ Provide an installation script:
 Possible behavior:
 
 PRE-COMMIT
+
 - quick formatting/lint checks
 - very fast unit tests
 
 COMMIT-MSG
+
 - optional Conventional Commit validation
 
 PRE-PUSH
+
 - broader test suite when practical
 
 Do not make hooks excessively slow or developers will bypass them.
 
 ---
 
-# 227. Auto-Generated Commit Messages Are Suggestions, Not Truth
+## 227. Auto-Generated Commit Messages Are Suggestions, Not Truth
 
 When Claude generates a commit message, derive it from the actual staged diff.
 
@@ -6555,7 +6566,7 @@ This keeps commit history aligned with actual code.
 
 ---
 
-# 228. Git Push Policy
+## 228. Git Push Policy
 
 Do not automatically push after every commit.
 
@@ -6583,7 +6594,7 @@ and explain why.
 
 ---
 
-# 229. main Branch Protection Philosophy
+## 229. main Branch Protection Philosophy
 
 Treat the integration branch as stable.
 
@@ -6601,7 +6612,7 @@ If the repository is later hosted on GitHub/GitLab, configure server-side branch
 
 ---
 
-# 230. Local Release Tagging
+## 230. Local Release Tagging
 
 Later, when milestones become meaningful, add:
 
@@ -6624,7 +6635,7 @@ Do not add release mechanics before they provide value.
 
 ---
 
-# 231. One-Command Developer Onboarding
+## 231. One-Command Developer Onboarding
 
 Eventually provide:
 
@@ -6645,7 +6656,7 @@ Do not overwrite an existing `.env`.
 
 ---
 
-# 232. help.bat
+## 232. help.bat
 
 Create:
 
@@ -6668,7 +6679,7 @@ This reduces the need to memorize commands.
 
 ---
 
-# 233. Makefile Versus Batch Files
+## 233. Makefile Versus Batch Files
 
 Because the primary developer environment is Windows, `.bat` files are the canonical local command interface.
 
@@ -6694,7 +6705,7 @@ SECONDARY:
 
 ---
 
-# 234. Script Output Style
+## 234. Script Output Style
 
 Developer scripts should clearly display what they are doing.
 
@@ -6716,7 +6727,7 @@ When invoking an important command, display enough context that the user learns 
 
 ---
 
-# 235. Script Exit Codes
+## 235. Script Exit Codes
 
 Every developer script must return useful exit codes.
 
@@ -6740,7 +6751,7 @@ Teach this concept when the first batch quality-gate script is created.
 
 ---
 
-# 236. Batch File Safety
+## 236. Batch File Safety
 
 Use Windows batch safely.
 
@@ -6774,7 +6785,7 @@ Explain this pattern when it is first introduced.
 
 ---
 
-# 237. Common Script Library
+## 237. Common Script Library
 
 If many `.bat` files begin duplicating setup logic, create:
 
@@ -6796,7 +6807,7 @@ Extract helpers only after duplication appears.
 
 ---
 
-# 238. Development Workflow Example
+## 238. Development Workflow Example
 
 A typical feature workflow should eventually feel like:
 
@@ -6824,7 +6835,7 @@ As the user becomes comfortable, routine explanations can become shorter.
 
 ---
 
-# 239. Claude Git Collaboration Rule
+## 239. Claude Git Collaboration Rule
 
 Claude should actively help maintain a healthy repository.
 
@@ -6845,7 +6856,7 @@ Do not interrupt the user constantly with Git housekeeping.
 
 ---
 
-# 240. Git as a Learning Tool
+## 240. Git as a Learning Tool
 
 Teach Git through the real project.
 
@@ -6886,7 +6897,7 @@ The user should understand both the convenience command and the Git operations b
 
 ---
 
-# 241. Developer Tooling Guiding Principle
+## 241. Developer Tooling Guiding Principle
 
 Developer automation should make the safe path easy.
 
