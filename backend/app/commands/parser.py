@@ -11,6 +11,13 @@ def parse_command(raw: str):
     command = parts[0]
     target = " ".join(parts[1:]) if len(parts) > 1 else None
 
+    if command in {"look", "l"} and len(parts) > 1 and parts[1] in {"in", "inside"}:
+        return {
+            "action": "look_in",
+            "container": " ".join(parts[2:]) or None,
+            "raw": text,
+        }
+
     if command in {"get", "take"} and "from" in parts[1:]:
         separator = parts.index("from", 1)
         return {

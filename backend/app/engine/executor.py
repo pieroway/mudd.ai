@@ -36,6 +36,32 @@ def execute_command(command, player, world):
         ]
         return {"success": True, "output": room.look(items_here), "room_id": room.id}
 
+    if action == "look_in":
+        container_target = command.get("container")
+        if not container_target:
+            return {"success": False, "output": "Usage: look in <container>."}
+
+        container = _find_item(world["items"], container_target)
+        if not _is_accessible(container, player):
+            return {
+                "success": False,
+                "output": f"You do not see a {container_target} here.",
+            }
+        if not container.can_open:
+            return {"success": False, "output": f"The {container.name} is not a container."}
+        if not container.is_open:
+            return {"success": False, "output": f"The {container.name} is closed."}
+
+        contents = sorted(
+            item.name for item in world["items"].values() if item.container_id == container.id
+        )
+        if not contents:
+            return {"success": True, "output": f"The {container.name} is empty."}
+        return {
+            "success": True,
+            "output": f"The {container.name} contains: {', '.join(contents)}.",
+        }
+
     if action == "move":
         direction = command.get("direction")
         room = world["rooms"][player.current_room_id]
@@ -200,6 +226,7 @@ def execute_command(command, player, world):
             "output": (
                 "Available commands: look, north, south, east, west, inventory, "
                 "take, take <item> from <container>, put <item> in <container>, "
+                "look in <container>, "
                 "drop, examine, open, close, use, help\n"
                 "Slash commands: /theme light | dark | techo"
             ),

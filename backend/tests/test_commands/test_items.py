@@ -52,6 +52,13 @@ def test_put_in_container_command_is_parsed(preposition):
     assert command["container"] == "chest"
 
 
+def test_look_in_container_command_is_parsed():
+    command = parse_command("look in chest")
+
+    assert command["action"] == "look_in"
+    assert command["container"] == "chest"
+
+
 def test_player_can_take_item_from_current_room(world_and_player):
     world, player = world_and_player
 
@@ -174,6 +181,28 @@ def test_player_can_put_an_item_in_an_open_container_and_take_it_back(world_and_
     assert player.inventory == ["torch"]
     assert world["items"]["torch"].owned_by == player.id
     assert world["items"]["torch"].container_id is None
+
+
+def test_player_can_look_in_an_open_container(world_and_player):
+    world, player = world_and_player
+    execute_command(parse_command("take torch"), player, world)
+    execute_command(parse_command("open chest"), player, world)
+    execute_command(parse_command("put torch in chest"), player, world)
+
+    result = execute_command(parse_command("look in chest"), player, world)
+
+    assert result == {"success": True, "output": "The chest contains: torch."}
+
+
+def test_empty_and_closed_container_descriptions(world_and_player):
+    world, player = world_and_player
+
+    closed_result = execute_command(parse_command("look in chest"), player, world)
+    execute_command(parse_command("open chest"), player, world)
+    empty_result = execute_command(parse_command("look in chest"), player, world)
+
+    assert closed_result == {"success": False, "output": "The chest is closed."}
+    assert empty_result == {"success": True, "output": "The chest is empty."}
 
 
 def test_player_cannot_use_a_closed_container(world_and_player):
