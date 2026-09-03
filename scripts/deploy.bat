@@ -19,6 +19,10 @@ echo Running Playwright workflow...
 call scripts\e2e.bat
 if errorlevel 1 goto failure
 
+echo Running smoke load test and authoritative-state checks...
+call scripts\load-test.bat smoke
+if errorlevel 1 goto failure
+
 echo Deployment gate passed.
 echo Frontend: http://localhost:5173
 echo Backend:  http://localhost:8000

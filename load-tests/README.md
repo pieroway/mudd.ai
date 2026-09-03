@@ -13,6 +13,10 @@ make load-stress    # 500 players, 10 minutes
 make load-crowded   # 100 players in one room, 2 minutes
 ```
 
+The `make deploy` gate automatically runs the smoke profile after the
+Playwright workflow. A failed k6 threshold or authoritative-state invariant
+stops deployment with a non-zero exit code.
+
 The first run may download the pinned k6 image. Each command builds and starts
 the isolated backend, runs the scenario, then removes its containers, network,
 and volumes even when a threshold fails.
@@ -21,6 +25,13 @@ Every run writes a timestamped k6 JSON summary to `load-tests/results/`. These
 generated reports are ignored by Git and remain available after the isolated
 containers are removed. Compare `command_latency`, `commands_sent`,
 `messages_received`, `ws_connecting`, and threshold results between runs.
+
+After k6 finishes, `check_invariants.py` examines the isolated PostgreSQL state
+before teardown. A run fails if either k6 thresholds or the invariant check fail.
+The checker validates exactly one location per item, container validity and
+cycles, light/fuel consistency, player room references, and normalized username
+uniqueness. It still runs when a performance threshold fails, allowing one run
+to report both performance and correctness results.
 
 Override the defaults directly if needed:
 

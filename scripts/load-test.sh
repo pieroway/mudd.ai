@@ -41,3 +41,12 @@ mkdir -p load-tests/results
 docker compose -f compose.load.yaml run --rm k6 run \
   --summary-export "/results/$RUN_ID-$profile.json" \
   "/scripts/scenarios/$scenario.js"
+k6_exit=$?
+docker compose -f compose.load.yaml exec -T backend_load \
+  python /load-tests/check_invariants.py
+invariant_exit=$?
+
+if [ "$k6_exit" -ne 0 ]; then
+  exit "$k6_exit"
+fi
+exit "$invariant_exit"

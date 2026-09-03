@@ -40,6 +40,8 @@ services:
         condition: service_healthy
       redis_load:
         condition: service_healthy
+    volumes:
+      - ./load-tests:/load-tests:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 2s

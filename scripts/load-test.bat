@@ -48,9 +48,12 @@ if errorlevel 1 goto :failed
 
 if not exist load-tests\results mkdir load-tests\results
 docker compose -f compose.load.yaml run --rm k6 run --summary-export "/results/%RUN_ID%-%PROFILE%.json" "/scripts/scenarios/%SCENARIO%.js"
-set "TEST_EXIT=%ERRORLEVEL%"
+set "K6_EXIT=%ERRORLEVEL%"
+docker compose -f compose.load.yaml exec -T backend_load python /load-tests/check_invariants.py
+set "INVARIANT_EXIT=%ERRORLEVEL%"
 docker compose -f compose.load.yaml down -v
-exit /b %TEST_EXIT%
+if not "%K6_EXIT%"=="0" exit /b %K6_EXIT%
+exit /b %INVARIANT_EXIT%
 
 :failed
 set "TEST_EXIT=%ERRORLEVEL%"

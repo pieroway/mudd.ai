@@ -6,7 +6,7 @@ help:
 	@echo "  make down         - Stop all services"
 	@echo "  make test         - Run unit tests"
 	@echo "  make e2e          - Run Playwright E2E tests"
-	@echo "  make deploy       - Full deployment pipeline (test + build + run)"
+	@echo "  make deploy       - Full gate (tests + build + E2E + load smoke)"
 	@echo "  make load-smoke   - Run a 10-player local WebSocket load test"
 	@echo "  make load-test    - Run a 100-player local WebSocket baseline"
 	@echo "  make load-stress  - Run a 500-player local WebSocket stress test"

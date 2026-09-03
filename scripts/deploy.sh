@@ -17,6 +17,9 @@ docker compose up -d --wait
 echo "Running Playwright workflow..."
 ./scripts/e2e.sh
 
+echo "Running smoke load test and authoritative-state checks..."
+./scripts/load-test.sh smoke
+
 echo "Deployment gate passed."
 echo "Frontend: http://localhost:5173"
 echo "Backend:  http://localhost:8000"
