@@ -223,6 +223,7 @@ make dev
 - [AI_MUD_CLAUDE_PROJECT_PROMPT.md](AI_MUD_CLAUDE_PROJECT_PROMPT.md) — Complete specification
 - [MILESTONE_ONE_PLAN.md](MILESTONE_ONE_PLAN.md) — M1 roadmap
 - [MILESTONE_TWO_PLAN.md](MILESTONE_TWO_PLAN.md) — Current M2 delivery plan
+- [Security review](docs/SECURITY_REVIEW_2026-09-02.md) — Open risks and remediation status
 - [AGENTS.md](AGENTS.md) — AI agent operating guide
 - [CLAUDE.md](CLAUDE.md) — Claude project instructions (to be created)
 

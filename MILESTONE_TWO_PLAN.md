@@ -4,6 +4,11 @@
 
 **In progress — started September 2, 2026.**
 
+Security work is tracked in
+[`docs/SECURITY_REVIEW_2026-09-02.md`](docs/SECURITY_REVIEW_2026-09-02.md). Its
+pre-M2 dependency, origin, input-limit, and logging findings should be addressed
+before expanding the command surface or enabling a real AI provider.
+
 Milestone One is complete. Milestone Two adds natural-language interpretation
 without weakening the deterministic engine: AI may propose a structured command,
 but the existing parser, validation, and engine remain authoritative.
