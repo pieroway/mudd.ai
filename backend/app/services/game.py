@@ -153,6 +153,16 @@ class GameService:
                         result["events"] = [
                             {"session_id": recipient_session, "text": recipient_output}
                         ]
+                if result.get("success"):
+                    activity_events = self._activity_events(
+                        session_id,
+                        command,
+                        player,
+                        active_players,
+                        active_sessions,
+                    )
+                    if activity_events:
+                        result.setdefault("events", []).extend(activity_events)
                 await repository.persist_world(
                     world,
                     player,
@@ -160,6 +170,83 @@ class GameService:
                     persist_items=lock_items,
                 )
                 return result
+
+    @staticmethod
+    def _activity_events(
+        session_id: str,
+        command: dict[str, Any],
+        player: Player,
+        active_players: list[Any],
+        active_sessions: dict[str, str],
+    ) -> list[dict[str, str]]:
+        action_value = command.get("action")
+        action = action_value if isinstance(action_value, str) else ""
+        sender_before = next(record for record in active_players if record.id == player.id)
+        sessions_by_player = {
+            player_id: candidate_session
+            for candidate_session, player_id in active_sessions.items()
+        }
+        events: list[dict[str, str]] = []
+
+        if action == "move":
+            direction_value = command.get("direction")
+            direction = direction_value if isinstance(direction_value, str) else ""
+            opposite = {
+                "north": "south",
+                "south": "north",
+                "east": "west",
+                "west": "east",
+                "up": "below",
+                "down": "above",
+            }.get(direction, direction)
+            for record in active_players:
+                recipient_session = sessions_by_player.get(record.id)
+                if recipient_session is None or recipient_session == session_id:
+                    continue
+                if record.current_room_id == sender_before.current_room_id:
+                    events.append(
+                        {
+                            "session_id": recipient_session,
+                            "text": f"{player.name} leaves to the {direction}.",
+                        }
+                    )
+                elif record.current_room_id == player.current_room_id:
+                    events.append(
+                        {
+                            "session_id": recipient_session,
+                            "text": f"{player.name} arrives from the {opposite}.",
+                        }
+                    )
+            return events
+
+        target = command.get("target")
+        activity = {
+            "take": f"{player.name} picks up the {target}.",
+            "drop": f"{player.name} drops the {target}.",
+            "open": f"{player.name} opens the {target}.",
+            "close": f"{player.name} closes the {target}.",
+            "put": f"{player.name} puts the {target} into a container.",
+            "take_from": f"{player.name} takes the {target} from a container.",
+            "give": f"{player.name} gives the {target} to another player.",
+        }.get(action)
+        if activity is None:
+            return events
+
+        direct_recipient_name = (
+            (command.get("target_player") or "").casefold()
+            if action == "give"
+            else None
+        )
+        for record in active_players:
+            recipient_session = sessions_by_player.get(record.id)
+            if (
+                recipient_session is not None
+                and recipient_session != session_id
+                and record.username.casefold() != direct_recipient_name
+                and record.current_room_id == player.current_room_id
+            ):
+                events.append({"session_id": recipient_session, "text": activity})
+        return events
 
     async def _speech_result(
         self,

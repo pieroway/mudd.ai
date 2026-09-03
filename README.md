@@ -4,6 +4,17 @@ A persistent multiplayer text-based game (MUD) with a deterministic authoritativ
 
 **Status:** Milestone One (Skeleton Phase) — Foundation in progress
 
+## Development with Codex
+
+This project is being developed with help from OpenAI Codex. Codex assists with
+implementing features, writing and updating tests, diagnosing failures, and
+maintaining documentation. The project owner directs the work, reviews the
+changes, and remains responsible for the architecture and final code.
+
+AI-assisted contributions follow the same project rules as every other change:
+the deterministic game engine owns authoritative state, generated code is
+reviewed, and the complete test gate must pass before deployment.
+
 ## Quick Start
 
 ### Prerequisites

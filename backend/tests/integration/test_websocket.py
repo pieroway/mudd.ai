@@ -11,6 +11,7 @@ def test_websocket_connections_have_independent_player_state(test_client):
             first_move = first.receive_json()
             assert first_move["success"] is True
             assert first_move["room_id"] == "forest"
+            assert second.receive_json()["text"] == "Alan leaves to the north."
 
             second.send_text("look")
             second_look = second.receive_json()
@@ -27,6 +28,7 @@ def test_only_one_websocket_player_can_take_a_shared_item(test_client):
 
             first.send_text("take torch")
             first_result = first.receive_json()
+            assert second.receive_json()["text"] == "Alan picks up the torch."
             second.send_text("take torch")
             second_result = second.receive_json()
 
@@ -63,6 +65,7 @@ def test_players_can_see_and_speak_to_others_in_the_same_room(test_client):
 
             robin.send_text("north")
             robin.receive_json()
+            assert alan.receive_json()["text"] == "Robin leaves to the north."
             alan.send_text("say Can you hear me?")
             assert alan.receive_json()["text"] == 'You say, "Can you hear me?"'
 
@@ -79,6 +82,7 @@ def test_players_can_tell_and_atomically_give_items(test_client):
 
             alan.send_text("take torch")
             alan.receive_json()
+            assert robin.receive_json()["text"] == "Alan picks up the torch."
             alan.send_text("give torch to Robin")
             assert alan.receive_json()["text"] == "You give the torch to Robin."
             assert robin.receive_json()["text"] == "Alan gives you the torch."
