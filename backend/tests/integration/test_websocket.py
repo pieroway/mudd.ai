@@ -70,6 +70,25 @@ def test_players_can_see_and_speak_to_others_in_the_same_room(test_client):
             assert alan.receive_json()["text"] == 'You say, "Can you hear me?"'
 
 
+def test_movement_output_lists_players_already_in_the_destination(test_client):
+    with test_client.websocket_connect("/ws?username=Alan") as alan:
+        alan.receive_json()
+        with test_client.websocket_connect("/ws?username=Robin") as robin:
+            robin.receive_json()
+
+            robin.send_text("north")
+            robin.receive_json()
+            assert alan.receive_json()["text"] == "Robin leaves to the north."
+
+            alan.send_text("north")
+            movement = alan.receive_json()
+
+            assert movement["success"] is True
+            assert movement["room_id"] == "forest"
+            assert "Also here: Robin." in movement["text"]
+            assert robin.receive_json()["text"] == "Alan arrives from the south."
+
+
 def test_players_can_tell_and_atomically_give_items(test_client):
     with test_client.websocket_connect("/ws?username=Alan") as alan:
         alan.receive_json()

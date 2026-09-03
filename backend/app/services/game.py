@@ -129,7 +129,7 @@ class GameService:
                         inventory=[],
                     )
                 result: dict[str, Any] = execute_command(command, player, world)
-                if command.get("action") == "look":
+                if command.get("action") in {"look", "move"} and result.get("success"):
                     others = sorted(
                         candidate.name
                         for candidate in domain_players.values()
