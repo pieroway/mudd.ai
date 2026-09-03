@@ -897,6 +897,86 @@ By the end of Milestone One, this should be true:
 
 ---
 
+## 13. Scalability Plan for 1,000 Connected Players
+
+This is post-Milestone-One work. The current single-process presence registry,
+direct WebSocket delivery, and global in-process command lock are appropriate
+for development but are not a production design for 1,000 concurrent players.
+PostgreSQL remains the authoritative store; Redis holds only ephemeral presence,
+routing, queueing, and rate-limit state.
+
+### Known Performance Risks
+
+- The global command lock serializes otherwise independent player actions.
+- Presence and connection ownership exist only inside one backend process.
+- Room-event delivery scans all connected players instead of indexed room members.
+- Slow WebSocket clients can delay command handling because delivery is inline.
+- Private and room messages cannot cross backend instances.
+- An unfiltered `who` response could produce an excessively large transcript.
+- Connection spikes, reconnect storms, and popular rooms can create hot spots.
+- Database and WebSocket pool limits have not been validated under sustained load.
+
+### Required Scalability Work
+
+- [ ] Replace the global command lock with PostgreSQL transactions and consistently
+      ordered row-level locks for contested players and items.
+- [ ] Store online-session leases and room membership indexes in Redis, with expiry
+      and disconnect cleanup for abandoned sessions.
+- [ ] Route room and private events across backend instances with Redis Pub/Sub or
+      Streams while preserving PostgreSQL as the source of authoritative state.
+- [ ] Use bounded per-connection outgoing queues so slow clients cannot block the
+      command path; define overflow and disconnect behavior.
+- [ ] Address room events through Redis room-membership sets instead of scanning
+      every connected player.
+- [ ] Add a paginated and filtered `who` command rather than returning all players.
+- [ ] Add per-player and per-room command/message rate limits.
+- [ ] Configure and measure database, Redis, and WebSocket connection pool limits.
+- [ ] Add metrics for active connections, commands per second, event fan-out,
+      queue depth, dropped messages, errors, and latency percentiles.
+- [ ] Add graceful connection draining for backend deploys and restarts.
+
+### Load-Test Gate
+
+Before claiming support for 1,000 players, define the expected command rate and
+room-size distribution, then test at least these scenarios:
+
+1. 1,000 mostly idle WebSocket connections with heartbeats.
+2. Sustained movement and chat across many rooms.
+3. A crowded-room fan-out test with hundreds of occupants.
+4. Concurrent attempts to take or give the same item.
+5. Disconnect and reconnect storms.
+6. Multiple backend instances with cross-instance `say`, `tell`, and movement.
+
+Record p50, p95, and p99 command latency, message-delivery latency, error rate,
+resource usage, and database lock contention. Concrete pass thresholds must be
+agreed before the load test; “1,000 connected” alone is not a sufficient capacity
+definition because idle connections and simultaneous commands have very different
+costs.
+
+### Deferred Room-Capacity Policy
+
+Prefer keeping popular rooms socially unified rather than immediately splitting
+them into separate instances. Introduce two operational thresholds when load
+testing shows they are needed:
+
+- A soft threshold, initially suggested at 100 occupants, where low-value activity
+  events are summarized, repetitive arrivals and departures are batched, and room
+  chat receives stricter rate limits.
+- An emergency hard cap, initially suggested at 500 occupants, where additional
+  entry is rejected with a clear explanation and available neighboring rooms are
+  suggested.
+
+The numbers are starting points, not promises; select them from measured fan-out,
+latency, and client-rendering results. If a hard cap is active, room entry must be
+atomic under concurrent movement. A rejected move leaves the player in the source
+room, consumes no torch fuel, and emits no departure or arrival event.
+
+Before implementation, define explicit policies for reconnecting players, staff,
+and parties. Private `tell` messages may continue across rooms, while `say` remains
+room-scoped. Overflow room instances are a last resort because they split players,
+conversation, and authoritative shared-item state; use them only as an intentional
+game design with clearly defined instance ownership and item behavior.
+
 ## Next Steps
 
 1. **Create the directory structure** (backend/, frontend/, e2e/, etc.)

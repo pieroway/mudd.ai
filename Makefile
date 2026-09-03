@@ -1,4 +1,4 @@
-.PHONY: help dev down test e2e deploy clean logs build
+.PHONY: help dev down test e2e deploy clean logs build load-smoke load-test load-stress
 
 help:
 	@echo "MUD AI - Available commands:"
@@ -7,6 +7,9 @@ help:
 	@echo "  make test         - Run unit tests"
 	@echo "  make e2e          - Run Playwright E2E tests"
 	@echo "  make deploy       - Full deployment pipeline (test + build + run)"
+	@echo "  make load-smoke   - Run a 10-player local WebSocket load test"
+	@echo "  make load-test    - Run a 100-player local WebSocket baseline"
+	@echo "  make load-stress  - Run a 500-player local WebSocket stress test"
 	@echo "  make build        - Build Docker images"
 	@echo "  make logs         - Follow backend logs"
 	@echo "  make clean        - Remove containers and volumes"
@@ -37,6 +40,15 @@ e2e:
 
 deploy:
 	@cmd /c scripts\deploy.bat
+
+load-smoke:
+	@cmd /c scripts\load-test.bat smoke
+
+load-test:
+	@cmd /c scripts\load-test.bat baseline
+
+load-stress:
+	@cmd /c scripts\load-test.bat stress
 
 clean:
 	@echo "🧹 Cleaning up..."

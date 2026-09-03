@@ -1,0 +1,65 @@
+name: muddai-load
+
+services:
+  postgres_load:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: muduser
+      POSTGRES_PASSWORD: mudpass
+      POSTGRES_DB: muddb_load
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U muduser -d muddb_load"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  redis_load:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  backend_load:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "18001:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://muduser:mudpass@postgres_load:5432/muddb_load
+      REDIS_URL: redis://redis_load:6379
+      AI_PROVIDER: fake
+      APP_ENV: test
+      LOG_LEVEL: WARNING
+    depends_on:
+      postgres_load:
+        condition: service_healthy
+      redis_load:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  k6:
+    image: grafana/k6:0.54.0
+    environment:
+      WS_URL: ws://backend_load:8000/ws
+      LOAD_VUS: ${LOAD_VUS:-25}
+      LOAD_DURATION: ${LOAD_DURATION:-1m}
+      SESSION_SECONDS: ${SESSION_SECONDS:-45}
+      THINK_TIME_MS: ${THINK_TIME_MS:-1000}
+      COMMAND_P95_MS: ${COMMAND_P95_MS:-500}
+      COMMAND_P99_MS: ${COMMAND_P99_MS:-1000}
+      RUN_ID: ${RUN_ID:-local}
+    volumes:
+      - ./load-tests:/scripts:ro
+    depends_on:
+      backend_load:
+        condition: service_healthy
+    command: run /scripts/scenarios/normal-gameplay.js
