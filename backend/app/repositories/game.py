@@ -41,6 +41,12 @@ class GameRepository:
         statement = select(PlayerRecord).where(PlayerRecord.id == player_id).with_for_update()
         return (await self.session.scalars(statement)).one()
 
+    async def load_players(self, player_ids: list[str]) -> list[PlayerRecord]:
+        if not player_ids:
+            return []
+        statement = select(PlayerRecord).where(PlayerRecord.id.in_(player_ids))
+        return list((await self.session.scalars(statement)).all())
+
     async def load_world(
         self, player_record: PlayerRecord, *, lock_items: bool = False
     ) -> tuple[dict[str, object], Player]:
@@ -76,6 +82,7 @@ class GameRepository:
                 use_message=record.use_message,
                 is_light_source=record.is_light_source,
                 is_lit=record.is_lit,
+                fuel_remaining=record.fuel_remaining,
             )
             for record in item_records
         }
@@ -110,6 +117,7 @@ class GameRepository:
             record.container_id = domain_item.container_id
             record.is_open = domain_item.is_open
             record.is_lit = domain_item.is_lit
+            record.fuel_remaining = domain_item.fuel_remaining
 
     async def load_player(self, player_id: str) -> Player:
         player_record = await self.session.get(PlayerRecord, player_id)

@@ -105,3 +105,21 @@ async def test_lit_torch_state_survives_service_restart(session_factory):
     result = await restarted_service.execute("connection-2", "look")
 
     assert "Torchlight reaches farther" in result["output"]
+
+
+@pytest.mark.asyncio
+async def test_torch_fuel_survives_service_restart(session_factory):
+    service = GameService(session_factory)
+    await service.connect_player("connection-1", "Alan")
+    await service.execute("connection-1", "take torch")
+    await service.execute("connection-1", "use torch")
+    for _ in range(5):
+        await service.execute("connection-1", "north")
+        await service.execute("connection-1", "south")
+    await service.disconnect_player("connection-1")
+
+    restarted_service = GameService(session_factory)
+    await restarted_service.connect_player("connection-2", "Alan")
+    result = await restarted_service.execute("connection-2", "examine torch")
+
+    assert "has some fuel remaining" in result["output"]

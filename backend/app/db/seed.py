@@ -42,10 +42,16 @@ async def seed_world(session: AsyncSession) -> None:
                     use_message=item.use_message,
                     is_light_source=item.is_light_source,
                     is_lit=item.is_lit,
+                    fuel_remaining=item.fuel_remaining,
                 )
             )
         else:
+            # Seeded item prose is canonical, while location, ownership, and
+            # consumable state remain persistent player-controlled state.
+            record.description = item.description
             record.can_open = item.can_open
             record.can_use = item.can_use
             record.use_message = item.use_message
             record.is_light_source = item.is_light_source
+            if record.fuel_remaining is None and item.fuel_remaining is not None:
+                record.fuel_remaining = item.fuel_remaining

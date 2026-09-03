@@ -46,3 +46,59 @@ def test_duplicate_connected_username_is_rejected(test_client):
                 "type": "error",
                 "text": "That username is already connected.",
             }
+
+
+def test_players_can_see_and_speak_to_others_in_the_same_room(test_client):
+    with test_client.websocket_connect("/ws?username=Alan") as alan:
+        alan.receive_json()
+        with test_client.websocket_connect("/ws?username=Robin") as robin:
+            robin.receive_json()
+
+            alan.send_text("look")
+            assert "Also here: Robin." in alan.receive_json()["text"]
+
+            alan.send_text("say Hello, Robin!")
+            assert alan.receive_json()["text"] == 'You say, "Hello, Robin!"'
+            assert robin.receive_json()["text"] == 'Alan says, "Hello, Robin!"'
+
+            robin.send_text("north")
+            robin.receive_json()
+            alan.send_text("say Can you hear me?")
+            assert alan.receive_json()["text"] == 'You say, "Can you hear me?"'
+
+
+def test_players_can_tell_and_atomically_give_items(test_client):
+    with test_client.websocket_connect("/ws?username=Alan") as alan:
+        alan.receive_json()
+        with test_client.websocket_connect("/ws?username=Robin") as robin:
+            robin.receive_json()
+
+            alan.send_text("say to Robin This is private.")
+            assert alan.receive_json()["text"] == 'You tell Robin, "This is private."'
+            assert robin.receive_json()["text"] == 'Alan tells you, "This is private."'
+
+            alan.send_text("take torch")
+            alan.receive_json()
+            alan.send_text("give torch to Robin")
+            assert alan.receive_json()["text"] == "You give the torch to Robin."
+            assert robin.receive_json()["text"] == "Alan gives you the torch."
+
+            robin.send_text("inventory")
+            assert robin.receive_json()["text"] == "Inventory: torch"
+
+
+def test_telling_yourself_returns_a_random_playful_warning(test_client):
+    from app.services.game import SELF_TALK_RESPONSES
+
+    with test_client.websocket_connect("/ws?username=Alan") as alan:
+        alan.receive_json()
+
+        alan.send_text("say to Alan Hello, me.")
+        say_to_result = alan.receive_json()
+        alan.send_text("tell ALAN Still there?")
+        tell_result = alan.receive_json()
+
+        assert say_to_result["success"] is False
+        assert say_to_result["text"] in SELF_TALK_RESPONSES
+        assert tell_result["success"] is False
+        assert tell_result["text"] in SELF_TALK_RESPONSES

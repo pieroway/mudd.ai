@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import Boolean, CheckConstraint, ForeignKey, String, Text
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -47,6 +47,10 @@ class ItemRecord(Base):
             name="ck_items_exactly_one_location",
         ),
         CheckConstraint("NOT is_open OR can_open", name="ck_items_open_requires_capability"),
+        CheckConstraint(
+            "fuel_remaining IS NULL OR fuel_remaining >= 0",
+            name="ck_items_fuel_nonnegative",
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(50), primary_key=True)
@@ -67,3 +71,4 @@ class ItemRecord(Base):
     use_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_light_source: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_lit: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    fuel_remaining: Mapped[int | None] = mapped_column(Integer, nullable=True)

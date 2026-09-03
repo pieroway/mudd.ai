@@ -76,3 +76,42 @@ def test_extinguished_torch_no_longer_reveals_adjacent_rooms():
     result = execute_command(parse_command("look"), player, world)
 
     assert "Torchlight reaches farther" not in result["output"]
+
+
+def test_successful_movement_consumes_lit_torch_fuel():
+    world = make_world_with_player()
+    player = world["players"]["alan"]
+    execute_command(parse_command("take torch"), player, world)
+    execute_command(parse_command("use torch"), player, world)
+
+    execute_command(parse_command("north"), player, world)
+
+    assert world["items"]["torch"].fuel_remaining == 19
+
+
+def test_failed_movement_does_not_consume_torch_fuel():
+    world = make_world_with_player()
+    player = world["players"]["alan"]
+    execute_command(parse_command("take torch"), player, world)
+    execute_command(parse_command("use torch"), player, world)
+
+    execute_command(parse_command("north"), player, world)
+    fuel_before_failed_move = world["items"]["torch"].fuel_remaining
+    result = execute_command(parse_command("east"), player, world)
+
+    assert result["success"] is False
+    assert world["items"]["torch"].fuel_remaining == fuel_before_failed_move
+
+
+def test_torch_automatically_extinguishes_when_fuel_reaches_zero():
+    world = make_world_with_player()
+    player = world["players"]["alan"]
+    execute_command(parse_command("take torch"), player, world)
+    execute_command(parse_command("use torch"), player, world)
+    world["items"]["torch"].fuel_remaining = 1
+
+    result = execute_command(parse_command("north"), player, world)
+
+    assert world["items"]["torch"].fuel_remaining == 0
+    assert world["items"]["torch"].is_lit is False
+    assert "The torch sputters out." in result["output"]

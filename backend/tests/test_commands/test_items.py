@@ -59,6 +59,23 @@ def test_look_in_container_command_is_parsed():
     assert command["container"] == "chest"
 
 
+def test_multiplayer_commands_preserve_message_text_and_parse_targets():
+    assert parse_command("say Hello there!") == {
+        "action": "say",
+        "message": "Hello there!",
+        "raw": "say Hello there!",
+    }
+    assert parse_command("say to Robin Keep WATCH!") == {
+        "action": "tell",
+        "target_player": "robin",
+        "message": "Keep WATCH!",
+        "raw": "say to Robin Keep WATCH!",
+    }
+    assert parse_command("give torch to Robin")["action"] == "give"
+    assert parse_command("give torch to Robin")["target"] == "torch"
+    assert parse_command("give torch to Robin")["target_player"] == "robin"
+
+
 @pytest.mark.parametrize("raw", ["extinguish torch", "douse torch", "put out torch"])
 def test_extinguish_command_aliases_are_parsed(raw):
     command = parse_command(raw)
@@ -102,6 +119,22 @@ def test_player_can_drop_carried_item(world_and_player):
     assert world["items"]["torch"].room_id == "town_square"
 
 
+def test_player_can_give_an_item_to_another_player_in_the_room(world_and_player):
+    world, player = world_and_player
+    robin = Player(id="robin", name="Robin", current_room_id="town_square")
+    world["players"][robin.id] = robin
+    execute_command(parse_command("take torch"), player, world)
+
+    result = execute_command(parse_command("give torch to Robin"), player, world)
+
+    assert result["success"] is True
+    assert result["output"] == "You give the torch to Robin."
+    assert result["recipient_output"] == "Alan gives you the torch."
+    assert world["items"]["torch"].owned_by == robin.id
+    assert player.inventory == []
+    assert robin.inventory == ["torch"]
+
+
 def test_player_cannot_drop_item_they_do_not_carry(world_and_player):
     world, player = world_and_player
 
@@ -111,6 +144,22 @@ def test_player_cannot_drop_item_they_do_not_carry(world_and_player):
     assert result["output"] == "You are not carrying a torch."
 
 
+def test_dropping_lit_torch_extinguishes_it_without_consuming_fuel(world_and_player):
+    world, player = world_and_player
+    execute_command(parse_command("take torch"), player, world)
+    execute_command(parse_command("use torch"), player, world)
+    world["items"]["torch"].fuel_remaining = 16
+
+    result = execute_command(parse_command("drop torch"), player, world)
+
+    torch = world["items"]["torch"]
+    assert result == {"success": True, "output": "You drop the torch. It goes out."}
+    assert torch.is_lit is False
+    assert torch.fuel_remaining == 16
+    assert torch.room_id == "town_square"
+    assert torch.owned_by is None
+
+
 def test_player_can_examine_room_item_or_carried_item(world_and_player):
     world, player = world_and_player
 
@@ -118,8 +167,15 @@ def test_player_can_examine_room_item_or_carried_item(world_and_player):
     execute_command(parse_command("take torch"), player, world)
     inventory_result = execute_command(parse_command("examine torch"), player, world)
 
-    assert room_result == {"success": True, "output": "A flickering torch."}
-    assert inventory_result == {"success": True, "output": "A flickering torch."}
+    expected = {
+        "success": True,
+        "output": (
+            "A wooden torch wrapped with an oil-soaked cloth. It is not lit "
+            "and has plenty of fuel remaining."
+        ),
+    }
+    assert room_result == expected
+    assert inventory_result == expected
 
 
 @pytest.mark.parametrize(
@@ -196,6 +252,47 @@ def test_player_can_extinguish_a_lit_torch(world_and_player):
 
     assert result == {"success": True, "output": "You extinguish the torch."}
     assert world["items"]["torch"].is_lit is False
+
+
+def test_examine_torch_reports_light_and_fuel_state(world_and_player):
+    world, player = world_and_player
+    execute_command(parse_command("take torch"), player, world)
+
+    result = execute_command(parse_command("examine torch"), player, world)
+
+    assert result == {
+        "success": True,
+        "output": (
+            "A wooden torch wrapped with an oil-soaked cloth. It is not lit "
+            "and has plenty of fuel remaining."
+        ),
+    }
+
+
+def test_examine_lit_torch_describes_its_flickering_flame(world_and_player):
+    world, player = world_and_player
+    execute_command(parse_command("take torch"), player, world)
+    execute_command(parse_command("use torch"), player, world)
+
+    result = execute_command(parse_command("examine torch"), player, world)
+
+    assert result == {
+        "success": True,
+        "output": (
+            "A wooden torch wrapped with an oil-soaked cloth. Its flame flickers "
+            "and has plenty of fuel remaining."
+        ),
+    }
+
+
+def test_spent_torch_cannot_be_lit(world_and_player):
+    world, player = world_and_player
+    execute_command(parse_command("take torch"), player, world)
+    world["items"]["torch"].fuel_remaining = 0
+
+    result = execute_command(parse_command("use torch"), player, world)
+
+    assert result == {"success": False, "output": "The torch is out of fuel."}
 
 
 def test_player_cannot_extinguish_an_unlit_torch(world_and_player):

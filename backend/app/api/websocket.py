@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 active_connections: Set[WebSocket] = set()
+connections_by_session: dict[str, WebSocket] = {}
 game_service = GameService()
 
 
@@ -25,6 +26,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
     await websocket.accept()
     active_connections.add(websocket)
+    connections_by_session[session_id] = websocket
 
     try:
         try:
@@ -57,6 +59,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
             try:
                 result = await game_service.execute(session_id, data)
+                events = result.pop("events", [])
                 await websocket.send_json(
                     {
                         "type": "game_output",
@@ -65,6 +68,12 @@ async def websocket_endpoint(websocket: WebSocket):
                         "room_id": result.get("room_id"),
                     }
                 )
+                for event in events:
+                    recipient = connections_by_session.get(event["session_id"])
+                    if recipient is not None:
+                        await recipient.send_json(
+                            {"type": "game_output", "success": True, "text": event["text"]}
+                        )
             except Exception:
                 logger.exception("Command execution error")
                 await websocket.send_json(
@@ -76,5 +85,6 @@ async def websocket_endpoint(websocket: WebSocket):
         logger.exception("WebSocket error")
     finally:
         active_connections.discard(websocket)
+        connections_by_session.pop(session_id, None)
         if connected:
             await game_service.disconnect_player(session_id)

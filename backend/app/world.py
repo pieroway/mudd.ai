@@ -51,11 +51,12 @@ def create_world() -> dict[str, Any]:
         "torch": Item(
             id="torch",
             name="torch",
-            description="A flickering torch.",
+            description="A wooden torch wrapped with an oil-soaked cloth.",
             room_id="town_square",
             can_use=True,
             use_message="The torch casts a steady pool of light.",
             is_light_source=True,
+            fuel_remaining=20,
         ),
         "mushroom": Item(
             id="mushroom",

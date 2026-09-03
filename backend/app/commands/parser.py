@@ -11,6 +11,43 @@ def parse_command(raw: str):
     command = parts[0]
     target = " ".join(parts[1:]) if len(parts) > 1 else None
 
+    if command == "say" and len(parts) > 1 and parts[1] == "to":
+        return {
+            "action": "tell",
+            "target_player": parts[2] if len(parts) > 2 else None,
+            "message": " ".join(text.split()[3:]) or None,
+            "raw": text,
+        }
+    if command == "tell":
+        return {
+            "action": "tell",
+            "target_player": parts[1] if len(parts) > 1 else None,
+            "message": " ".join(text.split()[2:]) or None,
+            "raw": text,
+        }
+    if command == "say":
+        return {
+            "action": "say",
+            "message": " ".join(text.split()[1:]) or None,
+            "raw": text,
+        }
+    if command == "give":
+        separator = parts.index("to", 1) if "to" in parts[1:] else None
+        return {
+            "action": "give",
+            "target": (
+                " ".join(parts[1:separator]) or None
+                if separator is not None
+                else target
+            ),
+            "target_player": (
+                " ".join(parts[separator + 1 :]) or None
+                if separator is not None
+                else None
+            ),
+            "raw": text,
+        }
+
     if command == "put" and len(parts) > 1 and parts[1] == "out":
         return {
             "action": "extinguish",

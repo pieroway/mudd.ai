@@ -94,4 +94,12 @@ test('player can open and close a persistent item', async ({ page }) => {
   await page.getByTestId('command-input').fill('put out torch')
   await page.getByTestId('command-input').press('Enter')
   await expect(transcript).toContainText('You extinguish the torch.')
+
+  await page.getByTestId('command-input').fill('use torch')
+  await page.getByTestId('command-input').press('Enter')
+  await expect(transcript).toContainText('The torch casts a steady pool of light.')
+
+  await page.getByTestId('command-input').fill('drop torch')
+  await page.getByTestId('command-input').press('Enter')
+  await expect(transcript).toContainText('You drop the torch. It goes out.')
 })
