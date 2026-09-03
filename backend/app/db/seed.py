@@ -40,9 +40,12 @@ async def seed_world(session: AsyncSession) -> None:
                     is_open=item.is_open,
                     can_use=item.can_use,
                     use_message=item.use_message,
+                    is_light_source=item.is_light_source,
+                    is_lit=item.is_lit,
                 )
             )
         else:
             record.can_open = item.can_open
             record.can_use = item.can_use
             record.use_message = item.use_message
+            record.is_light_source = item.is_light_source

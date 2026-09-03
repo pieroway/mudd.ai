@@ -81,6 +81,8 @@ class GameService:
             "drop",
             "open",
             "close",
+            "use",
+            "extinguish",
         }
         async with self.session_factory() as session:
             async with session.begin():

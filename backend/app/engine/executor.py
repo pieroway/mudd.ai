@@ -34,7 +34,18 @@ def execute_command(command, player, world):
             item.name for item in world["items"].values()
             if item.is_in_room(player.current_room_id)
         ]
-        return {"success": True, "output": room.look(items_here), "room_id": room.id}
+        output = room.look(items_here)
+        has_lit_light = any(
+            item.owned_by == player.id and item.is_light_source and item.is_lit
+            for item in world["items"].values()
+        )
+        if has_lit_light and room.exits:
+            distant_rooms = ", ".join(
+                f"{direction}: {world['rooms'][destination_id].name}"
+                for direction, destination_id in sorted(room.exits.items())
+            )
+            output += f"\nTorchlight reaches farther. Beyond the exits: {distant_rooms}."
+        return {"success": True, "output": output, "room_id": room.id}
 
     if action == "look_in":
         container_target = command.get("container")
@@ -133,6 +144,14 @@ def execute_command(command, player, world):
             return {"success": False, "output": f"The {container.name} is not a container."}
         if not container.is_open:
             return {"success": False, "output": f"The {container.name} is closed."}
+        if item.is_light_source and item.is_lit:
+            return {
+                "success": False,
+                "output": (
+                    f"You must extinguish the {item.name} before putting it "
+                    f"in the {container.name}."
+                ),
+            }
 
         player.inventory.remove(item.id)
         item.put_in(container.id)
@@ -182,7 +201,18 @@ def execute_command(command, player, world):
         if not item_is_accessible:
             return {"success": False, "output": f"You do not see a {target} here."}
 
-        return {"success": True, "output": item.description}
+        output = item.description
+        contains_items = any(
+            contained_item.container_id == item.id
+            for contained_item in world["items"].values()
+        )
+        if item.can_open and not item.is_open and contains_items:
+            output += (
+                " It seems heavier than you might expect, and something rattles "
+                "inside when you shake it."
+            )
+
+        return {"success": True, "output": output}
 
     if action in {"open", "close"}:
         target = command.get("target")
@@ -218,7 +248,31 @@ def execute_command(command, player, world):
         if not item.can_use:
             return {"success": False, "output": f"The {item.name} cannot be used."}
 
+        if item.is_light_source:
+            if item.is_lit:
+                return {"success": False, "output": f"The {item.name} is already lit."}
+            item.is_lit = True
+
         return {"success": True, "output": item.use_message or f"You use the {item.name}."}
+
+    if action == "extinguish":
+        target = command.get("target")
+        if not target:
+            return {"success": False, "output": "Extinguish what?"}
+
+        item = _find_item(world["items"], target)
+        if item is None or item.id not in player.inventory or item.owned_by != player.id:
+            return {
+                "success": False,
+                "output": f"You need to be carrying the {target} to extinguish it.",
+            }
+        if not item.is_light_source:
+            return {"success": False, "output": f"The {item.name} is not a light source."}
+        if not item.is_lit:
+            return {"success": False, "output": f"The {item.name} is not lit."}
+
+        item.is_lit = False
+        return {"success": True, "output": f"You extinguish the {item.name}."}
 
     if action == "help":
         return {
@@ -227,7 +281,7 @@ def execute_command(command, player, world):
                 "Available commands: look, north, south, east, west, inventory, "
                 "take, take <item> from <container>, put <item> in <container>, "
                 "look in <container>, "
-                "drop, examine, open, close, use, help\n"
+                "drop, examine, open, close, use, extinguish, help\n"
                 "Slash commands: /theme light | dark | techo"
             ),
         }

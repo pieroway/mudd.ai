@@ -15,6 +15,8 @@ class Item:
     is_open: bool = False
     can_use: bool = False
     use_message: str | None = None
+    is_light_source: bool = False
+    is_lit: bool = False
 
     def is_in_room(self, room_id: str) -> bool:
         return self.room_id == room_id and self.owned_by is None

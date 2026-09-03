@@ -55,6 +55,7 @@ def create_world() -> dict[str, Any]:
             room_id="town_square",
             can_use=True,
             use_message="The torch casts a steady pool of light.",
+            is_light_source=True,
         ),
         "mushroom": Item(
             id="mushroom",

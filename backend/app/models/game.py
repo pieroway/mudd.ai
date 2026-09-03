@@ -65,3 +65,5 @@ class ItemRecord(Base):
     is_open: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     can_use: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     use_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_light_source: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_lit: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

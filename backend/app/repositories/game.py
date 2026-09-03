@@ -74,6 +74,8 @@ class GameRepository:
                 is_open=record.is_open,
                 can_use=record.can_use,
                 use_message=record.use_message,
+                is_light_source=record.is_light_source,
+                is_lit=record.is_lit,
             )
             for record in item_records
         }
@@ -107,6 +109,7 @@ class GameRepository:
             record.owner_id = domain_item.owned_by
             record.container_id = domain_item.container_id
             record.is_open = domain_item.is_open
+            record.is_lit = domain_item.is_lit
 
     async def load_player(self, player_id: str) -> Player:
         player_record = await self.session.get(PlayerRecord, player_id)

@@ -90,3 +90,18 @@ async def test_container_contents_survive_service_restart(session_factory):
         "success": True,
         "output": "You take the torch from the chest.",
     }
+
+
+@pytest.mark.asyncio
+async def test_lit_torch_state_survives_service_restart(session_factory):
+    service = GameService(session_factory)
+    await service.connect_player("connection-1", "Alan")
+    await service.execute("connection-1", "take torch")
+    await service.execute("connection-1", "use torch")
+    await service.disconnect_player("connection-1")
+
+    restarted_service = GameService(session_factory)
+    await restarted_service.connect_player("connection-2", "Alan")
+    result = await restarted_service.execute("connection-2", "look")
+
+    assert "Torchlight reaches farther" in result["output"]

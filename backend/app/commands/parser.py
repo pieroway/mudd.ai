@@ -11,6 +11,15 @@ def parse_command(raw: str):
     command = parts[0]
     target = " ".join(parts[1:]) if len(parts) > 1 else None
 
+    if command == "put" and len(parts) > 1 and parts[1] == "out":
+        return {
+            "action": "extinguish",
+            "target": " ".join(parts[2:]) or None,
+            "raw": text,
+        }
+    if command in {"extinguish", "douse"}:
+        return {"action": "extinguish", "target": target, "raw": text}
+
     if command in {"look", "l"} and len(parts) > 1 and parts[1] in {"in", "inside"}:
         return {
             "action": "look_in",

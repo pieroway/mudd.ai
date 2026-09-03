@@ -59,6 +59,14 @@ def test_look_in_container_command_is_parsed():
     assert command["container"] == "chest"
 
 
+@pytest.mark.parametrize("raw", ["extinguish torch", "douse torch", "put out torch"])
+def test_extinguish_command_aliases_are_parsed(raw):
+    command = parse_command(raw)
+
+    assert command["action"] == "extinguish"
+    assert command["target"] == "torch"
+
+
 def test_player_can_take_item_from_current_room(world_and_player):
     world, player = world_and_player
 
@@ -166,6 +174,37 @@ def test_player_must_carry_an_item_to_use_it(world_and_player):
         "output": "You need to be carrying the torch to use it.",
     }
     assert used == {"success": True, "output": "The torch casts a steady pool of light."}
+    assert world["items"]["torch"].is_lit is True
+
+
+def test_using_an_already_lit_torch_is_rejected(world_and_player):
+    world, player = world_and_player
+    execute_command(parse_command("take torch"), player, world)
+    execute_command(parse_command("use torch"), player, world)
+
+    result = execute_command(parse_command("use torch"), player, world)
+
+    assert result == {"success": False, "output": "The torch is already lit."}
+
+
+def test_player_can_extinguish_a_lit_torch(world_and_player):
+    world, player = world_and_player
+    execute_command(parse_command("take torch"), player, world)
+    execute_command(parse_command("use torch"), player, world)
+
+    result = execute_command(parse_command("extinguish torch"), player, world)
+
+    assert result == {"success": True, "output": "You extinguish the torch."}
+    assert world["items"]["torch"].is_lit is False
+
+
+def test_player_cannot_extinguish_an_unlit_torch(world_and_player):
+    world, player = world_and_player
+    execute_command(parse_command("take torch"), player, world)
+
+    result = execute_command(parse_command("douse torch"), player, world)
+
+    assert result == {"success": False, "output": "The torch is not lit."}
 
 
 def test_player_can_put_an_item_in_an_open_container_and_take_it_back(world_and_player):
@@ -222,3 +261,52 @@ def test_player_can_only_put_carried_items_in_containers(world_and_player):
     result = execute_command(parse_command("put torch in chest"), player, world)
 
     assert result == {"success": False, "output": "You are not carrying a torch."}
+
+
+def test_player_must_extinguish_light_source_before_putting_it_in_container(
+    world_and_player,
+):
+    world, player = world_and_player
+    execute_command(parse_command("take torch"), player, world)
+    execute_command(parse_command("use torch"), player, world)
+    execute_command(parse_command("open chest"), player, world)
+
+    result = execute_command(parse_command("put torch in chest"), player, world)
+
+    assert result == {
+        "success": False,
+        "output": "You must extinguish the torch before putting it in the chest.",
+    }
+    assert player.inventory == ["torch"]
+    assert world["items"]["torch"].is_lit is True
+    assert world["items"]["torch"].container_id is None
+
+
+def test_examine_closed_nonempty_container_hints_at_hidden_contents(world_and_player):
+    world, player = world_and_player
+    execute_command(parse_command("take torch"), player, world)
+    execute_command(parse_command("open chest"), player, world)
+    execute_command(parse_command("put torch in chest"), player, world)
+    execute_command(parse_command("close chest"), player, world)
+
+    result = execute_command(parse_command("examine chest"), player, world)
+
+    assert result == {
+        "success": True,
+        "output": (
+            "A stout wooden chest reinforced with iron bands. "
+            "It seems heavier than you might expect, and something rattles "
+            "inside when you shake it."
+        ),
+    }
+
+
+def test_examine_closed_empty_container_does_not_hint_at_contents(world_and_player):
+    world, player = world_and_player
+
+    result = execute_command(parse_command("examine chest"), player, world)
+
+    assert result == {
+        "success": True,
+        "output": "A stout wooden chest reinforced with iron bands.",
+    }

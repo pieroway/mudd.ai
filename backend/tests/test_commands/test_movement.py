@@ -49,3 +49,30 @@ def test_help_lists_gameplay_and_client_slash_commands():
     assert result["success"] is True
     assert "Available commands: look" in result["output"]
     assert "Slash commands: /theme light | dark | techo" in result["output"]
+
+
+def test_lit_carried_torch_reveals_adjacent_room_names():
+    world = make_world_with_player()
+    player = world["players"]["alan"]
+    execute_command(parse_command("take torch"), player, world)
+
+    unlit_result = execute_command(parse_command("look"), player, world)
+    execute_command(parse_command("use torch"), player, world)
+    lit_result = execute_command(parse_command("look"), player, world)
+
+    assert "Torchlight reaches farther" not in unlit_result["output"]
+    assert "Torchlight reaches farther" in lit_result["output"]
+    assert "north: Forest" in lit_result["output"]
+    assert "south: Docks" in lit_result["output"]
+
+
+def test_extinguished_torch_no_longer_reveals_adjacent_rooms():
+    world = make_world_with_player()
+    player = world["players"]["alan"]
+    execute_command(parse_command("take torch"), player, world)
+    execute_command(parse_command("use torch"), player, world)
+    execute_command(parse_command("put out torch"), player, world)
+
+    result = execute_command(parse_command("look"), player, world)
+
+    assert "Torchlight reaches farther" not in result["output"]
