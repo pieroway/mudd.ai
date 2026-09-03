@@ -2,7 +2,7 @@
 
 A persistent multiplayer text-based game (MUD) with a deterministic authoritative game engine and controlled AI layers.
 
-**Status:** Milestone One (Skeleton Phase) — Foundation in progress
+**Status:** Milestone Two — AI command interpretation in progress
 
 ## Development with Codex
 
@@ -212,8 +212,8 @@ make dev
 
 ## Milestones
 
-- **M1** (Current): Deterministic 5-room MUD with terminal client
-- **M2**: AI natural-language command interpretation
+- **M1** (Complete): Deterministic 5-room MUD with terminal client
+- **M2** (Current): AI natural-language command interpretation
 - **M3**: AI narration
 - **M4**: One AI-powered NPC with personality/memory
 - **M5**: Controlled AI world generation
@@ -222,6 +222,7 @@ make dev
 
 - [AI_MUD_CLAUDE_PROJECT_PROMPT.md](AI_MUD_CLAUDE_PROJECT_PROMPT.md) — Complete specification
 - [MILESTONE_ONE_PLAN.md](MILESTONE_ONE_PLAN.md) — M1 roadmap
+- [MILESTONE_TWO_PLAN.md](MILESTONE_TWO_PLAN.md) — Current M2 delivery plan
 - [AGENTS.md](AGENTS.md) — AI agent operating guide
 - [CLAUDE.md](CLAUDE.md) — Claude project instructions (to be created)
 

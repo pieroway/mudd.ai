@@ -1,0 +1,69 @@
+# Milestone Two Plan — AI Command Interpretation
+
+## Status
+
+**In progress — started September 2, 2026.**
+
+Milestone One is complete. Milestone Two adds natural-language interpretation
+without weakening the deterministic engine: AI may propose a structured command,
+but the existing parser, validation, and engine remain authoritative.
+
+## Scope
+
+- Define a provider-independent `AIProvider` command-interpretation contract.
+- Define a strict schema for proposed commands and reject invalid output.
+- Add a deterministic `FakeAIProvider` for all automated tests.
+- Preserve the classic parser as the first path for known commands.
+- Send only otherwise-unrecognized input to the configured interpreter.
+- Execute accepted proposals through the existing authoritative game engine.
+- Add configuration that keeps AI disabled or fake by default.
+- Add backend, WebSocket, frontend, and focused Playwright coverage.
+
+Out of scope: AI narration, NPC intelligence, world generation, autonomous game
+state changes, and real-provider calls from tests.
+
+## Delivery Increments
+
+### 1. Contract and validation
+
+- [ ] Add the provider interface and typed interpretation request/response models.
+- [ ] Define the allowed action vocabulary and per-action fields.
+- [ ] Add schema-validation and malformed-output tests.
+- [ ] Add `FakeAIProvider` with explicit deterministic fixtures.
+
+### 2. Command fallback
+
+- [ ] Keep recognized classic commands on the existing zero-AI path.
+- [ ] Route unrecognized input to the provider through the game service.
+- [ ] Re-validate interpreted commands with normal engine rules.
+- [ ] Return a safe, useful error when interpretation fails or is unavailable.
+
+### 3. Protocol and user experience
+
+- [ ] Expose whether a result used classic or AI-assisted interpretation in
+      structured diagnostic metadata without requiring transcript parsing.
+- [ ] Add examples such as “walk toward the docks” and “look carefully at the
+      torch.”
+- [ ] Document configuration, privacy boundaries, timeouts, and failure behavior.
+
+### 4. Verification and optional real provider
+
+- [ ] Add WebSocket integration and Playwright coverage for natural language.
+- [ ] Verify AI proposals cannot bypass location, ownership, container, fuel, or
+      multiplayer concurrency rules.
+- [ ] Run the complete deployment gate, including its smoke load test and state
+      invariant check.
+- [ ] Only then evaluate a real provider adapter behind explicit configuration.
+
+## Definition of Done
+
+- Familiar deterministic commands work without an AI call.
+- Supported natural-language phrases become strictly validated commands.
+- Invalid, unavailable, or malicious provider output cannot mutate game state.
+- All automated tests use `FakeAIProvider`; no secrets or network calls are needed.
+- The full deployment gate passes.
+
+## Deferred Feature
+
+The multi-user communications panel is recorded in `docs/ROADMAP.md`. It remains
+post-M1 and is not required to complete AI command interpretation.

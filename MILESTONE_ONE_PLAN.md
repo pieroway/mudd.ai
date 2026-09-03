@@ -1,5 +1,11 @@
 # Milestone One Implementation Plan — Deterministic MUD
 
+> **Status: Complete — September 2, 2026.** The final deployment gate passed
+> 73 backend tests, 7 frontend tests, 3 Playwright tests, Docker health checks,
+> a 10-user smoke load test with no command failures, and the post-load
+> authoritative-state invariant check. New feature work proceeds under
+> [MILESTONE_TWO_PLAN.md](MILESTONE_TWO_PLAN.md).
+
 ## Executive Summary
 
 Milestone One creates a **playable, deterministic MUD with no AI yet**. Players can:
@@ -978,6 +984,9 @@ conversation, and authoritative shared-item state; use them only as an intention
 game design with clearly defined instance ownership and item behavior.
 
 ## Next Steps
+
+Milestone One is closed. The historical steps below are retained as the original
+implementation plan; current work is tracked in `MILESTONE_TWO_PLAN.md`.
 
 1. **Create the directory structure** (backend/, frontend/, e2e/, etc.)
 2. **Write docker/compose.yaml and compose.test.yaml**
