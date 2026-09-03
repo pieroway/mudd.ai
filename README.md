@@ -96,8 +96,8 @@ mudd.ai/
 ├── Makefile            # Common commands
 ├── README.md
 ├── AGENTS.md           # AI agent guidance
-├── CLAUDE.md           # Claude project instructions (future)
-└── AI_MUD_CLAUDE_PROJECT_PROMPT.md  # Full specification
+├── CODEX.md           # Codex project instructions
+└── AI_MUD_CODEX_PROJECT_PROMPT.md  # Full specification
 ```
 
 ## Architecture Overview
@@ -220,12 +220,12 @@ make dev
 
 ## Documentation
 
-- [AI_MUD_CLAUDE_PROJECT_PROMPT.md](AI_MUD_CLAUDE_PROJECT_PROMPT.md) — Complete specification
+- [AI_MUD_CODEX_PROJECT_PROMPT.md](AI_MUD_CODEX_PROJECT_PROMPT.md) — Complete specification
 - [MILESTONE_ONE_PLAN.md](MILESTONE_ONE_PLAN.md) — M1 roadmap
 - [MILESTONE_TWO_PLAN.md](MILESTONE_TWO_PLAN.md) — Current M2 delivery plan
 - [Security review](docs/SECURITY_REVIEW_2026-09-02.md) — Open risks and remediation status
 - [AGENTS.md](AGENTS.md) — AI agent operating guide
-- [CLAUDE.md](CLAUDE.md) — Claude project instructions (to be created)
+- [CODEX.md](CODEX.md) — Codex project instructions
 
 ## License
 

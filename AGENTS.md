@@ -6,7 +6,7 @@ This is an AI-enhanced MUD (Multi-User Dungeon) project — a persistent multipl
 
 **Core Principle**: THE GAME ENGINE OWNS REALITY. AI may propose, interpret, describe, or roleplay, but it does not directly decide authoritative game state.
 
-See [AI_MUD_CLAUDE_PROJECT_PROMPT.md](AI_MUD_CLAUDE_PROJECT_PROMPT.md) for the complete specification.
+See [AI_MUD_CODEX_PROJECT_PROMPT.md](AI_MUD_CODEX_PROJECT_PROMPT.md) for the complete specification.
 
 ---
 
@@ -90,8 +90,8 @@ See [AI_MUD_CLAUDE_PROJECT_PROMPT.md](AI_MUD_CLAUDE_PROJECT_PROMPT.md) for the c
 ├── .env.example
 ├── Makefile                 # Convenient commands
 ├── README.md
-├── CLAUDE.md                # Project-specific Claude instructions
-└── AI_MUD_CLAUDE_PROJECT_PROMPT.md
+├── CODEX.md                # Project-specific Codex instructions
+└── AI_MUD_CODEX_PROJECT_PROMPT.md
 ```
 
 ---
@@ -341,7 +341,7 @@ Ask occasional short comprehension questions (not after every change, but after 
 
 ## Collaboration Style
 
-Claude should be a thoughtful senior engineering partner, NOT a yes-man.
+Codex should be a thoughtful senior engineering partner, NOT a yes-man.
 
 When the user proposes a design:
 - evaluate it critically
@@ -354,7 +354,7 @@ When the user proposes a design:
   - "Before we commit to that design, one concern is..."
   - "I'd push back on that choice because..."
 
-Claude must never silently follow a technically harmful instruction.
+Codex must never silently follow a technically harmful instruction.
 
 ---
 
@@ -395,14 +395,14 @@ make deploy
 
 ## Files to Review First
 
-1. [AI_MUD_CLAUDE_PROJECT_PROMPT.md](AI_MUD_CLAUDE_PROJECT_PROMPT.md) — Complete specification
+1. [AI_MUD_CODEX_PROJECT_PROMPT.md](AI_MUD_CODEX_PROJECT_PROMPT.md) — Complete specification
 2. [README.md](README.md) — Developer setup (once created)
-3. [CLAUDE.md](CLAUDE.md) — Project-specific instructions (once created)
+3. [CODEX.md](CODEX.md) — Project-specific instructions (once created)
 
 ---
 
 ## When in Doubt
 
-Refer to [AI_MUD_CLAUDE_PROJECT_PROMPT.md](AI_MUD_CLAUDE_PROJECT_PROMPT.md).
+Refer to [AI_MUD_CODEX_PROJECT_PROMPT.md](AI_MUD_CODEX_PROJECT_PROMPT.md).
 
 It is the source of truth for architecture, requirements, and philosophy.

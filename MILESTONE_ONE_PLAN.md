@@ -193,9 +193,9 @@ mudd.ai/
 ├── .env.example
 ├── Makefile
 ├── README.md                    # Developer onboarding
-├── CLAUDE.md                    # Claude project instructions
+├── CODEX.md                    # Codex project instructions
 ├── AGENTS.md                    # AI agent guidance (✓ created)
-└── AI_MUD_CLAUDE_PROJECT_PROMPT.md  # Full specification
+└── AI_MUD_CODEX_PROJECT_PROMPT.md  # Full specification
 ```
 
 ---
@@ -840,7 +840,7 @@ def seed_world(db_session):
 
 ### Phase 11: Documentation & Deployment (Final)
 - [ ] README.md complete
-- [ ] CLAUDE.md with project instructions
+- [ ] CODEX.md with project instructions
 - [ ] Deployment script tested
 - [ ] Test gate enforced in CI
 
@@ -879,8 +879,8 @@ A feature is not done until:
 - ✅ Database migrations created (Alembic)
 - ✅ Docker build succeeds
 - ✅ All tests pass before deployment gate
-- ✅ Documentation updated (README, CLAUDE.md)
-- ✅ Claude reports exactly what changed and what tests ran
+- ✅ Documentation updated (README, CODEX.md)
+- ✅ Codex reports exactly what changed and what tests ran
 
 **No feature is done until tests pass and deployment succeeds.**
 

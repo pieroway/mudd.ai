@@ -55,7 +55,7 @@ exposed to the public internet or an untrusted network.
 ### SEC-004 — Known dependency vulnerabilities
 
 - **Severity:** High
-- **Status:** Open
+- **Status:** Resolved September 2, 2026
 - **Evidence:** `pip-audit` reported 20 advisories across FastAPI 0.109.0,
   Starlette 0.35.1, python-multipart 0.0.6, and python-dotenv 1.0.0. Several relate
   to denial of service or malformed form processing. The application currently
@@ -67,6 +67,12 @@ exposed to the public internet or an untrusted network.
 - **Remediation:** Upgrade compatible packages with tests. Remove
   `python-multipart` until a form/upload feature requires it. Upgrade the frontend
   toolchain and keep development servers off untrusted networks.
+- **Resolution:** Upgraded FastAPI to 0.141.1, Pydantic to 2.13.5,
+  pydantic-settings to 2.15.0, and python-dotenv to 1.2.3; removed the unused
+  python-multipart dependency; upgraded Vite, Vitest, the Vite React plugin, and
+  TypeScript ESLint; pinned all direct Node dependencies exactly. Follow-up
+  `pip-audit` and full `npm audit` scans reported no known vulnerabilities. The
+  full deployment gate also passed.
 
 ### SEC-005 — Missing connection, traffic, and input limits
 
@@ -125,7 +131,7 @@ exposed to the public internet or an untrusted network.
 
 ## Remediation Order
 
-- [ ] Upgrade or remove vulnerable dependencies (SEC-004).
+- [x] Upgrade or remove vulnerable dependencies (SEC-004).
 - [ ] Restrict HTTP and WebSocket origins (SEC-002).
 - [ ] Add input, connection, and rate limits (SEC-005).
 - [ ] Remove raw command content from logs (SEC-006).

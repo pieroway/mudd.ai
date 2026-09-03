@@ -1,18 +1,18 @@
-# CLAUDE.md — AI-Enhanced MUD Project Instructions
+# CODEX.md — AI-Enhanced MUD Project Instructions
 
-This file contains project-specific instructions for Claude (AI coding assistant) working on this repository.
+This file contains project-specific instructions for Codex working on this repository.
 
 ## Quick Context
 
-**Project:** AI-Enhanced MUD (Milestone One — Deterministic foundation)
+**Project:** AI-Enhanced MUD (Milestone Two — AI command interpretation)
 
-**Current Status:** Phase 1 skeleton created — ready for Phase 2 (foundation code)
+**Current Status:** Milestone One complete; Milestone Two security preparation and provider-contract work in progress
 
 **Architecture:** 7-layer deterministic game engine with controlled AI abstraction
 
 **Key Principle:** THE GAME ENGINE OWNS REALITY
 
-See [AI_MUD_CLAUDE_PROJECT_PROMPT.md](AI_MUD_CLAUDE_PROJECT_PROMPT.md) for complete specification.
+See [AI_MUD_CODEX_PROJECT_PROMPT.md](AI_MUD_CODEX_PROJECT_PROMPT.md) for complete specification.
 
 ---
 
@@ -20,7 +20,7 @@ See [AI_MUD_CLAUDE_PROJECT_PROMPT.md](AI_MUD_CLAUDE_PROJECT_PROMPT.md) for compl
 
 1. Review [AGENTS.md](AGENTS.md) — defines how to work on this project
 2. Review [MILESTONE_ONE_PLAN.md](MILESTONE_ONE_PLAN.md) — M1 implementation roadmap
-3. Read the relevant section of [AI_MUD_CLAUDE_PROJECT_PROMPT.md](AI_MUD_CLAUDE_PROJECT_PROMPT.md)
+3. Read the relevant section of [AI_MUD_CODEX_PROJECT_PROMPT.md](AI_MUD_CODEX_PROJECT_PROMPT.md)
 
 ---
 
@@ -121,10 +121,10 @@ If a test fails, STOP. Do not proceed until:
 
 | File | Purpose |
 |------|---------|
-| [AI_MUD_CLAUDE_PROJECT_PROMPT.md](AI_MUD_CLAUDE_PROJECT_PROMPT.md) | Complete specification (source of truth) |
+| [AI_MUD_CODEX_PROJECT_PROMPT.md](AI_MUD_CODEX_PROJECT_PROMPT.md) | Complete specification (source of truth) |
 | [AGENTS.md](AGENTS.md) | AI agent operating rules |
 | [MILESTONE_ONE_PLAN.md](MILESTONE_ONE_PLAN.md) | M1 roadmap with phases, schema, patterns |
-| [CLAUDE.md](CLAUDE.md) | This file — project-specific instructions |
+| [CODEX.md](CODEX.md) | This file — project-specific instructions |
 | [README.md](README.md) | Developer setup guide |
 | [compose.yaml](compose.yaml) | Development Docker stack |
 | [compose.test.yaml](compose.test.yaml) | Test Docker stack (isolated) |
@@ -281,7 +281,7 @@ Open http://localhost:5173 in browser → F12 → Console tab
 
 ## Collaboration Style
 
-I (Claude) will:
+I (Codex) will:
 - ✅ Evaluate designs critically
 - ✅ Challenge assumptions respectfully
 - ✅ Explain concepts as they arise
@@ -326,7 +326,7 @@ As the project grows, update this file:
 ## Questions?
 
 Refer to the specification files in order:
-1. [CLAUDE.md](CLAUDE.md) (this file)
+1. [CODEX.md](CODEX.md) (this file)
 2. [AGENTS.md](AGENTS.md)
 3. [MILESTONE_ONE_PLAN.md](MILESTONE_ONE_PLAN.md)
-4. [AI_MUD_CLAUDE_PROJECT_PROMPT.md](AI_MUD_CLAUDE_PROJECT_PROMPT.md) (complete truth)
+4. [AI_MUD_CODEX_PROJECT_PROMPT.md](AI_MUD_CODEX_PROJECT_PROMPT.md) (complete truth)
