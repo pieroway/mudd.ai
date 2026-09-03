@@ -47,6 +47,13 @@ class GameRepository:
         statement = select(PlayerRecord).where(PlayerRecord.id.in_(player_ids))
         return list((await self.session.scalars(statement)).all())
 
+    async def room_names(self, room_ids: set[str]) -> dict[str, str]:
+        if not room_ids:
+            return {}
+        statement = select(RoomRecord).where(RoomRecord.id.in_(room_ids))
+        records = (await self.session.scalars(statement)).all()
+        return {record.id: record.name for record in records}
+
     async def load_world(
         self, player_record: PlayerRecord, *, lock_items: bool = False
     ) -> tuple[dict[str, object], Player]:

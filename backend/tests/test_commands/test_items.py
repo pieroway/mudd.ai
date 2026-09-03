@@ -74,6 +74,12 @@ def test_multiplayer_commands_preserve_message_text_and_parse_targets():
     assert parse_command("give torch to Robin")["action"] == "give"
     assert parse_command("give torch to Robin")["target"] == "torch"
     assert parse_command("give torch to Robin")["target_player"] == "robin"
+    assert parse_command("who") == {"action": "who", "page": None, "raw": "who"}
+    assert parse_command("who 2") == {
+        "action": "who",
+        "page": "2",
+        "raw": "who 2",
+    }
 
 
 @pytest.mark.parametrize("raw", ["extinguish torch", "douse torch", "put out torch"])

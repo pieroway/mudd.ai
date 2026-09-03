@@ -31,6 +31,12 @@ def parse_command(raw: str):
             "message": " ".join(text.split()[1:]) or None,
             "raw": text,
         }
+    if command == "who":
+        return {
+            "action": "who",
+            "page": parts[1] if len(parts) == 2 else None,
+            "raw": text,
+        }
     if command == "give":
         separator = parts.index("to", 1) if "to" in parts[1:] else None
         return {

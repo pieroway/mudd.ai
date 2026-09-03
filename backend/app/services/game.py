@@ -100,6 +100,9 @@ class GameService:
                 session_id, player_id, command, active_sessions, active_player_ids
             )
 
+        if command.get("action") == "who":
+            return await self._who_result(command, active_player_ids)
+
         lock_items = command.get("action") in {
             "take",
             "take_from",
@@ -170,6 +173,45 @@ class GameService:
                     persist_items=lock_items,
                 )
                 return result
+
+    async def _who_result(
+        self, command: dict[str, Any], active_player_ids: list[str]
+    ) -> dict[str, Any]:
+        raw_page = command.get("page")
+        try:
+            page = int(raw_page) if raw_page is not None else 1
+        except (TypeError, ValueError):
+            return {"success": False, "output": "Usage: who [page]."}
+        if page < 1:
+            return {"success": False, "output": "Page number must be at least 1."}
+
+        async with self.session_factory() as session:
+            repository = GameRepository(session)
+            records = await repository.load_players(active_player_ids)
+            room_names = await repository.room_names(
+                {record.current_room_id for record in records}
+            )
+
+        records.sort(key=lambda record: record.username.casefold())
+        page_size = 25
+        page_count = max(1, (len(records) + page_size - 1) // page_size)
+        if page > page_count:
+            return {
+                "success": False,
+                "output": f"There are only {page_count} pages of connected players.",
+            }
+
+        start = (page - 1) * page_size
+        visible_records = records[start : start + page_size]
+        heading = f"Players online ({len(records)})"
+        if page_count > 1:
+            heading += f" — page {page}/{page_count}"
+        lines = [f"{heading}:"]
+        lines.extend(
+            f"- {record.username} — {room_names[record.current_room_id]}"
+            for record in visible_records
+        )
+        return {"success": True, "output": "\n".join(lines)}
 
     @staticmethod
     def _activity_events(

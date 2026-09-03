@@ -125,3 +125,22 @@ def test_telling_yourself_returns_a_random_playful_warning(test_client):
         assert say_to_result["text"] in SELF_TALK_RESPONSES
         assert tell_result["success"] is False
         assert tell_result["text"] in SELF_TALK_RESPONSES
+
+
+def test_who_lists_only_connected_players_and_their_rooms(test_client):
+    with test_client.websocket_connect("/ws?username=Robin") as robin:
+        robin.receive_json()
+        robin.send_text("north")
+        robin.receive_json()
+
+        with test_client.websocket_connect("/ws?username=Alan") as alan:
+            alan.receive_json()
+            alan.send_text("who")
+            result = alan.receive_json()
+
+            assert result["success"] is True
+            assert result["text"] == (
+                "Players online (2):\n"
+                "- Alan — Town Square\n"
+                "- Robin — Forest"
+            )
