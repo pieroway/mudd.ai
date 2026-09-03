@@ -38,6 +38,7 @@ e2e/playwright-report/
 # Logs
 *.log
 logs/
+load-tests/results/*.json
 
 # OS
 .DS_Store

@@ -10,11 +10,17 @@ Redis storage. They never use development or production game data.
 make load-smoke     # 10 players, 30 seconds
 make load-test      # 100 players, 5 minutes
 make load-stress    # 500 players, 10 minutes
+make load-crowded   # 100 players in one room, 2 minutes
 ```
 
 The first run may download the pinned k6 image. Each command builds and starts
 the isolated backend, runs the scenario, then removes its containers, network,
 and volumes even when a threshold fails.
+
+Every run writes a timestamped k6 JSON summary to `load-tests/results/`. These
+generated reports are ignored by Git and remain available after the isolated
+containers are removed. Compare `command_latency`, `commands_sent`,
+`messages_received`, `ws_connecting`, and threshold results between runs.
 
 Override the defaults directly if needed:
 
@@ -32,6 +38,11 @@ Compose command.
 `normal-gameplay.js` creates unique players that repeatedly run `look`,
 `inventory`, `north`, and `south`. Only one command is outstanding per player,
 so command-response latency can be measured despite unsolicited room events.
+
+`crowded-room.js` keeps every simulated player in Town Square and repeatedly
+uses `say`. This deliberately creates room-wide fan-out: each command produces
+roughly one outbound event per other occupant. It is expected to expose limits
+earlier than the normal-gameplay scenario.
 
 The baseline and stress runs fail if:
 

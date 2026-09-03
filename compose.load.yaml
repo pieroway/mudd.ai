@@ -59,6 +59,7 @@ services:
       RUN_ID: ${RUN_ID:-local}
     volumes:
       - ./load-tests:/scripts:ro
+      - ./load-tests/results:/results
     depends_on:
       backend_load:
         condition: service_healthy
