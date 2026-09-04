@@ -4,8 +4,11 @@ import asyncio
 from secrets import choice
 from typing import Any
 
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.ai.models import InterpretCommandRequest, InterpretCommandResponse
+from app.ai.provider import AIProvider, AIProviderError
 from app.commands.parser import parse_command
 from app.db import get_session_factory
 from app.domain.player import Player
@@ -45,9 +48,12 @@ class GameService:
     """Coordinate persistent players with transactional game commands."""
 
     def __init__(
-        self, session_factory: async_sessionmaker[AsyncSession] | None = None
+        self,
+        session_factory: async_sessionmaker[AsyncSession] | None = None,
+        ai_provider: AIProvider | None = None,
     ) -> None:
         self.session_factory = session_factory or get_session_factory()
+        self.ai_provider = ai_provider
         self._session_players: dict[str, str] = {}
         self._session_usernames: dict[str, str] = {}
         self._active_usernames: set[str] = set()
@@ -86,6 +92,21 @@ class GameService:
             raise KeyError(f"No active player session: {session_id}")
 
         command = parse_command(raw_command)
+        if command.get("action") == "unknown" and self.ai_provider is not None:
+            try:
+                proposed = await self.ai_provider.interpret_command(
+                    InterpretCommandRequest(raw_input=raw_command)
+                )
+                validated = InterpretCommandResponse.model_validate(proposed)
+            except (AIProviderError, ValidationError):
+                return {
+                    "success": False,
+                    "output": (
+                        "I couldn't interpret that command. "
+                        "Try 'help' for available commands."
+                    ),
+                }
+            command = validated.command.model_dump()
         async with self._command_lock:
             return await self._execute_locked(session_id, player_id, command)
 

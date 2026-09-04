@@ -38,10 +38,10 @@ state changes, and real-provider calls from tests.
 
 ### 2. Command fallback
 
-- [ ] Keep recognized classic commands on the existing zero-AI path.
-- [ ] Route unrecognized input to the provider through the game service.
-- [ ] Re-validate interpreted commands with normal engine rules.
-- [ ] Return a safe, useful error when interpretation fails or is unavailable.
+- [x] Keep recognized classic commands on the existing zero-AI path.
+- [x] Route unrecognized input to the provider through the game service.
+- [x] Re-validate interpreted commands with normal engine rules.
+- [x] Return a safe, useful error when interpretation fails or is unavailable.
 
 ### 3. Protocol and user experience
 

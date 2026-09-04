@@ -2,6 +2,9 @@ import asyncio
 
 import pytest
 
+from app.ai.fake import FakeAIProvider
+from app.ai.models import InterpretCommandRequest, InterpretCommandResponse
+from app.ai.provider import AIProvider
 from app.services.game import GameService, UsernameInUseError
 
 
@@ -123,3 +126,65 @@ async def test_torch_fuel_survives_service_restart(session_factory):
     result = await restarted_service.execute("connection-2", "examine torch")
 
     assert "has some fuel remaining" in result["output"]
+
+
+@pytest.mark.asyncio
+async def test_classic_commands_do_not_call_ai_provider(session_factory):
+    provider = FakeAIProvider()
+    service = GameService(session_factory, ai_provider=provider)
+    await service.connect_player("connection-1", "Alan")
+
+    result = await service.execute("connection-1", "look")
+
+    assert result["success"] is True
+    assert provider.requests == []
+
+
+@pytest.mark.asyncio
+async def test_unknown_commands_use_ai_proposal_then_authoritative_engine(session_factory):
+    provider = FakeAIProvider()
+    service = GameService(session_factory, ai_provider=provider)
+    player = await service.connect_player("connection-1", "Alan")
+
+    result = await service.execute("connection-1", "walk toward the docks")
+
+    assert result["success"] is True
+    assert (await service.room_for_player(player.id)).id == "docks"
+    assert provider.requests == [
+        InterpretCommandRequest(raw_input="walk toward the docks")
+    ]
+
+
+@pytest.mark.asyncio
+async def test_unavailable_interpretation_returns_safe_error_without_mutation(session_factory):
+    provider = FakeAIProvider()
+    service = GameService(session_factory, ai_provider=provider)
+    player = await service.connect_player("connection-1", "Alan")
+
+    result = await service.execute("connection-1", "perform an undocumented action")
+
+    assert result == {
+        "success": False,
+        "output": "I couldn't interpret that command. Try 'help' for available commands.",
+    }
+    assert (await service.room_for_player(player.id)).id == "town_square"
+
+
+class InvalidResponseProvider(AIProvider):
+    async def interpret_command(
+        self, request: InterpretCommandRequest
+    ) -> InterpretCommandResponse:
+        return {  # type: ignore[return-value]
+            "command": {"action": "teleport", "direction": "north"}
+        }
+
+
+@pytest.mark.asyncio
+async def test_provider_response_is_revalidated_before_engine_execution(session_factory):
+    service = GameService(session_factory, ai_provider=InvalidResponseProvider())
+    player = await service.connect_player("connection-1", "Alan")
+
+    result = await service.execute("connection-1", "teleport north")
+
+    assert result["success"] is False
+    assert (await service.room_for_player(player.id)).id == "town_square"
