@@ -32,8 +32,8 @@ state changes, and real-provider calls from tests.
 ### 1. Contract and validation
 
 - [ ] Add the provider interface and typed interpretation request/response models.
-- [ ] Define the allowed action vocabulary and per-action fields.
-- [ ] Add schema-validation and malformed-output tests.
+- [x] Define the allowed action vocabulary and per-action fields.
+- [x] Add schema-validation and malformed-output tests.
 - [ ] Add `FakeAIProvider` with explicit deterministic fixtures.
 
 ### 2. Command fallback
