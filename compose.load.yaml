@@ -35,6 +35,8 @@ services:
       AI_PROVIDER: fake
       APP_ENV: test
       LOG_LEVEL: WARNING
+      MAX_WEBSOCKET_CONNECTIONS: 600
+      CONNECTION_ATTEMPT_LIMIT: 1000
     depends_on:
       postgres_load:
         condition: service_healthy

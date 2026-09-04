@@ -1,6 +1,8 @@
 import pytest
 from starlette.websockets import WebSocketDisconnect
 
+from app.api import websocket as websocket_api
+
 
 def test_websocket_accepts_a_trusted_browser_origin(test_client):
     with test_client.websocket_connect(
@@ -24,6 +26,55 @@ def test_websocket_rejects_an_untrusted_browser_origin(test_client):
 def test_websocket_accepts_a_client_without_an_origin_header(test_client):
     with test_client.websocket_connect("/ws?username=NativeClient") as websocket:
         assert websocket.receive_json()["type"] == "system"
+
+
+def test_websocket_rejects_an_oversized_command(test_client, monkeypatch):
+    monkeypatch.setattr(websocket_api.settings, "max_command_bytes", 4)
+
+    with test_client.websocket_connect("/ws?username=Verbose") as websocket:
+        websocket.receive_json()
+        websocket.send_text("north")
+        assert websocket.receive_json() == {
+            "type": "error",
+            "text": "Command is too large.",
+        }
+        with pytest.raises(WebSocketDisconnect) as closed:
+            websocket.receive_json()
+
+    assert closed.value.code == 1009
+
+
+def test_websocket_rate_limits_commands_per_connection(test_client, monkeypatch):
+    monkeypatch.setattr(websocket_api.settings, "command_rate_limit", 2)
+    monkeypatch.setattr(websocket_api.settings, "command_rate_window_seconds", 60.0)
+
+    with test_client.websocket_connect("/ws?username=Rapid") as websocket:
+        websocket.receive_json()
+        for _ in range(2):
+            websocket.send_text("look")
+            assert websocket.receive_json()["success"] is True
+
+        websocket.send_text("look")
+        assert websocket.receive_json() == {
+            "type": "error",
+            "text": "Command rate limit exceeded.",
+        }
+        with pytest.raises(WebSocketDisconnect) as closed:
+            websocket.receive_json()
+
+    assert closed.value.code == 1008
+
+
+def test_websocket_enforces_the_concurrent_connection_limit(test_client, monkeypatch):
+    monkeypatch.setattr(websocket_api.settings, "max_websocket_connections", 1)
+
+    with test_client.websocket_connect("/ws?username=First") as first:
+        first.receive_json()
+        with pytest.raises(WebSocketDisconnect) as denied:
+            with test_client.websocket_connect("/ws?username=Second"):
+                pass
+
+    assert denied.value.code == 1013
 
 
 def test_websocket_connections_have_independent_player_state(test_client):

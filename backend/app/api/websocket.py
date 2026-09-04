@@ -1,6 +1,9 @@
 """WebSocket endpoints for the MUD game."""
 
+import asyncio
 import logging
+from collections import defaultdict, deque
+from time import monotonic
 from typing import Set
 from uuid import uuid4
 
@@ -17,6 +20,30 @@ active_connections: Set[WebSocket] = set()
 connections_by_session: dict[str, WebSocket] = {}
 game_service = GameService()
 settings = Settings()
+connection_attempts: dict[str, deque[float]] = defaultdict(deque)
+
+
+def _within_rate_limit(timestamps: deque[float], limit: int, window: float) -> bool:
+    now = monotonic()
+    while timestamps and timestamps[0] <= now - window:
+        timestamps.popleft()
+    if len(timestamps) >= limit:
+        return False
+    timestamps.append(now)
+    return True
+
+
+async def _send_json(websocket: WebSocket, message: dict) -> bool:
+    """Bound writes so a slow client cannot hold a server task indefinitely."""
+    try:
+        await asyncio.wait_for(
+            websocket.send_json(message),
+            timeout=settings.outbound_send_timeout_seconds,
+        )
+        return True
+    except (TimeoutError, WebSocketDisconnect):
+        logger.warning("Dropped an outbound WebSocket message to a slow client")
+        return False
 
 
 @router.websocket("/ws")
@@ -27,9 +54,25 @@ async def websocket_endpoint(websocket: WebSocket):
         await websocket.close(code=1008)
         return
 
+    client_host = websocket.client.host if websocket.client else "unknown"
+    if not _within_rate_limit(
+        connection_attempts[client_host],
+        settings.connection_attempt_limit,
+        settings.connection_attempt_window_seconds,
+    ):
+        logger.warning("Rejected WebSocket connection after excessive attempts")
+        await websocket.close(code=1013)
+        return
+
+    if len(active_connections) >= settings.max_websocket_connections:
+        logger.warning("Rejected WebSocket connection because capacity was reached")
+        await websocket.close(code=1013)
+        return
+
     session_id = str(uuid4())
     username = websocket.query_params.get("username", "")
     connected = False
+    command_timestamps: deque[float] = deque()
 
     await websocket.accept()
     active_connections.add(websocket)
@@ -40,18 +83,20 @@ async def websocket_endpoint(websocket: WebSocket):
             player = await game_service.connect_player(session_id, username)
             connected = True
         except UsernameInUseError:
-            await websocket.send_json(
+            await _send_json(
+                websocket,
                 {"type": "error", "text": "That username is already connected."}
             )
             await websocket.close(code=1008)
             return
         except InvalidUsernameError as error:
-            await websocket.send_json({"type": "error", "text": str(error)})
+            await _send_json(websocket, {"type": "error", "text": str(error)})
             await websocket.close(code=1008)
             return
 
         room = await game_service.room_for_player(player.id)
-        await websocket.send_json(
+        await _send_json(
+            websocket,
             {
                 "type": "system",
                 "text": f"Welcome to the MUD! You stand in the {room.name}.",
@@ -62,12 +107,30 @@ async def websocket_endpoint(websocket: WebSocket):
 
         while True:
             data = await websocket.receive_text()
+            if len(data.encode("utf-8")) > settings.max_command_bytes:
+                await _send_json(
+                    websocket, {"type": "error", "text": "Command is too large."}
+                )
+                await websocket.close(code=1009)
+                return
+            if not _within_rate_limit(
+                command_timestamps,
+                settings.command_rate_limit,
+                settings.command_rate_window_seconds,
+            ):
+                await _send_json(
+                    websocket,
+                    {"type": "error", "text": "Command rate limit exceeded."},
+                )
+                await websocket.close(code=1008)
+                return
             logger.debug("Received command: %s", data)
 
             try:
                 result = await game_service.execute(session_id, data)
                 events = result.pop("events", [])
-                await websocket.send_json(
+                await _send_json(
+                    websocket,
                     {
                         "type": "game_output",
                         "success": result.get("success", False),
@@ -78,12 +141,14 @@ async def websocket_endpoint(websocket: WebSocket):
                 for event in events:
                     recipient = connections_by_session.get(event["session_id"])
                     if recipient is not None:
-                        await recipient.send_json(
+                        await _send_json(
+                            recipient,
                             {"type": "game_output", "success": True, "text": event["text"]}
                         )
             except Exception:
                 logger.exception("Command execution error")
-                await websocket.send_json(
+                await _send_json(
+                    websocket,
                     {"type": "error", "text": "An internal error occurred."}
                 )
     except WebSocketDisconnect:

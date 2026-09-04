@@ -19,3 +19,8 @@ def test_trusted_origins_are_trimmed_and_matched_exactly():
 def test_wildcard_trusted_origin_is_rejected():
     with pytest.raises(ValidationError, match="exact origins"):
         Settings(_env_file=None, trusted_origins="*")
+
+
+def test_websocket_limits_must_be_positive():
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, max_command_bytes=0)

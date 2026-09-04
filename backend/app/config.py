@@ -1,6 +1,6 @@
 """Application configuration from environment variables."""
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,6 +13,13 @@ class Settings(BaseSettings):
     app_env: str = "development"
     log_level: str = "INFO"
     trusted_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    max_command_bytes: int = Field(default=4096, gt=0)
+    command_rate_limit: int = Field(default=10, gt=0)
+    command_rate_window_seconds: float = Field(default=1.0, gt=0)
+    max_websocket_connections: int = Field(default=250, gt=0)
+    connection_attempt_limit: int = Field(default=60, gt=0)
+    connection_attempt_window_seconds: float = Field(default=60.0, gt=0)
+    outbound_send_timeout_seconds: float = Field(default=2.0, gt=0)
 
     @field_validator("trusted_origins")
     @classmethod
