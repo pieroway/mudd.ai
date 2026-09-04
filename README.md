@@ -60,6 +60,9 @@ make test
 # Audit Python and Node dependencies
 make audit
 
+# Validate and build the hardened production-like stack
+make validate-production
+
 # Run E2E tests (Playwright)
 make e2e
 
@@ -80,6 +83,25 @@ it when dependency inputs change, every Monday, and on manual request. It is
 kept separate from deployment so advisory-service outages cannot prevent an
 otherwise verified release; run `make audit` before an exceptional manual
 deployment that did not pass through the protected branch workflow.
+
+## Production-like Stack
+
+The hardened stack has one public TLS entry point and keeps the backend,
+PostgreSQL, and Redis on internal Docker networks. Application containers run
+without root, Linux capabilities, writable root filesystems, source mounts, or
+development reload processes.
+
+```bash
+cp .env.production.example .env.production
+# Replace every change-me value, then set PUBLIC_URL and CADDY_HOST for deployment.
+docker compose --env-file .env.production -f compose.production.yaml up -d --build --wait
+```
+
+Caddy uses an internal certificate authority by default, which is suitable for
+production-like validation. A public deployment must configure a real hostname
+and publicly trusted certificate before users connect. The normal deployment
+gate validates and builds this hardened configuration before starting the local
+development stack.
 
 ## Project Structure
 

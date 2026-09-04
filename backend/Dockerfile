@@ -17,7 +17,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY pyproject.toml .
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -e ".[dev]"
+ARG INSTALL_DEV=true
+RUN if [ "$INSTALL_DEV" = "true" ]; then \
+      pip install --no-cache-dir -e ".[dev]"; \
+    else \
+      pip install --no-cache-dir -e "."; \
+    fi
 
 # Copy application
 COPY . .

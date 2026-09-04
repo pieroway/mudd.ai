@@ -1,0 +1,16 @@
+{$CADDY_HOST}:443 {
+	tls internal
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+
+	@backend path /health /ws
+	reverse_proxy @backend backend:8000
+	reverse_proxy frontend:5173
+}

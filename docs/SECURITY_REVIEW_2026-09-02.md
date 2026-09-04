@@ -121,7 +121,7 @@ exposed to the public internet or an untrusted network.
 ### SEC-007 — Development containers are not production hardened
 
 - **Severity:** Medium
-- **Status:** Open
+- **Status:** Resolved September 3, 2026
 - **Evidence:** The development backend uses reload mode and bind-mounted source.
   The frontend Compose service runs the builder stage, exposes Vite on all
   interfaces, and does not inherit the final image's non-root user.
@@ -130,6 +130,13 @@ exposed to the public internet or an untrusted network.
 - **Remediation:** Keep the development stack local. Define a separate hardened
   production-like profile with no reload or source mounts, non-root users,
   constrained capabilities, and TLS termination.
+- **Resolution:** `compose.production.yaml` provides a separate TLS-terminated
+  stack with no application or data-service ports exposed behind the gateway.
+  Its application containers run as non-root with read-only root filesystems,
+  all capabilities dropped, no-new-privileges enabled, and no development bind
+  mounts or reload processes. Production database credentials and the public
+  origin are required inputs. The deployment gate validates and builds the
+  production-like application images before continuing.
 
 ### SEC-008 — Compiled Python artifacts are tracked
 
@@ -165,7 +172,7 @@ exposed to the public internet or an untrusted network.
   advisories and high/critical Node advisories fail the workflow; audit-service
   failures fail closed. The live lookup is intentionally separate from the
   deployment script so an advisory-service outage cannot break deployments.
-- [ ] Add a hardened production-like Compose profile (SEC-007).
+- [x] Add a hardened production-like Compose profile (SEC-007).
 - [ ] Remove tracked compiled Python artifacts (SEC-008).
 - [ ] Repeat this review and perform dynamic security testing before public launch.
 

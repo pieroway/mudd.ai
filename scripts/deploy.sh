@@ -8,6 +8,8 @@ fi
 echo "Running required test gate..."
 ./scripts/test.sh
 
+./scripts/validate-production.sh
+
 echo "Building application images..."
 docker compose build
 

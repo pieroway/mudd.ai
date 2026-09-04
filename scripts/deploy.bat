@@ -7,6 +7,9 @@ echo Running required test gate...
 call scripts\test.bat
 if errorlevel 1 goto failure
 
+call scripts\validate-production.bat
+if errorlevel 1 goto failure
+
 echo Building application images...
 docker compose build
 if errorlevel 1 goto failure
