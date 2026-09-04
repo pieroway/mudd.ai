@@ -1,10 +1,11 @@
-.PHONY: help dev down test e2e deploy clean logs build load-smoke load-test load-stress load-crowded
+.PHONY: help dev down test audit e2e deploy clean logs build load-smoke load-test load-stress load-crowded
 
 help:
 	@echo "MUD AI - Available commands:"
 	@echo "  make dev          - Start development environment"
 	@echo "  make down         - Stop all services"
 	@echo "  make test         - Run unit tests"
+	@echo "  make audit        - Audit Python, frontend, and Playwright dependencies"
 	@echo "  make e2e          - Run Playwright E2E tests"
 	@echo "  make deploy       - Full gate (tests + build + E2E + load smoke)"
 	@echo "  make load-smoke   - Run a 10-player local WebSocket load test"
@@ -34,6 +35,9 @@ build:
 test:
 	@echo "🧪 Running unit tests..."
 	@cmd /c scripts\test.bat
+
+audit:
+	@cmd /c scripts\audit.bat
 
 e2e:
 	@echo "🎭 Running E2E tests..."

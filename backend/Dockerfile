@@ -2,6 +2,9 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
+# Pin pip so the build tool itself is included in the audited dependency baseline.
+RUN python -m pip install --no-cache-dir --upgrade pip==26.2.1
+
 # Install build and runtime dependencies required for native Python packages.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \

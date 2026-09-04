@@ -159,7 +159,12 @@ exposed to the public internet or an untrusted network.
 - [x] Remove raw command content from logs (SEC-006).
 - [x] Restrict development database and Redis ports (SEC-003).
 - [ ] Design and implement real authentication before public access (SEC-001).
-- [ ] Add automated dependency auditing to CI/deployment checks.
+- [x] Add automated dependency auditing to CI/deployment checks. `make audit`
+  scans the pinned backend, frontend, and Playwright environments. GitHub
+  Actions runs it for dependency changes, weekly, and on demand. All Python
+  advisories and high/critical Node advisories fail the workflow; audit-service
+  failures fail closed. The live lookup is intentionally separate from the
+  deployment script so an advisory-service outage cannot break deployments.
 - [ ] Add a hardened production-like Compose profile (SEC-007).
 - [ ] Remove tracked compiled Python artifacts (SEC-008).
 - [ ] Repeat this review and perform dynamic security testing before public launch.

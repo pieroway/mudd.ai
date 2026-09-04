@@ -57,6 +57,9 @@ make down
 # Run unit tests (backend)
 make test
 
+# Audit Python and Node dependencies
+make audit
+
 # Run E2E tests (Playwright)
 make e2e
 
@@ -69,6 +72,14 @@ make logs
 # Clean up containers and volumes
 make clean
 ```
+
+The dependency audit blocks on every known Python advisory and on high or
+critical Node advisories. A registry or advisory-service error also fails the
+audit because the dependency state could not be verified. GitHub Actions runs
+it when dependency inputs change, every Monday, and on manual request. It is
+kept separate from deployment so advisory-service outages cannot prevent an
+otherwise verified release; run `make audit` before an exceptional manual
+deployment that did not pass through the protected branch workflow.
 
 ## Project Structure
 

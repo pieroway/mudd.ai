@@ -1,0 +1,42 @@
+name: Dependency audit
+
+on:
+  pull_request:
+    paths:
+      - "backend/pyproject.toml"
+      - "backend/Dockerfile"
+      - "frontend/package.json"
+      - "frontend/package-lock.json"
+      - "e2e/package.json"
+      - "e2e/package-lock.json"
+      - "scripts/audit.sh"
+      - ".github/workflows/dependency-audit.yml"
+  push:
+    branches: [main]
+    paths:
+      - "backend/pyproject.toml"
+      - "backend/Dockerfile"
+      - "frontend/package.json"
+      - "frontend/package-lock.json"
+      - "e2e/package.json"
+      - "e2e/package-lock.json"
+      - "scripts/audit.sh"
+      - ".github/workflows/dependency-audit.yml"
+  schedule:
+    - cron: "17 9 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Audit pinned dependencies
+        run: bash ./scripts/audit.sh
