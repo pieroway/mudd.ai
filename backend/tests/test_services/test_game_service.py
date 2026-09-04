@@ -47,7 +47,13 @@ async def test_only_one_player_can_take_a_shared_item_concurrently(session_facto
     successes = [result for result in (first_result, second_result) if result["success"]]
     failures = [result for result in (first_result, second_result) if not result["success"]]
     assert len(successes) == 1
-    assert failures == [{"success": False, "output": "You do not see a torch here."}]
+    assert failures == [
+        {
+            "success": False,
+            "output": "You do not see a torch here.",
+            "metadata": {"command_source": "classic"},
+        }
+    ]
 
     first_inventory = await service.inventory_for_player(first_player.id)
     second_inventory = await service.inventory_for_player(second_player.id)
@@ -66,10 +72,15 @@ async def test_open_item_state_survives_service_restart(session_factory):
     await restarted_service.connect_player("connection-2", "Alan")
     repeated_result = await restarted_service.execute("connection-2", "open chest")
 
-    assert result == {"success": True, "output": "You open the chest."}
+    assert result == {
+        "success": True,
+        "output": "You open the chest.",
+        "metadata": {"command_source": "classic"},
+    }
     assert repeated_result == {
         "success": False,
         "output": "The chest is already open.",
+        "metadata": {"command_source": "classic"},
     }
 
 
@@ -88,10 +99,15 @@ async def test_container_contents_survive_service_restart(session_factory):
         "connection-2", "take torch from chest"
     )
 
-    assert put_result == {"success": True, "output": "You put the torch in the chest."}
+    assert put_result == {
+        "success": True,
+        "output": "You put the torch in the chest.",
+        "metadata": {"command_source": "classic"},
+    }
     assert take_result == {
         "success": True,
         "output": "You take the torch from the chest.",
+        "metadata": {"command_source": "classic"},
     }
 
 
@@ -137,6 +153,7 @@ async def test_classic_commands_do_not_call_ai_provider(session_factory):
     result = await service.execute("connection-1", "look")
 
     assert result["success"] is True
+    assert result["metadata"] == {"command_source": "classic"}
     assert provider.requests == []
 
 
@@ -149,6 +166,7 @@ async def test_unknown_commands_use_ai_proposal_then_authoritative_engine(sessio
     result = await service.execute("connection-1", "walk toward the docks")
 
     assert result["success"] is True
+    assert result["metadata"] == {"command_source": "ai"}
     assert (await service.room_for_player(player.id)).id == "docks"
     assert provider.requests == [
         InterpretCommandRequest(raw_input="walk toward the docks")
@@ -166,6 +184,7 @@ async def test_unavailable_interpretation_returns_safe_error_without_mutation(se
     assert result == {
         "success": False,
         "output": "I couldn't interpret that command. Try 'help' for available commands.",
+        "metadata": {"command_source": "ai"},
     }
     assert (await service.room_for_player(player.id)).id == "town_square"
 

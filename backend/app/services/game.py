@@ -92,7 +92,9 @@ class GameService:
             raise KeyError(f"No active player session: {session_id}")
 
         command = parse_command(raw_command)
+        command_source = "classic"
         if command.get("action") == "unknown" and self.ai_provider is not None:
+            command_source = "ai"
             try:
                 proposed = await self.ai_provider.interpret_command(
                     InterpretCommandRequest(raw_input=raw_command)
@@ -105,10 +107,13 @@ class GameService:
                         "I couldn't interpret that command. "
                         "Try 'help' for available commands."
                     ),
+                    "metadata": {"command_source": command_source},
                 }
             command = validated.command.model_dump()
         async with self._command_lock:
-            return await self._execute_locked(session_id, player_id, command)
+            result = await self._execute_locked(session_id, player_id, command)
+        result["metadata"] = {"command_source": command_source}
+        return result
 
     async def _execute_locked(
         self, session_id: str, player_id: str, command: dict[str, Any]

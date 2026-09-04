@@ -162,6 +162,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         "success": result.get("success", False),
                         "text": result.get("output", ""),
                         "room_id": result.get("room_id"),
+                        "metadata": result.get("metadata", {}),
                     }
                 )
                 for event in events:

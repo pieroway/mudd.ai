@@ -45,7 +45,7 @@ state changes, and real-provider calls from tests.
 
 ### 3. Protocol and user experience
 
-- [ ] Expose whether a result used classic or AI-assisted interpretation in
+- [x] Expose whether a result used classic or AI-assisted interpretation in
       structured diagnostic metadata without requiring transcript parsing.
 - [ ] Add examples such as “walk toward the docks” and “look carefully at the
       torch.”

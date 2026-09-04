@@ -8,6 +8,9 @@ interface GameMessage {
   text?: string
   room_name?: string
   room_description?: string
+  metadata?: {
+    command_source?: 'classic' | 'ai'
+  }
 }
 
 interface TerminalProps {

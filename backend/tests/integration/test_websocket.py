@@ -3,6 +3,7 @@ import logging
 import pytest
 from starlette.websockets import WebSocketDisconnect
 
+from app.ai.fake import FakeAIProvider
 from app.api import websocket as websocket_api
 
 
@@ -138,6 +139,20 @@ def test_websocket_connections_have_independent_player_state(test_client):
             assert second_look["success"] is True
             assert second_look["room_id"] == "town_square"
             assert "Town Square" in second_look["text"]
+            assert second_look["metadata"] == {"command_source": "classic"}
+
+
+def test_websocket_exposes_ai_interpretation_metadata(test_client, monkeypatch):
+    monkeypatch.setattr(websocket_api.game_service, "ai_provider", FakeAIProvider())
+
+    with test_client.websocket_connect("/ws?username=NaturalSpeaker") as websocket:
+        websocket.receive_json()
+        websocket.send_text("walk toward the docks")
+        result = websocket.receive_json()
+
+    assert result["success"] is True
+    assert result["room_id"] == "docks"
+    assert result["metadata"] == {"command_source": "ai"}
 
 
 def test_only_one_websocket_player_can_take_a_shared_item(test_client):

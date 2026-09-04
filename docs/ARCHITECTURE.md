@@ -2,6 +2,12 @@
 
 Browser client → HTTP/WebSocket API → command router → classic parser or AI intent parser → validator → authoritative game engine → PostgreSQL / Redis as appropriate → structured result → optional AI narrator → client.
 
+Game-output WebSocket messages include diagnostic metadata with a
+`command_source` value of `classic` or `ai`. Clients may use this structured
+field for diagnostics or presentation but must not infer it from transcript
+text. The field describes interpretation only; it does not grant authority to
+the AI provider.
+
 Use a modular monolith first. Avoid premature microservices.
 
 ## Authority
