@@ -212,8 +212,13 @@ DATABASE_URL=postgresql+...      # Database connection
 REDIS_URL=redis://...            # Redis connection
 
 AI_PROVIDER=fake                 # fake, anthropic, openai
+AI_COMMAND_INTERPRETATION_ENABLED=false  # Set true to enable the configured provider
 AI_NARRATION_ENABLED=false       # Enable AI narration
 ```
+
+Only the deterministic `fake` command provider is currently implemented. Setting
+`AI_COMMAND_INTERPRETATION_ENABLED=true` with `anthropic` or `openai` fails at
+startup until those adapters and their security boundaries are implemented.
 
 ## Development Workflow
 

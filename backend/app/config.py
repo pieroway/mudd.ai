@@ -1,5 +1,7 @@
 """Application configuration from environment variables."""
 
+from typing import Literal
+
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -45,7 +47,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://redis:6379"
 
     # AI Provider
-    ai_provider: str = "fake"
+    ai_provider: Literal["fake", "anthropic", "openai"] = "fake"
     anthropic_api_key: str = ""
     openai_api_key: str = ""
     ai_model: str = "claude-3-haiku"

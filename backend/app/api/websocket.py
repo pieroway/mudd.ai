@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from app.ai.factory import create_ai_provider
 from app.commands.parser import parse_command
 from app.config import Settings
 from app.services.game import GameService, InvalidUsernameError, UsernameInUseError
@@ -19,8 +20,8 @@ router = APIRouter()
 
 active_connections: Set[WebSocket] = set()
 connections_by_session: dict[str, WebSocket] = {}
-game_service = GameService()
 settings = Settings()
+game_service = GameService(ai_provider=create_ai_provider(settings))
 connection_attempts: dict[str, deque[float]] = defaultdict(deque)
 
 
