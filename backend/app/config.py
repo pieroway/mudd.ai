@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     max_websocket_connections: int = Field(default=250, gt=0)
     connection_attempt_limit: int = Field(default=60, gt=0)
     connection_attempt_window_seconds: float = Field(default=60.0, gt=0)
+    max_tracked_client_addresses: int = Field(default=10_000, gt=0)
     outbound_send_timeout_seconds: float = Field(default=2.0, gt=0)
 
     @field_validator("trusted_origins")

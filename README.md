@@ -163,6 +163,14 @@ Edit `.env` to customize:
 APP_ENV=development              # development, test, production
 LOG_LEVEL=INFO                   # DEBUG, INFO, WARNING, ERROR
 TRUSTED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+MAX_COMMAND_BYTES=4096          # UTF-8 command size and transport-frame limit
+COMMAND_RATE_LIMIT=10           # Commands allowed per client/window
+COMMAND_RATE_WINDOW_SECONDS=1
+MAX_WEBSOCKET_CONNECTIONS=250   # Per backend process
+CONNECTION_ATTEMPT_LIMIT=60     # Attempts per source address/window
+CONNECTION_ATTEMPT_WINDOW_SECONDS=60
+MAX_TRACKED_CLIENT_ADDRESSES=10000
+OUTBOUND_SEND_TIMEOUT_SECONDS=2
 
 DATABASE_URL=postgresql+...      # Database connection
 REDIS_URL=redis://...            # Redis connection

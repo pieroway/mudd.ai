@@ -81,7 +81,7 @@ exposed to the public internet or an untrusted network.
 ### SEC-005 — Missing connection, traffic, and input limits
 
 - **Severity:** High
-- **Status:** Open
+- **Status:** Resolved September 3, 2026
 - **Evidence:** No explicit limits exist for WebSocket message size, command rate,
   connection attempts, chat length, reconnect attempts, or per-client outbound
   queues.
@@ -89,6 +89,13 @@ exposed to the public internet or an untrusted network.
   command lock.
 - **Remediation:** Add bounded command and chat lengths, connection and per-player
   rate limits, server/proxy WebSocket size limits, and bounded outgoing queues.
+- **Resolution:** Configurable application and Uvicorn message-size limits now
+  reject oversized UTF-8 commands before engine execution. Each connection has a
+  sliding-window command limit; connection attempts are limited per source address;
+  active WebSockets are capped per backend process; and every outbound send has a
+  timeout. The service sends directly rather than maintaining unbounded application
+  queues. Load-test Compose explicitly raises connection limits for its 500-client
+  capacity scenario.
 
 ### SEC-006 — Raw commands may enter debug logs
 
@@ -137,7 +144,7 @@ exposed to the public internet or an untrusted network.
 
 - [x] Upgrade or remove vulnerable dependencies (SEC-004).
 - [x] Restrict HTTP and WebSocket origins (SEC-002).
-- [ ] Add input, connection, and rate limits (SEC-005).
+- [x] Add input, connection, and rate limits (SEC-005).
 - [ ] Remove raw command content from logs (SEC-006).
 - [ ] Restrict development database and Redis ports (SEC-003).
 - [ ] Design and implement real authentication before public access (SEC-001).

@@ -33,6 +33,20 @@ def _within_rate_limit(timestamps: deque[float], limit: int, window: float) -> b
     return True
 
 
+def _connection_attempt_allowed(client_host: str) -> bool:
+    timestamps = connection_attempts.get(client_host)
+    if timestamps is None:
+        if len(connection_attempts) >= settings.max_tracked_client_addresses:
+            return False
+        timestamps = deque()
+        connection_attempts[client_host] = timestamps
+    return _within_rate_limit(
+        timestamps,
+        settings.connection_attempt_limit,
+        settings.connection_attempt_window_seconds,
+    )
+
+
 async def _send_json(websocket: WebSocket, message: dict) -> bool:
     """Bound writes so a slow client cannot hold a server task indefinitely."""
     try:
@@ -55,11 +69,7 @@ async def websocket_endpoint(websocket: WebSocket):
         return
 
     client_host = websocket.client.host if websocket.client else "unknown"
-    if not _within_rate_limit(
-        connection_attempts[client_host],
-        settings.connection_attempt_limit,
-        settings.connection_attempt_window_seconds,
-    ):
+    if not _connection_attempt_allowed(client_host):
         logger.warning("Rejected WebSocket connection after excessive attempts")
         await websocket.close(code=1013)
         return

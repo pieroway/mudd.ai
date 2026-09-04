@@ -77,6 +77,22 @@ def test_websocket_enforces_the_concurrent_connection_limit(test_client, monkeyp
     assert denied.value.code == 1013
 
 
+def test_websocket_rate_limits_connection_attempts_by_source(test_client, monkeypatch):
+    websocket_api.connection_attempts.clear()
+    monkeypatch.setattr(websocket_api.settings, "connection_attempt_limit", 1)
+    monkeypatch.setattr(websocket_api.settings, "connection_attempt_window_seconds", 60.0)
+
+    try:
+        with test_client.websocket_connect("/ws?username=FirstAttempt") as first:
+            first.receive_json()
+        with pytest.raises(WebSocketDisconnect) as denied:
+            with test_client.websocket_connect("/ws?username=SecondAttempt"):
+                pass
+        assert denied.value.code == 1013
+    finally:
+        websocket_api.connection_attempts.clear()
+
+
 def test_websocket_connections_have_independent_player_state(test_client):
     with test_client.websocket_connect("/ws?username=Alan") as first:
         first_welcome = first.receive_json()
