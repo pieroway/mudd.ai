@@ -34,7 +34,7 @@ state changes, and real-provider calls from tests.
 - [x] Add the provider interface and typed interpretation request/response models.
 - [x] Define the allowed action vocabulary and per-action fields.
 - [x] Add schema-validation and malformed-output tests.
-- [ ] Add `FakeAIProvider` with explicit deterministic fixtures.
+- [x] Add `FakeAIProvider` with explicit deterministic fixtures.
 
 ### 2. Command fallback
 
