@@ -42,6 +42,9 @@ make dev
 - **Health Check:** http://localhost:8000/health
 - **Database (psql):** `psql -h localhost -U muduser -d muddb` (password: mudpass)
 
+PostgreSQL is exposed only on the host loopback interface for local development.
+Redis is available only to containers on the Compose network and has no host port.
+
 ## Development Commands
 
 ```bash

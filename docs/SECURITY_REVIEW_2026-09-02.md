@@ -47,7 +47,7 @@ exposed to the public internet or an untrusted network.
 ### SEC-003 — Development data services exposed with known credentials
 
 - **Severity:** High on an untrusted local network
-- **Status:** Open
+- **Status:** Resolved September 3, 2026
 - **Evidence:** Development Compose publishes PostgreSQL on port 5432 using the
   documented `muduser`/`mudpass` credentials and publishes unauthenticated Redis
   on port 6379.
@@ -55,6 +55,11 @@ exposed to the public internet or an untrusted network.
   depending on host firewall rules.
 - **Remediation:** Bind development ports to `127.0.0.1`, avoid publishing Redis
   unless required, and keep production credentials in managed secrets.
+- **Resolution:** Development PostgreSQL now publishes only to
+  `127.0.0.1:5432`. Redis no longer publishes a host port and remains reachable
+  only by services on the private Compose network. Test, E2E, and load stacks
+  already keep both data services internal. Public deployments must still replace
+  the documented development credentials with managed secrets.
 
 ### SEC-004 — Known dependency vulnerabilities
 
@@ -152,7 +157,7 @@ exposed to the public internet or an untrusted network.
 - [x] Restrict HTTP and WebSocket origins (SEC-002).
 - [x] Add input, connection, and rate limits (SEC-005).
 - [x] Remove raw command content from logs (SEC-006).
-- [ ] Restrict development database and Redis ports (SEC-003).
+- [x] Restrict development database and Redis ports (SEC-003).
 - [ ] Design and implement real authentication before public access (SEC-001).
 - [ ] Add automated dependency auditing to CI/deployment checks.
 - [ ] Add a hardened production-like Compose profile (SEC-007).
