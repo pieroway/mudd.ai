@@ -5,7 +5,8 @@
 .env.*.local
 
 # Backend
-backend/__pycache__/
+__pycache__/
+*.py[cod]
 backend/.pytest_cache/
 backend/.coverage
 backend/dist/

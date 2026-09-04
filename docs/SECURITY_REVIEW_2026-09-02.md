@@ -141,12 +141,15 @@ exposed to the public internet or an untrusted network.
 ### SEC-008 — Compiled Python artifacts are tracked
 
 - **Severity:** Low
-- **Status:** Open
+- **Status:** Resolved September 4, 2026
 - **Evidence:** Tracked `__pycache__` directories and `.pyc` files remain in the
   repository even though new instances are ignored.
 - **Risk:** Stale artifacts add repository noise and can obscure what source is
   actually executed.
 - **Remediation:** Remove tracked compiled files in a dedicated cleanup change.
+- **Resolution:** Removed the tracked Python bytecode and broadened `.gitignore`
+  rules to exclude Python cache directories and compiled bytecode throughout the
+  repository.
 
 ## Positive Controls Observed
 
@@ -173,7 +176,7 @@ exposed to the public internet or an untrusted network.
   failures fail closed. The live lookup is intentionally separate from the
   deployment script so an advisory-service outage cannot break deployments.
 - [x] Add a hardened production-like Compose profile (SEC-007).
-- [ ] Remove tracked compiled Python artifacts (SEC-008).
+- [x] Remove tracked compiled Python artifacts (SEC-008).
 - [ ] Repeat this review and perform dynamic security testing before public launch.
 
 ## Milestone Two Boundary
