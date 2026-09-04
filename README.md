@@ -218,7 +218,9 @@ AI_NARRATION_ENABLED=false       # Enable AI narration
 
 Only the deterministic `fake` command provider is currently implemented. Setting
 `AI_COMMAND_INTERPRETATION_ENABLED=true` with `anthropic` or `openai` fails at
-startup until those adapters and their security boundaries are implemented.
+startup until those adapters and their security boundaries are implemented. The
+fake provider is available for tests and deliberate local demos, but the server
+rejects it when command interpretation is enabled with `APP_ENV=production`.
 
 ## Development Workflow
 

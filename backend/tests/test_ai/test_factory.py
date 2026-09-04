@@ -21,6 +21,29 @@ def test_enabled_fake_provider_is_created_from_settings():
     assert isinstance(create_ai_provider(settings), FakeAIProvider)
 
 
+def test_enabled_fake_provider_is_rejected_in_production():
+    settings = Settings(
+        _env_file=None,
+        app_env="production",
+        ai_command_interpretation_enabled=True,
+        ai_provider="fake",
+    )
+
+    with pytest.raises(UnsupportedAIProviderError, match="not allowed in production"):
+        create_ai_provider(settings)
+
+
+def test_disabled_fake_provider_is_safe_in_production_configuration():
+    settings = Settings(
+        _env_file=None,
+        app_env="production",
+        ai_command_interpretation_enabled=False,
+        ai_provider="fake",
+    )
+
+    assert create_ai_provider(settings) is None
+
+
 @pytest.mark.parametrize("provider_name", ["anthropic", "openai"])
 def test_unimplemented_real_provider_fails_closed(provider_name):
     settings = Settings(
