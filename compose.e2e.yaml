@@ -33,6 +33,7 @@ services:
       AI_PROVIDER: fake
       APP_ENV: test
       LOG_LEVEL: WARNING
+      TRUSTED_ORIGINS: http://host.docker.internal:15173
     depends_on:
       postgres_e2e:
         condition: service_healthy

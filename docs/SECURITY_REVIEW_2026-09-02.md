@@ -32,13 +32,17 @@ exposed to the public internet or an untrusted network.
 ### SEC-002 — Unrestricted browser and WebSocket origins
 
 - **Severity:** High
-- **Status:** Open
+- **Status:** Resolved September 3, 2026
 - **Evidence:** HTTP CORS allows `*` while credentials are enabled. The WebSocket
   endpoint performs no `Origin` validation and accepts the connection before
   player validation.
 - **Risk:** An untrusted website can attempt cross-origin connections to the game.
 - **Remediation:** Configure explicit trusted origins and reject an unapproved
   WebSocket origin before calling `accept()`.
+- **Resolution:** HTTP CORS and browser WebSocket connections now share an exact,
+  configurable `TRUSTED_ORIGINS` allowlist. Untrusted browser origins are rejected
+  before WebSocket acceptance. Clients without an Origin header remain supported
+  because Origin is a browser security boundary, not client authentication.
 
 ### SEC-003 — Development data services exposed with known credentials
 
@@ -132,7 +136,7 @@ exposed to the public internet or an untrusted network.
 ## Remediation Order
 
 - [x] Upgrade or remove vulnerable dependencies (SEC-004).
-- [ ] Restrict HTTP and WebSocket origins (SEC-002).
+- [x] Restrict HTTP and WebSocket origins (SEC-002).
 - [ ] Add input, connection, and rate limits (SEC-005).
 - [ ] Remove raw command content from logs (SEC-006).
 - [ ] Restrict development database and Redis ports (SEC-003).

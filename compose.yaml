@@ -40,6 +40,7 @@ services:
       AI_PROVIDER: fake
       APP_ENV: development
       LOG_LEVEL: INFO
+      TRUSTED_ORIGINS: ${TRUSTED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
     depends_on:
       postgres:
         condition: service_healthy

@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from app.config import Settings
 from app.services.game import GameService, InvalidUsernameError, UsernameInUseError
 
 logger = logging.getLogger(__name__)
@@ -15,11 +16,17 @@ router = APIRouter()
 active_connections: Set[WebSocket] = set()
 connections_by_session: dict[str, WebSocket] = {}
 game_service = GameService()
+settings = Settings()
 
 
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for persistent game sessions."""
+    if not settings.allows_origin(websocket.headers.get("origin")):
+        logger.warning("Rejected WebSocket connection from an untrusted origin")
+        await websocket.close(code=1008)
+        return
+
     session_id = str(uuid4())
     username = websocket.query_params.get("username", "")
     connected = False

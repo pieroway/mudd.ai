@@ -1,3 +1,31 @@
+import pytest
+from starlette.websockets import WebSocketDisconnect
+
+
+def test_websocket_accepts_a_trusted_browser_origin(test_client):
+    with test_client.websocket_connect(
+        "/ws?username=Trusted",
+        headers={"origin": "http://localhost:5173"},
+    ) as websocket:
+        assert websocket.receive_json()["type"] == "system"
+
+
+def test_websocket_rejects_an_untrusted_browser_origin(test_client):
+    with pytest.raises(WebSocketDisconnect) as denied:
+        with test_client.websocket_connect(
+            "/ws?username=Untrusted",
+            headers={"origin": "https://evil.example"},
+        ):
+            pass
+
+    assert denied.value.code == 1008
+
+
+def test_websocket_accepts_a_client_without_an_origin_header(test_client):
+    with test_client.websocket_connect("/ws?username=NativeClient") as websocket:
+        assert websocket.receive_json()["type"] == "system"
+
+
 def test_websocket_connections_have_independent_player_state(test_client):
     with test_client.websocket_connect("/ws?username=Alan") as first:
         first_welcome = first.receive_json()

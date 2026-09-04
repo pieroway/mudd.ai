@@ -162,6 +162,7 @@ Edit `.env` to customize:
 ```env
 APP_ENV=development              # development, test, production
 LOG_LEVEL=INFO                   # DEBUG, INFO, WARNING, ERROR
+TRUSTED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 
 DATABASE_URL=postgresql+...      # Database connection
 REDIS_URL=redis://...            # Redis connection
