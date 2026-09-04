@@ -47,9 +47,9 @@ state changes, and real-provider calls from tests.
 
 - [x] Expose whether a result used classic or AI-assisted interpretation in
       structured diagnostic metadata without requiring transcript parsing.
-- [ ] Add examples such as “walk toward the docks” and “look carefully at the
+- [x] Add examples such as “walk toward the docks” and “look carefully at the
       torch.”
-- [ ] Document configuration, privacy boundaries, timeouts, and failure behavior.
+- [x] Document configuration, privacy boundaries, timeouts, and failure behavior.
 
 ### 4. Verification and optional real provider
 

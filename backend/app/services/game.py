@@ -51,9 +51,11 @@ class GameService:
         self,
         session_factory: async_sessionmaker[AsyncSession] | None = None,
         ai_provider: AIProvider | None = None,
+        ai_command_timeout_seconds: float = 5.0,
     ) -> None:
         self.session_factory = session_factory or get_session_factory()
         self.ai_provider = ai_provider
+        self.ai_command_timeout_seconds = ai_command_timeout_seconds
         self._session_players: dict[str, str] = {}
         self._session_usernames: dict[str, str] = {}
         self._active_usernames: set[str] = set()
@@ -96,11 +98,14 @@ class GameService:
         if command.get("action") == "unknown" and self.ai_provider is not None:
             command_source = "ai"
             try:
-                proposed = await self.ai_provider.interpret_command(
-                    InterpretCommandRequest(raw_input=raw_command)
+                proposed = await asyncio.wait_for(
+                    self.ai_provider.interpret_command(
+                        InterpretCommandRequest(raw_input=raw_command)
+                    ),
+                    timeout=self.ai_command_timeout_seconds,
                 )
                 validated = InterpretCommandResponse.model_validate(proposed)
-            except (AIProviderError, ValidationError):
+            except (AIProviderError, TimeoutError, ValidationError):
                 return {
                     "success": False,
                     "output": (

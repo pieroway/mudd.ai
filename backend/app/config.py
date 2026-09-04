@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     openai_api_key: str = ""
     ai_model: str = "claude-3-haiku"
+    ai_command_timeout_seconds: float = Field(default=5.0, gt=0)
 
     # Features
     ai_narration_enabled: bool = False

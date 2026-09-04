@@ -24,3 +24,8 @@ def test_wildcard_trusted_origin_is_rejected():
 def test_websocket_limits_must_be_positive():
     with pytest.raises(ValidationError):
         Settings(_env_file=None, max_command_bytes=0)
+
+
+def test_ai_command_timeout_must_be_positive():
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, ai_command_timeout_seconds=0)

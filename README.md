@@ -213,6 +213,7 @@ REDIS_URL=redis://...            # Redis connection
 
 AI_PROVIDER=fake                 # fake, anthropic, openai
 AI_COMMAND_INTERPRETATION_ENABLED=false  # Set true to enable the configured provider
+AI_COMMAND_TIMEOUT_SECONDS=5     # Hard limit for one interpretation request
 AI_NARRATION_ENABLED=false       # Enable AI narration
 ```
 
@@ -221,6 +222,20 @@ Only the deterministic `fake` command provider is currently implemented. Setting
 startup until those adapters and their security boundaries are implemented. The
 fake provider is available for tests and deliberate local demos, but the server
 rejects it when command interpretation is enabled with `APP_ENV=production`.
+
+When command interpretation is enabled, recognized classic commands still go
+directly to the deterministic engine and are never sent to a provider. Only
+otherwise-unrecognized player input is included as `raw_input` in an
+interpretation request. Provider output is treated as an untrusted command
+proposal, validated against the strict action schema, and then checked by the
+authoritative engine.
+
+The local fake recognizes deterministic examples including `walk toward the
+docks` and `look carefully at the torch`. Unknown fixtures, invalid responses,
+provider errors, and requests exceeding `AI_COMMAND_TIMEOUT_SECONDS` return a
+safe error without changing game state. Raw commands are excluded from server
+logs, but a future external provider would receive the unrecognized input, so
+players should not submit secrets or sensitive personal information.
 
 ## Development Workflow
 

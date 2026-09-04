@@ -207,3 +207,30 @@ async def test_provider_response_is_revalidated_before_engine_execution(session_
 
     assert result["success"] is False
     assert (await service.room_for_player(player.id)).id == "town_square"
+
+
+class NeverRespondingProvider(AIProvider):
+    async def interpret_command(
+        self, request: InterpretCommandRequest
+    ) -> InterpretCommandResponse:
+        await asyncio.Event().wait()
+        raise AssertionError("unreachable")
+
+
+@pytest.mark.asyncio
+async def test_provider_timeout_returns_safe_error_without_mutation(session_factory):
+    service = GameService(
+        session_factory,
+        ai_provider=NeverRespondingProvider(),
+        ai_command_timeout_seconds=0.001,
+    )
+    player = await service.connect_player("connection-1", "Alan")
+
+    result = await service.execute("connection-1", "venture somewhere mysterious")
+
+    assert result == {
+        "success": False,
+        "output": "I couldn't interpret that command. Try 'help' for available commands.",
+        "metadata": {"command_source": "ai"},
+    }
+    assert (await service.room_for_player(player.id)).id == "town_square"

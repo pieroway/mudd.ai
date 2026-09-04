@@ -21,7 +21,10 @@ router = APIRouter()
 active_connections: Set[WebSocket] = set()
 connections_by_session: dict[str, WebSocket] = {}
 settings = Settings()
-game_service = GameService(ai_provider=create_ai_provider(settings))
+game_service = GameService(
+    ai_provider=create_ai_provider(settings),
+    ai_command_timeout_seconds=settings.ai_command_timeout_seconds,
+)
 connection_attempts: dict[str, deque[float]] = defaultdict(deque)
 
 
