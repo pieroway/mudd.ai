@@ -100,12 +100,18 @@ exposed to the public internet or an untrusted network.
 ### SEC-006 — Raw commands may enter debug logs
 
 - **Severity:** Medium
-- **Status:** Open
+- **Status:** Resolved September 3, 2026
 - **Evidence:** The WebSocket handler logs the complete received command at debug
   level.
 - **Risk:** Private `tell` messages and future AI prompts may be retained in logs.
 - **Remediation:** Log action metadata, identifiers, and sizes rather than raw
   private content. Define retention and redaction rules.
+- **Resolution:** WebSocket command logs now contain only the server-generated
+  session identifier, parsed action, UTF-8 byte count, success state, and elapsed
+  time. Raw command, chat, target, username, and AI-prompt content are excluded.
+  Automated log-capture tests cover both ordinary and private-message commands.
+  Production log retention remains an operator responsibility and should be kept
+  to the shortest period needed for reliability and incident investigation.
 
 ### SEC-007 — Development containers are not production hardened
 
@@ -145,7 +151,7 @@ exposed to the public internet or an untrusted network.
 - [x] Upgrade or remove vulnerable dependencies (SEC-004).
 - [x] Restrict HTTP and WebSocket origins (SEC-002).
 - [x] Add input, connection, and rate limits (SEC-005).
-- [ ] Remove raw command content from logs (SEC-006).
+- [x] Remove raw command content from logs (SEC-006).
 - [ ] Restrict development database and Redis ports (SEC-003).
 - [ ] Design and implement real authentication before public access (SEC-001).
 - [ ] Add automated dependency auditing to CI/deployment checks.

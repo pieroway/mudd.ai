@@ -1,7 +1,32 @@
+import logging
+
 import pytest
 from starlette.websockets import WebSocketDisconnect
 
 from app.api import websocket as websocket_api
+
+
+@pytest.mark.parametrize(
+    ("command", "expected_action", "secret"),
+    [
+        ("examine private-keepsake-7419", "examine", "private-keepsake-7419"),
+        ("tell Nobody private-message-8527", "tell", "private-message-8527"),
+    ],
+)
+def test_websocket_logs_command_metadata_without_content(
+    test_client, caplog, command, expected_action, secret
+):
+    with caplog.at_level(logging.DEBUG, logger="app.api.websocket"):
+        with test_client.websocket_connect("/ws?username=LoggerTest") as websocket:
+            websocket.receive_json()
+            websocket.send_text(command)
+            websocket.receive_json()
+
+    assert secret not in caplog.text
+    assert command not in caplog.text
+    assert f"action={expected_action}" in caplog.text
+    assert f"bytes={len(command.encode('utf-8'))}" in caplog.text
+    assert "success=" in caplog.text
 
 
 def test_websocket_accepts_a_trusted_browser_origin(test_client):

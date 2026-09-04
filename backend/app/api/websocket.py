@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from app.commands.parser import parse_command
 from app.config import Settings
 from app.services.game import GameService, InvalidUsernameError, UsernameInUseError
 
@@ -117,7 +118,8 @@ async def websocket_endpoint(websocket: WebSocket):
 
         while True:
             data = await websocket.receive_text()
-            if len(data.encode("utf-8")) > settings.max_command_bytes:
+            command_bytes = len(data.encode("utf-8"))
+            if command_bytes > settings.max_command_bytes:
                 await _send_json(
                     websocket, {"type": "error", "text": "Command is too large."}
                 )
@@ -134,11 +136,25 @@ async def websocket_endpoint(websocket: WebSocket):
                 )
                 await websocket.close(code=1008)
                 return
-            logger.debug("Received command: %s", data)
+            action = str(parse_command(data).get("action", "unknown"))
+            started_at = monotonic()
+            logger.debug(
+                "Command received session_id=%s action=%s bytes=%d",
+                session_id,
+                action,
+                command_bytes,
+            )
 
             try:
                 result = await game_service.execute(session_id, data)
                 events = result.pop("events", [])
+                logger.debug(
+                    "Command completed session_id=%s action=%s success=%s elapsed_ms=%.1f",
+                    session_id,
+                    action,
+                    bool(result.get("success", False)),
+                    (monotonic() - started_at) * 1000,
+                )
                 await _send_json(
                     websocket,
                     {
