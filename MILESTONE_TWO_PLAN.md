@@ -62,7 +62,20 @@ state changes, and real-provider calls from tests.
       multiplayer concurrency rules.
 - [x] Run the complete deployment gate, including its smoke load test and state
       invariant check.
-- [ ] Only then evaluate a real provider adapter behind explicit configuration.
+- [x] Evaluate and implement a development-only OpenAI Responses adapter behind
+      explicit configuration, with bounded usage and mocked HTTP contract tests.
+
+The adapter passed three live API smoke requests with `gpt-5.4-nano` for movement,
+examine, and inventory, with responses taking 0.94–2.43 seconds. The project owner
+also reported passing browser smoke testing with live AI enabled. These manual
+checks are separate from the deterministic automated suite. Production enablement
+remains blocked pending authentication and shared usage-budget controls. See
+README for privacy boundaries and local configuration.
+
+Adapter validation on September 4, 2026: `scripts\deploy.bat` exited 0 with
+151 backend tests, 10 frontend tests, 5 Playwright tests, passing lint/type checks
+and image builds, a 10-user smoke test with zero command failures, and passing
+authoritative-state invariants. Live AI was explicitly disabled during the gate.
 
 ## Definition of Done
 

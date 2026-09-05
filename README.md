@@ -217,9 +217,8 @@ AI_COMMAND_TIMEOUT_SECONDS=5     # Hard limit for one interpretation request
 AI_NARRATION_ENABLED=false       # Enable AI narration
 ```
 
-Only the deterministic `fake` command provider is currently implemented. Setting
-`AI_COMMAND_INTERPRETATION_ENABLED=true` with `anthropic` or `openai` fails at
-startup until those adapters and their security boundaries are implemented. The
+The `fake` provider and a development-only `openai` adapter are implemented.
+`anthropic` remains unsupported. The
 fake provider is available for tests and deliberate local demos, but the server
 rejects it when command interpretation is enabled with `APP_ENV=production`.
 
@@ -234,8 +233,43 @@ The local fake recognizes deterministic examples including `walk toward the
 docks` and `look carefully at the torch`. Unknown fixtures, invalid responses,
 provider errors, and requests exceeding `AI_COMMAND_TIMEOUT_SECONDS` return a
 safe error without changing game state. Raw commands are excluded from server
-logs, but a future external provider would receive the unrecognized input, so
+logs, but the OpenAI provider receives the unrecognized input when enabled, so
 players should not submit secrets or sensitive personal information.
+
+### Local OpenAI command interpretation
+
+Set `AI_PROVIDER=openai`, `AI_COMMAND_INTERPRETATION_ENABLED=true`,
+`OPENAI_API_KEY`, and an explicit `AI_MODEL` in your ignored local `.env`.
+Choose a model available to your API project that supports the Responses API and
+Structured Outputs. No model or paid calls are selected automatically.
+After the required test gate passes, recreate the development backend with
+`docker compose up -d --no-deps backend`. Never put the key in frontend variables,
+source control, screenshots, or shared `docker compose config` output.
+
+The adapter sends a fixed instruction, the command schema, and only the current
+unrecognized input. It sends no player identity, room state, inventory, history,
+or tools. It requests `store=false`; this is not a promise of zero retention by
+the provider. See [OpenAI data controls](https://platform.openai.com/docs/guides/your-data)
+and [Structured Outputs](https://platform.openai.com/docs/guides/structured-outputs).
+The prompt instructs the model to abstain from destinations such as “walk to the
+docks” because it has no map context; try “please head north.” This is a prompt
+constraint, not a guarantee of correct interpretation. The engine still checks
+whether any proposed movement is legal.
+
+Defaults are a 5-second total deadline, 4,096 input bytes, 512 output tokens,
+two concurrent requests, and 100 attempted requests per backend process lifetime.
+Configure these with `AI_COMMAND_TIMEOUT_SECONDS`, `AI_COMMAND_MAX_INPUT_BYTES`,
+`AI_COMMAND_MAX_OUTPUT_TOKENS`, `AI_COMMAND_MAX_CONCURRENT`, and
+`AI_COMMAND_MAX_REQUESTS`. Failed attempts count; requests are never retried and
+redirects are not followed. Responses exceeding 64 KiB, refusals, incomplete
+output, and invalid commands fail safely. Classic commands remain available when
+AI capacity is exhausted. Limits reset on restart and multiply across processes;
+they are local safeguards, not persistent billing limits. Set appropriate project
+usage controls separately. Shared budget accounting and authenticated per-player
+quotas remain future work. Real interpretation is blocked outside development.
+
+Automated gameplay tests retain `FakeAIProvider`; adapter contract tests use an
+in-memory HTTP transport with dummy credentials and make no external requests.
 
 The browser command `/debug on` appends safe structured WebSocket diagnostics to
 the transcript; `/debug off` disables them. Debug output includes message type,

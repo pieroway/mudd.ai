@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -49,9 +49,13 @@ class Settings(BaseSettings):
     # AI Provider
     ai_provider: Literal["fake", "anthropic", "openai"] = "fake"
     anthropic_api_key: str = ""
-    openai_api_key: str = ""
-    ai_model: str = "claude-3-haiku"
+    openai_api_key: SecretStr = SecretStr("")
+    ai_model: str = ""
     ai_command_timeout_seconds: float = Field(default=5.0, gt=0)
+    ai_command_max_input_bytes: int = Field(default=4096, gt=0, le=4096)
+    ai_command_max_output_tokens: int = Field(default=512, ge=16, le=2048)
+    ai_command_max_requests: int = Field(default=100, gt=0, le=1000)
+    ai_command_max_concurrent: int = Field(default=2, gt=0, le=10)
 
     # Features
     ai_narration_enabled: bool = False

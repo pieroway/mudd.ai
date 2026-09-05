@@ -44,7 +44,7 @@ def test_disabled_fake_provider_is_safe_in_production_configuration():
     assert create_ai_provider(settings) is None
 
 
-@pytest.mark.parametrize("provider_name", ["anthropic", "openai"])
+@pytest.mark.parametrize("provider_name", ["anthropic"])
 def test_unimplemented_real_provider_fails_closed(provider_name):
     settings = Settings(
         _env_file=None,
@@ -59,3 +59,44 @@ def test_unimplemented_real_provider_fails_closed(provider_name):
 def test_unknown_provider_name_is_rejected_by_settings():
     with pytest.raises(ValueError):
         Settings(_env_file=None, ai_provider="unknown")
+
+
+@pytest.mark.parametrize("environment", ["production", "test", "staging"])
+def test_openai_rejected_outside_development(environment):
+    settings = Settings(
+        _env_file=None,
+        app_env=environment,
+        ai_provider="openai",
+        ai_command_interpretation_enabled=True,
+    )
+    with pytest.raises(UnsupportedAIProviderError, match="development-only"):
+        create_ai_provider(settings)
+
+
+@pytest.mark.parametrize("key,model", [("", "model"), ("key", ""), (" ", "model")])
+def test_openai_requires_explicit_configuration(key, model):
+    settings = Settings(
+        _env_file=None,
+        app_env="development",
+        ai_provider="openai",
+        ai_command_interpretation_enabled=True,
+        openai_api_key=key,
+        ai_model=model,
+    )
+    with pytest.raises(UnsupportedAIProviderError, match="requires"):
+        create_ai_provider(settings)
+
+
+def test_openai_factory_and_secret_redaction():
+    from app.ai.openai import OpenAIProvider
+
+    settings = Settings(
+        _env_file=None,
+        app_env="development",
+        ai_provider="openai",
+        ai_command_interpretation_enabled=True,
+        openai_api_key="test-secret",
+        ai_model="model",
+    )
+    assert isinstance(create_ai_provider(settings), OpenAIProvider)
+    assert "test-secret" not in repr(settings)

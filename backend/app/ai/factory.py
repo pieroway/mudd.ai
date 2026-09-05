@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from app.ai.fake import FakeAIProvider
+from app.ai.openai import OpenAIProvider
 from app.ai.provider import AIProvider
 from app.config import Settings
 
@@ -22,6 +23,12 @@ def create_ai_provider(settings: Settings) -> AIProvider | None:
                 "interpretation is enabled."
             )
         return FakeAIProvider()
+    if settings.ai_provider == "openai":
+        if settings.app_env.casefold() != "development":
+            raise UnsupportedAIProviderError("OpenAI command interpretation is development-only.")
+        if not settings.openai_api_key.get_secret_value().strip() or not settings.ai_model.strip():
+            raise UnsupportedAIProviderError("OpenAI requires OPENAI_API_KEY and explicit AI_MODEL.")
+        return OpenAIProvider(settings)
     raise UnsupportedAIProviderError(
         f"AI provider {settings.ai_provider!r} is not implemented for command interpretation."
     )

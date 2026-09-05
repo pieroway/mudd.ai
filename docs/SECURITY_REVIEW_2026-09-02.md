@@ -185,3 +185,11 @@ M2 must not send user input to a real AI provider until prompt data handling,
 timeouts, output schema validation, logging/redaction, and secret management are
 defined. Automated tests must continue to use `FakeAIProvider` without network
 calls or real credentials.
+
+The development-only OpenAI adapter now defines these boundaries in README:
+stateless minimal prompts, `store=false`, a total deadline, strict local schema
+validation, generic errors, a redacted settings key, and bounded request/output
+limits without retries. Adapter tests use an in-memory mock HTTP transport with
+dummy credentials; gameplay tests continue to use FakeAIProvider. Production
+activation is rejected. Persistent/shared cost accounting and authenticated
+per-player quotas remain deferred; process-local limits reset on restart.
