@@ -51,6 +51,26 @@ Implement it incrementally:
 Open design decisions include invitation consent, who may add members, history
 retention, offline participation, membership changes, and blocking behavior.
 
+### Deferred Engine-Owned Destination Navigation
+
+Support natural requests such as `walk toward the docks` with a structured
+destination intent rather than asking an AI provider to invent directions:
+
+```json
+{"action": "navigate", "destination": "docks"}
+```
+
+The AI layer may identify the requested destination, but the authoritative game
+engine must determine the player's current location, whether the destination is
+known and reachable, and which exits form a valid route. The engine should then
+execute one step at a time or expose a cancellable travel policy; it must never
+accept provider-supplied geography as fact.
+
+Before implementation, decide how destination ambiguity, player map knowledge,
+locked or changing routes, interruption, hazards, and multiplayer movement
+events affect navigation. The current `walk toward the docks` fake fixture is
+only a narrow interpretation-pipeline example and not general pathfinding.
+
 ## Later Gameplay
 Design for, defer:
 - authenticated administrator roles and admin-only debug diagnostics
