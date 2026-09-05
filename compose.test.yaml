@@ -33,6 +33,7 @@ services:
       REDIS_URL: redis://redis_test:6379
       AI_PROVIDER: fake
       APP_ENV: test
+      DATABASE_POOL_ENABLED: "false"
       LOG_LEVEL: WARNING
     depends_on:
       postgres_test:

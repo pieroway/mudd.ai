@@ -10,7 +10,7 @@
 		-Server
 	}
 
-	@backend path /health /ws
+	@backend path /health /ws /auth/*
 	reverse_proxy @backend backend:8000
 	reverse_proxy frontend:5173
 }

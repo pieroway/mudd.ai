@@ -6,18 +6,31 @@ import pytest
 from sqlalchemy import delete
 
 os.environ.setdefault("APP_ENV", "test")
+os.environ.setdefault("DATABASE_POOL_ENABLED", "false")
 
 from app.db import get_session_factory  # noqa: E402
 from app.db.seed import seed_world  # noqa: E402
-from app.models import ExitRecord, ItemRecord, PlayerRecord, RoomRecord  # noqa: E402
+from app.models import (  # noqa: E402
+    AccountRecord,
+    AuthSessionRecord,
+    ExitRecord,
+    ItemRecord,
+    PlayerRecord,
+    RoomRecord,
+)  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
 async def reset_persistent_database():
     """Give every test a deterministic PostgreSQL world."""
     factory = get_session_factory()
+    from app.api.auth import attempts
+
+    attempts.clear()
     async with factory() as session:
         async with session.begin():
+            await session.execute(delete(AuthSessionRecord))
+            await session.execute(delete(AccountRecord))
             await session.execute(delete(ItemRecord))
             await session.execute(delete(PlayerRecord))
             await session.execute(delete(ExitRecord))

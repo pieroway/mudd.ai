@@ -5,10 +5,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import Settings
-from app.db import get_session_factory
+from app.db import engine, get_session_factory
 from app.db.seed import seed_world
 from app.api.websocket import router as ws_router
 from app.api.health import router as health_router
+from app.api.auth import router as auth_router
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,10 @@ async def lifespan(app: FastAPI):
     async with get_session_factory()() as session:
         async with session.begin():
             await seed_world(session)
-    yield
+    try:
+        yield
+    finally:
+        await engine.dispose()
     logger.info("🎮 MUD Server shutting down...")
 
 
@@ -47,6 +51,7 @@ def create_app() -> FastAPI:
     # Routes
     app.include_router(health_router, tags=["health"])
     app.include_router(ws_router, tags=["game"])
+    app.include_router(auth_router, tags=["auth"])
 
     return app
 

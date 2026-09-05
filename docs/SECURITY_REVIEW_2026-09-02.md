@@ -20,7 +20,7 @@ exposed to the public internet or an untrusted network.
 ### SEC-001 — Username impersonation and missing authentication
 
 - **Severity:** Critical for public deployment
-- **Status:** Open
+- **Status:** Resolved September 4, 2026
 - **Evidence:** A WebSocket query-string username is treated as the persistent
   player identity. Duplicate-name protection applies only while that player is
   connected.
@@ -28,6 +28,11 @@ exposed to the public internet or an untrusted network.
   persistent location and inventory.
 - **Remediation:** Introduce authenticated accounts or signed development
   sessions. Separate account identity, character identity, and connection state.
+- **Resolution:** Password-backed accounts now own characters. WebSockets resolve
+  identity from revocable server-side sessions and ignore query-string usernames.
+  Registration reserves legacy characters for explicit operator adoption. Tests
+  cover impersonation, expiry, logout, and revocation before engine execution.
+  See [authentication details and remaining public-launch work](AUTHENTICATION.md).
 
 ### SEC-002 — Unrestricted browser and WebSocket origins
 
@@ -168,7 +173,7 @@ exposed to the public internet or an untrusted network.
 - [x] Add input, connection, and rate limits (SEC-005).
 - [x] Remove raw command content from logs (SEC-006).
 - [x] Restrict development database and Redis ports (SEC-003).
-- [ ] Design and implement real authentication before public access (SEC-001).
+- [x] Design and implement real authentication before public access (SEC-001).
 - [x] Add automated dependency auditing to CI/deployment checks. `make audit`
   scans the pinned backend, frontend, and Playwright environments. GitHub
   Actions runs it for dependency changes, weekly, and on demand. All Python

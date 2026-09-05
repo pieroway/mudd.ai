@@ -14,16 +14,16 @@ echo Building application images...
 docker compose build
 if errorlevel 1 goto failure
 
-echo Starting application stack and waiting for health checks...
-docker compose up -d --wait
-if errorlevel 1 goto failure
-
 echo Running Playwright workflow...
 call scripts\e2e.bat
 if errorlevel 1 goto failure
 
 echo Running smoke load test and authoritative-state checks...
 call scripts\load-test.bat smoke
+if errorlevel 1 goto failure
+
+echo Starting application stack and waiting for health checks...
+docker compose up -d --wait
 if errorlevel 1 goto failure
 
 echo Deployment gate passed.

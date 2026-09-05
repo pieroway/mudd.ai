@@ -13,14 +13,14 @@ echo "Running required test gate..."
 echo "Building application images..."
 docker compose build
 
-echo "Starting application stack and waiting for health checks..."
-docker compose up -d --wait
-
 echo "Running Playwright workflow..."
 ./scripts/e2e.sh
 
 echo "Running smoke load test and authoritative-state checks..."
 ./scripts/load-test.sh smoke
+
+echo "Starting application stack and waiting for health checks..."
+docker compose up -d --wait
 
 echo "Deployment gate passed."
 echo "Frontend: http://localhost:5173"

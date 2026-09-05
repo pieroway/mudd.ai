@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Transcript from './Transcript'
 import CommandPrompt from './CommandPrompt'
+import { apiUrl } from '../services/api'
 import '../styles/Terminal.css'
 
 interface GameMessage {
@@ -46,14 +47,9 @@ export default function Terminal({ username }: TerminalProps) {
 
   useEffect(() => {
     // Connect to WebSocket
-    const apiUrl = new URL(import.meta.env.VITE_API_URL ?? `http://${window.location.hostname}:8000`)
-    if (apiUrl.hostname === 'localhost' && window.location.hostname !== 'localhost') {
-      apiUrl.hostname = window.location.hostname
-    }
-    apiUrl.protocol = apiUrl.protocol === 'https:' ? 'wss:' : 'ws:'
-    apiUrl.pathname = '/ws'
-    apiUrl.search = new URLSearchParams({ username }).toString()
-    const websocket = new WebSocket(apiUrl.toString())
+    const socketUrl = apiUrl('/ws')
+    socketUrl.protocol = socketUrl.protocol === 'https:' ? 'wss:' : 'ws:'
+    const websocket = new WebSocket(socketUrl.toString())
 
     websocket.onopen = () => {
       setConnected(true)

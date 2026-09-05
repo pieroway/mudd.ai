@@ -1,10 +1,36 @@
 import logging
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 from starlette.websockets import WebSocketDisconnect
 
 from app.ai.fake import FakeAIProvider
 from app.api import websocket as websocket_api
+
+
+@pytest.fixture
+def game_client(test_client):
+    """Authenticate each test character through HTTP, retaining independent cookies."""
+    tokens = {}
+
+    class GameClient:
+        def websocket_connect(self, url, **kwargs):
+            username = parse_qs(urlparse(url).query)["username"][0].strip()
+            normalized = username.casefold()
+            if normalized not in tokens:
+                test_client.cookies.clear()
+                response = test_client.post(
+                    "/auth/register",
+                    json={"username": username, "password": "A long test-only passphrase1!"},
+                    headers={"origin": "http://localhost:5173"},
+                )
+                assert response.status_code == 201
+                tokens[normalized] = test_client.cookies.get("mud_session")
+            headers = dict(kwargs.pop("headers", {}))
+            headers["cookie"] = f"mud_session={tokens[normalized]}"
+            return test_client.websocket_connect(url, headers=headers, **kwargs)
+
+    return GameClient()
 
 
 @pytest.mark.parametrize(
@@ -15,10 +41,10 @@ from app.api import websocket as websocket_api
     ],
 )
 def test_websocket_logs_command_metadata_without_content(
-    test_client, caplog, command, expected_action, secret
+    game_client, caplog, command, expected_action, secret
 ):
     with caplog.at_level(logging.DEBUG, logger="app.api.websocket"):
-        with test_client.websocket_connect("/ws?username=LoggerTest") as websocket:
+        with game_client.websocket_connect("/ws?username=LoggerTest") as websocket:
             websocket.receive_json()
             websocket.send_text(command)
             websocket.receive_json()
@@ -30,17 +56,17 @@ def test_websocket_logs_command_metadata_without_content(
     assert "success=" in caplog.text
 
 
-def test_websocket_accepts_a_trusted_browser_origin(test_client):
-    with test_client.websocket_connect(
+def test_websocket_accepts_a_trusted_browser_origin(game_client):
+    with game_client.websocket_connect(
         "/ws?username=Trusted",
         headers={"origin": "http://localhost:5173"},
     ) as websocket:
         assert websocket.receive_json()["type"] == "system"
 
 
-def test_websocket_rejects_an_untrusted_browser_origin(test_client):
+def test_websocket_rejects_an_untrusted_browser_origin(game_client):
     with pytest.raises(WebSocketDisconnect) as denied:
-        with test_client.websocket_connect(
+        with game_client.websocket_connect(
             "/ws?username=Untrusted",
             headers={"origin": "https://evil.example"},
         ):
@@ -49,15 +75,15 @@ def test_websocket_rejects_an_untrusted_browser_origin(test_client):
     assert denied.value.code == 1008
 
 
-def test_websocket_accepts_a_client_without_an_origin_header(test_client):
-    with test_client.websocket_connect("/ws?username=NativeClient") as websocket:
+def test_websocket_accepts_a_client_without_an_origin_header(game_client):
+    with game_client.websocket_connect("/ws?username=NativeClient") as websocket:
         assert websocket.receive_json()["type"] == "system"
 
 
-def test_websocket_rejects_an_oversized_command(test_client, monkeypatch):
+def test_websocket_rejects_an_oversized_command(game_client, monkeypatch):
     monkeypatch.setattr(websocket_api.settings, "max_command_bytes", 4)
 
-    with test_client.websocket_connect("/ws?username=Verbose") as websocket:
+    with game_client.websocket_connect("/ws?username=Verbose") as websocket:
         websocket.receive_json()
         websocket.send_text("north")
         assert websocket.receive_json() == {
@@ -70,11 +96,11 @@ def test_websocket_rejects_an_oversized_command(test_client, monkeypatch):
     assert closed.value.code == 1009
 
 
-def test_websocket_rate_limits_commands_per_connection(test_client, monkeypatch):
+def test_websocket_rate_limits_commands_per_connection(game_client, monkeypatch):
     monkeypatch.setattr(websocket_api.settings, "command_rate_limit", 2)
     monkeypatch.setattr(websocket_api.settings, "command_rate_window_seconds", 60.0)
 
-    with test_client.websocket_connect("/ws?username=Rapid") as websocket:
+    with game_client.websocket_connect("/ws?username=Rapid") as websocket:
         websocket.receive_json()
         for _ in range(2):
             websocket.send_text("look")
@@ -91,41 +117,41 @@ def test_websocket_rate_limits_commands_per_connection(test_client, monkeypatch)
     assert closed.value.code == 1008
 
 
-def test_websocket_enforces_the_concurrent_connection_limit(test_client, monkeypatch):
+def test_websocket_enforces_the_concurrent_connection_limit(game_client, monkeypatch):
     monkeypatch.setattr(websocket_api.settings, "max_websocket_connections", 1)
 
-    with test_client.websocket_connect("/ws?username=First") as first:
+    with game_client.websocket_connect("/ws?username=First") as first:
         first.receive_json()
         with pytest.raises(WebSocketDisconnect) as denied:
-            with test_client.websocket_connect("/ws?username=Second"):
+            with game_client.websocket_connect("/ws?username=Second"):
                 pass
 
     assert denied.value.code == 1013
 
 
-def test_websocket_rate_limits_connection_attempts_by_source(test_client, monkeypatch):
+def test_websocket_rate_limits_connection_attempts_by_source(game_client, monkeypatch):
     websocket_api.connection_attempts.clear()
     monkeypatch.setattr(websocket_api.settings, "connection_attempt_limit", 1)
     monkeypatch.setattr(websocket_api.settings, "connection_attempt_window_seconds", 60.0)
 
     try:
-        with test_client.websocket_connect("/ws?username=FirstAttempt") as first:
+        with game_client.websocket_connect("/ws?username=FirstAttempt") as first:
             first.receive_json()
         with pytest.raises(WebSocketDisconnect) as denied:
-            with test_client.websocket_connect("/ws?username=SecondAttempt"):
+            with game_client.websocket_connect("/ws?username=SecondAttempt"):
                 pass
         assert denied.value.code == 1013
     finally:
         websocket_api.connection_attempts.clear()
 
 
-def test_websocket_connections_have_independent_player_state(test_client):
-    with test_client.websocket_connect("/ws?username=Alan") as first:
+def test_websocket_connections_have_independent_player_state(game_client):
+    with game_client.websocket_connect("/ws?username=Alan") as first:
         first_welcome = first.receive_json()
         assert first_welcome["type"] == "system"
         assert first_welcome["room_name"] == "Town Square"
 
-        with test_client.websocket_connect("/ws?username=Robin") as second:
+        with game_client.websocket_connect("/ws?username=Robin") as second:
             second.receive_json()
 
             first.send_text("north")
@@ -142,10 +168,10 @@ def test_websocket_connections_have_independent_player_state(test_client):
             assert second_look["metadata"] == {"command_source": "classic"}
 
 
-def test_websocket_exposes_ai_interpretation_metadata(test_client, monkeypatch):
+def test_websocket_exposes_ai_interpretation_metadata(game_client, monkeypatch):
     monkeypatch.setattr(websocket_api.game_service, "ai_provider", FakeAIProvider())
 
-    with test_client.websocket_connect("/ws?username=NaturalSpeaker") as websocket:
+    with game_client.websocket_connect("/ws?username=NaturalSpeaker") as websocket:
         websocket.receive_json()
         websocket.send_text("walk toward the docks")
         result = websocket.receive_json()
@@ -155,10 +181,10 @@ def test_websocket_exposes_ai_interpretation_metadata(test_client, monkeypatch):
     assert result["metadata"] == {"command_source": "ai"}
 
 
-def test_only_one_websocket_player_can_take_a_shared_item(test_client):
-    with test_client.websocket_connect("/ws?username=Alan") as first:
+def test_only_one_websocket_player_can_take_a_shared_item(game_client):
+    with game_client.websocket_connect("/ws?username=Alan") as first:
         first.receive_json()
-        with test_client.websocket_connect("/ws?username=Robin") as second:
+        with game_client.websocket_connect("/ws?username=Robin") as second:
             second.receive_json()
 
             first.send_text("take torch")
@@ -173,10 +199,10 @@ def test_only_one_websocket_player_can_take_a_shared_item(test_client):
             assert second_result["text"] == "You do not see a torch here."
 
 
-def test_duplicate_connected_username_is_rejected(test_client):
-    with test_client.websocket_connect("/ws?username=Alan") as first:
+def test_duplicate_connected_username_is_rejected(game_client):
+    with game_client.websocket_connect("/ws?username=Alan") as first:
         first.receive_json()
-        with test_client.websocket_connect("/ws?username=%20ALAN%20") as second:
+        with game_client.websocket_connect("/ws?username=%20ALAN%20") as second:
             error = second.receive_json()
 
             assert error == {
@@ -185,10 +211,10 @@ def test_duplicate_connected_username_is_rejected(test_client):
             }
 
 
-def test_players_can_see_and_speak_to_others_in_the_same_room(test_client):
-    with test_client.websocket_connect("/ws?username=Alan") as alan:
+def test_players_can_see_and_speak_to_others_in_the_same_room(game_client):
+    with game_client.websocket_connect("/ws?username=Alan") as alan:
         alan.receive_json()
-        with test_client.websocket_connect("/ws?username=Robin") as robin:
+        with game_client.websocket_connect("/ws?username=Robin") as robin:
             robin.receive_json()
 
             alan.send_text("look")
@@ -205,10 +231,10 @@ def test_players_can_see_and_speak_to_others_in_the_same_room(test_client):
             assert alan.receive_json()["text"] == 'You say, "Can you hear me?"'
 
 
-def test_movement_output_lists_players_already_in_the_destination(test_client):
-    with test_client.websocket_connect("/ws?username=Alan") as alan:
+def test_movement_output_lists_players_already_in_the_destination(game_client):
+    with game_client.websocket_connect("/ws?username=Alan") as alan:
         alan.receive_json()
-        with test_client.websocket_connect("/ws?username=Robin") as robin:
+        with game_client.websocket_connect("/ws?username=Robin") as robin:
             robin.receive_json()
 
             robin.send_text("north")
@@ -224,10 +250,10 @@ def test_movement_output_lists_players_already_in_the_destination(test_client):
             assert robin.receive_json()["text"] == "Alan arrives from the south."
 
 
-def test_players_can_tell_and_atomically_give_items(test_client):
-    with test_client.websocket_connect("/ws?username=Alan") as alan:
+def test_players_can_tell_and_atomically_give_items(game_client):
+    with game_client.websocket_connect("/ws?username=Alan") as alan:
         alan.receive_json()
-        with test_client.websocket_connect("/ws?username=Robin") as robin:
+        with game_client.websocket_connect("/ws?username=Robin") as robin:
             robin.receive_json()
 
             alan.send_text("say to Robin This is private.")
@@ -245,10 +271,10 @@ def test_players_can_tell_and_atomically_give_items(test_client):
             assert robin.receive_json()["text"] == "Inventory: torch"
 
 
-def test_telling_yourself_returns_a_random_playful_warning(test_client):
+def test_telling_yourself_returns_a_random_playful_warning(game_client):
     from app.services.game import SELF_TALK_RESPONSES
 
-    with test_client.websocket_connect("/ws?username=Alan") as alan:
+    with game_client.websocket_connect("/ws?username=Alan") as alan:
         alan.receive_json()
 
         alan.send_text("say to Alan Hello, me.")
@@ -262,20 +288,18 @@ def test_telling_yourself_returns_a_random_playful_warning(test_client):
         assert tell_result["text"] in SELF_TALK_RESPONSES
 
 
-def test_who_lists_only_connected_players_and_their_rooms(test_client):
-    with test_client.websocket_connect("/ws?username=Robin") as robin:
+def test_who_lists_only_connected_players_and_their_rooms(game_client):
+    with game_client.websocket_connect("/ws?username=Robin") as robin:
         robin.receive_json()
         robin.send_text("north")
         robin.receive_json()
 
-        with test_client.websocket_connect("/ws?username=Alan") as alan:
+        with game_client.websocket_connect("/ws?username=Alan") as alan:
             alan.receive_json()
             alan.send_text("who")
             result = alan.receive_json()
 
             assert result["success"] is True
             assert result["text"] == (
-                "Players online (2):\n"
-                "- Alan — Town Square\n"
-                "- Robin — Forest"
+                "Players online (2):\n" "- Alan — Town Square\n" "- Robin — Forest"
             )

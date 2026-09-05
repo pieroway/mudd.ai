@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from secrets import choice
 from typing import Any
+from collections.abc import Awaitable, Callable
 
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -62,7 +63,9 @@ class GameService:
         self._connection_lock = asyncio.Lock()
         self._command_lock = asyncio.Lock()
 
-    async def connect_player(self, session_id: str, username: str) -> Player:
+    async def connect_player(
+        self, session_id: str, username: str, *, player_id: str | None = None
+    ) -> Player:
         display_name, normalized_username = normalize_username(username)
         async with self._connection_lock:
             if normalized_username in self._active_usernames:
@@ -71,10 +74,13 @@ class GameService:
             async with self.session_factory() as session:
                 async with session.begin():
                     repository = GameRepository(session)
-                    player_record = await repository.get_or_create_player(
-                        display_name, normalized_username
-                    )
-                    player = await repository.load_player(player_record.id)
+                    if player_id is None:
+                        # Internal deterministic fixtures; network callers supply authenticated ID.
+                        player_record = await repository.get_or_create_player(
+                            display_name, normalized_username
+                        )
+                        player_id = player_record.id
+                    player = await repository.load_player(player_id)
 
             self._session_players[session_id] = player.id
             self._session_usernames[session_id] = normalized_username
@@ -88,7 +94,13 @@ class GameService:
             if normalized_username is not None:
                 self._active_usernames.discard(normalized_username)
 
-    async def execute(self, session_id: str, raw_command: str) -> dict[str, Any]:
+    async def execute(
+        self,
+        session_id: str,
+        raw_command: str,
+        *,
+        authorization_check: Callable[[], Awaitable[bool]] | None = None,
+    ) -> dict[str, Any]:
         player_id = self._session_players.get(session_id)
         if player_id is None:
             raise KeyError(f"No active player session: {session_id}")
@@ -109,13 +121,18 @@ class GameService:
                 return {
                     "success": False,
                     "output": (
-                        "I couldn't interpret that command. "
-                        "Try 'help' for available commands."
+                        "I couldn't interpret that command. " "Try 'help' for available commands."
                     ),
                     "metadata": {"command_source": command_source},
                 }
             command = validated.command.model_dump()
         async with self._command_lock:
+            if authorization_check is not None and not await authorization_check():
+                return {
+                    "success": False,
+                    "output": "Session expired. Please sign in again.",
+                    "metadata": {"command_source": command_source},
+                }
             result = await self._execute_locked(session_id, player_id, command)
         result["metadata"] = {"command_source": command_source}
         return result
@@ -150,9 +167,7 @@ class GameService:
             async with session.begin():
                 repository = GameRepository(session)
                 player_record = await repository.load_player_for_update(player_id)
-                world, player = await repository.load_world(
-                    player_record, lock_items=lock_items
-                )
+                world, player = await repository.load_world(player_record, lock_items=lock_items)
                 domain_players: dict[str, Player] = world["players"]  # type: ignore[assignment]
                 active_players = await repository.load_players(active_player_ids)
                 for record in active_players:
@@ -219,9 +234,7 @@ class GameService:
         async with self.session_factory() as session:
             repository = GameRepository(session)
             records = await repository.load_players(active_player_ids)
-            room_names = await repository.room_names(
-                {record.current_room_id for record in records}
-            )
+            room_names = await repository.room_names({record.current_room_id for record in records})
 
         records.sort(key=lambda record: record.username.casefold())
         page_size = 25
@@ -256,8 +269,7 @@ class GameService:
         action = action_value if isinstance(action_value, str) else ""
         sender_before = next(record for record in active_players if record.id == player.id)
         sessions_by_player = {
-            player_id: candidate_session
-            for candidate_session, player_id in active_sessions.items()
+            player_id: candidate_session for candidate_session, player_id in active_sessions.items()
         }
         events: list[dict[str, str]] = []
 
@@ -306,9 +318,7 @@ class GameService:
             return events
 
         direct_recipient_name = (
-            (command.get("target_player") or "").casefold()
-            if action == "give"
-            else None
+            (command.get("target_player") or "").casefold() if action == "give" else None
         )
         for record in active_players:
             recipient_session = sessions_by_player.get(record.id)
@@ -331,7 +341,11 @@ class GameService:
     ) -> dict[str, Any]:
         message = command.get("message")
         if not message:
-            usage = "Usage: say to <player> <message>." if command.get("action") == "tell" else "Say what?"
+            usage = (
+                "Usage: say to <player> <message>."
+                if command.get("action") == "tell"
+                else "Say what?"
+            )
             return {"success": False, "output": usage}
 
         async with self.session_factory() as session:
@@ -356,12 +370,20 @@ class GameService:
                 None,
             )
             if recipient_session is None:
-                return {"success": False, "output": f"{target_name or 'That player'} is not connected."}
+                return {
+                    "success": False,
+                    "output": f"{target_name or 'That player'} is not connected.",
+                }
             recipient = players[active_sessions[recipient_session]]
             return {
                 "success": True,
                 "output": f'You tell {recipient.username}, "{message}"',
-                "events": [{"session_id": recipient_session, "text": f'{sender.username} tells you, "{message}"'}],
+                "events": [
+                    {
+                        "session_id": recipient_session,
+                        "text": f'{sender.username} tells you, "{message}"',
+                    }
+                ],
             }
 
         events = [

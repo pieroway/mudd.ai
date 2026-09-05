@@ -23,6 +23,13 @@ class Settings(BaseSettings):
     connection_attempt_window_seconds: float = Field(default=60.0, gt=0)
     max_tracked_client_addresses: int = Field(default=10_000, gt=0)
     outbound_send_timeout_seconds: float = Field(default=2.0, gt=0)
+    auth_session_seconds: int = Field(default=86400, ge=60, le=604800)
+    auth_attempt_limit: int = Field(default=20, gt=0)
+    auth_attempt_window_seconds: int = Field(default=60, gt=0)
+
+    @property
+    def secure_auth_cookie(self) -> bool:
+        return self.app_env.casefold() not in {"development", "test"}
 
     @field_validator("trusted_origins")
     @classmethod
@@ -42,6 +49,7 @@ class Settings(BaseSettings):
 
     # Database
     database_url: str = "postgresql+asyncpg://muduser:mudpass@postgres:5432/muddb"
+    database_pool_enabled: bool = True
 
     # Redis
     redis_url: str = "redis://redis:6379"

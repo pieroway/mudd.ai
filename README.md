@@ -167,8 +167,10 @@ make dev  # Rebuilds fresh
 ```
 
 Player location and inventory are stored in PostgreSQL. Usernames are normalized
-case-insensitively and must be unique. Milestone One does not provide passwords or
-account authentication, so usernames are persistent identities but are not yet secure accounts.
+case-insensitively and must be unique. Players register an account with a password
+of 8–128 characters, including a number (0-9) and a special character, then sign in to their character. Each account owns one
+character initially. See [authentication](docs/AUTHENTICATION.md) for session
+behavior and how to secure existing characters after upgrading.
 
 ## Testing
 

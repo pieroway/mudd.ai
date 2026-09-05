@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import App from '../src/App'
+import Terminal from '../src/components/Terminal'
 
 class MockWebSocket {
   static readonly CONNECTING = 0
@@ -36,7 +36,7 @@ class MockWebSocket {
   }
 }
 
-describe('App', () => {
+describe('Terminal', () => {
   beforeEach(() => {
     MockWebSocket.instances = []
     window.localStorage.clear()
@@ -47,21 +47,17 @@ describe('App', () => {
     vi.unstubAllGlobals()
   })
 
-  it('enters the world with the submitted username', () => {
-    render(<App />)
+  it('uses cookie authentication without putting identity in the URL', () => {
+    render(<Terminal username="Alan" />)
 
-    fireEvent.change(screen.getByTestId('username-input'), { target: { value: 'Alan Smith' } })
-    fireEvent.click(screen.getByTestId('login-button'))
 
-    expect(screen.getByText("Alan Smith's Journey")).toBeInTheDocument()
+    expect(screen.getByText("Alan's Journey")).toBeInTheDocument()
     const socketUrl = new URL(MockWebSocket.instances[0].url)
-    expect(socketUrl.searchParams.get('username')).toBe('Alan Smith')
+    expect(socketUrl.search).toBe('')
   })
 
   it('shows server output and sends commands after connecting', () => {
-    render(<App />)
-    fireEvent.change(screen.getByTestId('username-input'), { target: { value: 'Alan' } })
-    fireEvent.click(screen.getByTestId('login-button'))
+    render(<Terminal username="Alan" />)
 
     const socket = MockWebSocket.instances[0]
     act(() => {
@@ -80,9 +76,7 @@ describe('App', () => {
   })
 
   it('exposes structured command-source metadata without adding transcript text', () => {
-    render(<App />)
-    fireEvent.change(screen.getByTestId('username-input'), { target: { value: 'Alan' } })
-    fireEvent.click(screen.getByTestId('login-button'))
+    render(<Terminal username="Alan" />)
 
     act(() => {
       MockWebSocket.instances[0].receive({
@@ -97,9 +91,7 @@ describe('App', () => {
   })
 
   it('applies theme slash commands locally without sending them to the server', () => {
-    render(<App />)
-    fireEvent.change(screen.getByTestId('username-input'), { target: { value: 'Alan' } })
-    fireEvent.click(screen.getByTestId('login-button'))
+    render(<Terminal username="Alan" />)
 
     const socket = MockWebSocket.instances[0]
     act(() => socket.open())
@@ -114,9 +106,7 @@ describe('App', () => {
   })
 
   it('explains valid options for an invalid theme', () => {
-    render(<App />)
-    fireEvent.change(screen.getByTestId('username-input'), { target: { value: 'Alan' } })
-    fireEvent.click(screen.getByTestId('login-button'))
+    render(<Terminal username="Alan" />)
     act(() => MockWebSocket.instances[0].open())
 
     fireEvent.change(screen.getByTestId('command-input'), { target: { value: '/theme sepia' } })
@@ -127,9 +117,7 @@ describe('App', () => {
   })
 
   it('toggles safe structured debug output locally', () => {
-    render(<App />)
-    fireEvent.change(screen.getByTestId('username-input'), { target: { value: 'Alan' } })
-    fireEvent.click(screen.getByTestId('login-button'))
+    render(<Terminal username="Alan" />)
     const socket = MockWebSocket.instances[0]
     act(() => socket.open())
 
@@ -161,9 +149,7 @@ describe('App', () => {
   })
 
   it('shows usage for an invalid debug command', () => {
-    render(<App />)
-    fireEvent.change(screen.getByTestId('username-input'), { target: { value: 'Alan' } })
-    fireEvent.click(screen.getByTestId('login-button'))
+    render(<Terminal username="Alan" />)
     act(() => MockWebSocket.instances[0].open())
 
     fireEvent.change(screen.getByTestId('command-input'), { target: { value: '/debug maybe' } })
@@ -174,9 +160,7 @@ describe('App', () => {
   })
 
   it('shows server errors in the transcript', () => {
-    render(<App />)
-    fireEvent.change(screen.getByTestId('username-input'), { target: { value: 'Alan' } })
-    fireEvent.click(screen.getByTestId('login-button'))
+    render(<Terminal username="Alan" />)
 
     act(() => {
       MockWebSocket.instances[0].receive({ type: 'error', text: 'Username is unavailable.' })
@@ -186,9 +170,7 @@ describe('App', () => {
   })
 
   it('closes a socket that finishes connecting after unmount', () => {
-    const view = render(<App />)
-    fireEvent.change(screen.getByTestId('username-input'), { target: { value: 'Alan' } })
-    fireEvent.click(screen.getByTestId('login-button'))
+    const view = render(<Terminal username="Alan" />)
     const socket = MockWebSocket.instances[0]
 
     view.unmount()

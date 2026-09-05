@@ -36,6 +36,7 @@ e2e/playwright-report/
 
 # Docker
 .dockerignore
+!e2e/.dockerignore
 
 # Logs
 *.log

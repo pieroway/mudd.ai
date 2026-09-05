@@ -1,3 +1,4 @@
+import { authenticatePlayer } from '../auth.js';
 import ws from 'k6/ws';
 import { check } from 'k6';
 import { Counter, Rate, Trend } from 'k6/metrics';
@@ -37,7 +38,7 @@ export default function () {
   const username = `load-${runId}-${__VU}-${__ITER}`.slice(0, 50);
   const url = `${__ENV.WS_URL || 'ws://localhost:18001/ws'}?username=${username}`;
 
-  const response = ws.connect(url, {}, (socket) => {
+  const response = ws.connect(url, authenticatePlayer(url, username), (socket) => {
     let commandIndex = 0;
     let pending = null;
     let welcomed = false;
