@@ -8,6 +8,8 @@ interface GameMessage {
   text?: string
   room_name?: string
   room_description?: string
+  success?: boolean
+  room_id?: string
   metadata?: {
     command_source?: 'classic' | 'ai'
   }
@@ -33,6 +35,8 @@ export default function Terminal({ username }: TerminalProps) {
   const [connected, setConnected] = useState(false)
   const [theme, setTheme] = useState<Theme>(getSavedTheme)
   const [commandSource, setCommandSource] = useState<'classic' | 'ai' | null>(null)
+  const [debugEnabled, setDebugEnabled] = useState(false)
+  const debugEnabledRef = useRef(false)
   const transcriptEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -77,6 +81,19 @@ export default function Terminal({ username }: TerminalProps) {
 
       if (output) {
         setTranscript((prev) => [...prev, output])
+      }
+      if (debugEnabledRef.current) {
+        const details = [`type=${message.type}`]
+        if (typeof message.success === 'boolean') {
+          details.push(`success=${message.success}`)
+        }
+        if (message.room_id) {
+          details.push(`room_id=${message.room_id}`)
+        }
+        if (message.metadata?.command_source) {
+          details.push(`command_source=${message.metadata.command_source}`)
+        }
+        setTranscript((prev) => [...prev, `[DEBUG] ${details.join(' ')}`])
       }
     }
 
@@ -126,6 +143,20 @@ export default function Terminal({ username }: TerminalProps) {
       return
     }
 
+    if (slashCommand[0] === '/debug') {
+      setTranscript((prev) => [...prev, `> ${command}`])
+      const requestedState = slashCommand[1]
+      if (slashCommand.length === 2 && (requestedState === 'on' || requestedState === 'off')) {
+        const enabled = requestedState === 'on'
+        debugEnabledRef.current = enabled
+        setDebugEnabled(enabled)
+        setTranscript((prev) => [...prev, `Debug output ${enabled ? 'enabled' : 'disabled'}.`])
+      } else {
+        setTranscript((prev) => [...prev, 'Usage: /debug on | off'])
+      }
+      return
+    }
+
     if (ws && connected) {
       setTranscript((prev) => [...prev, `> ${command}`])
       ws.send(command)
@@ -138,6 +169,7 @@ export default function Terminal({ username }: TerminalProps) {
       data-testid="terminal"
       data-theme={theme}
       data-command-source={commandSource ?? undefined}
+      data-debug={debugEnabled ? 'on' : 'off'}
     >
       <div className="terminal-header">
         <h2>{username}'s Journey</h2>

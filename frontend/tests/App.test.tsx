@@ -126,6 +126,53 @@ describe('App', () => {
     expect(MockWebSocket.instances[0].send).not.toHaveBeenCalled()
   })
 
+  it('toggles safe structured debug output locally', () => {
+    render(<App />)
+    fireEvent.change(screen.getByTestId('username-input'), { target: { value: 'Alan' } })
+    fireEvent.click(screen.getByTestId('login-button'))
+    const socket = MockWebSocket.instances[0]
+    act(() => socket.open())
+
+    fireEvent.change(screen.getByTestId('command-input'), { target: { value: '/debug on' } })
+    fireEvent.submit(screen.getByTestId('command-input').closest('form')!)
+    expect(screen.getByText('Debug output enabled.')).toBeInTheDocument()
+    expect(screen.getByTestId('terminal')).toHaveAttribute('data-debug', 'on')
+    expect(socket.send).not.toHaveBeenCalled()
+
+    act(() => {
+      socket.receive({
+        type: 'game_output',
+        text: 'You move south.',
+        success: true,
+        room_id: 'docks',
+        metadata: { command_source: 'ai' },
+      })
+    })
+    expect(
+      screen.getByText(
+        '[DEBUG] type=game_output success=true room_id=docks command_source=ai',
+      ),
+    ).toBeInTheDocument()
+
+    fireEvent.change(screen.getByTestId('command-input'), { target: { value: '/debug off' } })
+    fireEvent.submit(screen.getByTestId('command-input').closest('form')!)
+    expect(screen.getByText('Debug output disabled.')).toBeInTheDocument()
+    expect(screen.getByTestId('terminal')).toHaveAttribute('data-debug', 'off')
+  })
+
+  it('shows usage for an invalid debug command', () => {
+    render(<App />)
+    fireEvent.change(screen.getByTestId('username-input'), { target: { value: 'Alan' } })
+    fireEvent.click(screen.getByTestId('login-button'))
+    act(() => MockWebSocket.instances[0].open())
+
+    fireEvent.change(screen.getByTestId('command-input'), { target: { value: '/debug maybe' } })
+    fireEvent.submit(screen.getByTestId('command-input').closest('form')!)
+
+    expect(screen.getByText('Usage: /debug on | off')).toBeInTheDocument()
+    expect(MockWebSocket.instances[0].send).not.toHaveBeenCalled()
+  })
+
   it('shows server errors in the transcript', () => {
     render(<App />)
     fireEvent.change(screen.getByTestId('username-input'), { target: { value: 'Alan' } })

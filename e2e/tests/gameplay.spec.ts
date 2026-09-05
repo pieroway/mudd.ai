@@ -50,6 +50,31 @@ test('natural commands use AI fallback while classic commands bypass it', async 
   await expect(terminal).toHaveAttribute('data-command-source', 'ai')
 })
 
+test('player can toggle safe debug diagnostics in the transcript', async ({ page }) => {
+  await page.goto('/')
+  await page.getByTestId('username-input').fill(`DebugPlaywright-${Date.now()}`)
+  await page.getByTestId('login-button').click()
+
+  const terminal = page.getByTestId('terminal')
+  const transcript = page.getByTestId('transcript')
+  const commandInput = page.getByTestId('command-input')
+  await expect(page.getByText(/Online/)).toBeVisible()
+
+  await commandInput.fill('/debug on')
+  await commandInput.press('Enter')
+  await expect(terminal).toHaveAttribute('data-debug', 'on')
+
+  await commandInput.fill('look')
+  await commandInput.press('Enter')
+  await expect(transcript).toContainText(
+    '[DEBUG] type=game_output success=true room_id=town_square command_source=classic',
+  )
+
+  await commandInput.fill('/debug off')
+  await commandInput.press('Enter')
+  await expect(terminal).toHaveAttribute('data-debug', 'off')
+})
+
 test('a connected username cannot be used by another player', async ({ browser }) => {
   const firstPage = await browser.newPage()
   const secondPage = await browser.newPage()

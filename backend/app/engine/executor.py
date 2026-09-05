@@ -364,7 +364,7 @@ def execute_command(command, player, world):
                 "drop, give <item> to <player>, say <message>, "
                 "say to <player> <message>, tell <player> <message>, examine, "
                 "who [page], open, close, use, extinguish, help\n"
-                "Slash commands: /theme light | dark | techo"
+                "Slash commands: /theme light | dark | techo; /debug on | off"
             ),
         }
 

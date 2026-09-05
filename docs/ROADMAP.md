@@ -53,6 +53,7 @@ retention, offline participation, membership changes, and blocking behavior.
 
 ## Later Gameplay
 Design for, defer:
+- authenticated administrator roles and admin-only debug diagnostics
 - progression
 - equipment
 - crafting

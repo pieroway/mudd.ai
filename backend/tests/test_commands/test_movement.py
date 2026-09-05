@@ -49,6 +49,7 @@ def test_help_lists_gameplay_and_client_slash_commands():
     assert result["success"] is True
     assert "Available commands: look" in result["output"]
     assert "Slash commands: /theme light | dark | techo" in result["output"]
+    assert "/debug on | off" in result["output"]
 
 
 def test_lit_carried_torch_reveals_adjacent_room_names():

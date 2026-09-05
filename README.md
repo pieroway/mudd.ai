@@ -237,6 +237,13 @@ safe error without changing game state. Raw commands are excluded from server
 logs, but a future external provider would receive the unrecognized input, so
 players should not submit secrets or sensitive personal information.
 
+The browser command `/debug on` appends safe structured WebSocket diagnostics to
+the transcript; `/debug off` disables them. Debug output includes message type,
+success, room identifier, and command source when available. It deliberately
+excludes raw payloads, command text, private messages, and AI prompts. The command
+is available to all users until authenticated accounts and administrator roles
+are implemented; restricting it to administrators is tracked as future work.
+
 ## Development Workflow
 
 1. **Make a small change** to backend or frontend
