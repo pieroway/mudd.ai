@@ -32,6 +32,7 @@ export default function Terminal({ username }: TerminalProps) {
   const [ws, setWs] = useState<WebSocket | null>(null)
   const [connected, setConnected] = useState(false)
   const [theme, setTheme] = useState<Theme>(getSavedTheme)
+  const [commandSource, setCommandSource] = useState<'classic' | 'ai' | null>(null)
   const transcriptEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -66,6 +67,10 @@ export default function Terminal({ username }: TerminalProps) {
         }
       } else if (message.type === 'game_output') {
         output = message.text || ''
+        const source = message.metadata?.command_source
+        if (source === 'classic' || source === 'ai') {
+          setCommandSource(source)
+        }
       } else if (message.type === 'error') {
         output = `[ERROR] ${message.text || 'Unknown server error'}`
       }
@@ -128,7 +133,12 @@ export default function Terminal({ username }: TerminalProps) {
   }
 
   return (
-    <div className="terminal" data-testid="terminal" data-theme={theme}>
+    <div
+      className="terminal"
+      data-testid="terminal"
+      data-theme={theme}
+      data-command-source={commandSource ?? undefined}
+    >
       <div className="terminal-header">
         <h2>{username}'s Journey</h2>
         <span className={`status ${connected ? 'connected' : 'disconnected'}`}>

@@ -79,6 +79,23 @@ describe('App', () => {
     expect(screen.getByText('> north')).toBeInTheDocument()
   })
 
+  it('exposes structured command-source metadata without adding transcript text', () => {
+    render(<App />)
+    fireEvent.change(screen.getByTestId('username-input'), { target: { value: 'Alan' } })
+    fireEvent.click(screen.getByTestId('login-button'))
+
+    act(() => {
+      MockWebSocket.instances[0].receive({
+        type: 'game_output',
+        text: 'You move south.',
+        metadata: { command_source: 'ai' },
+      })
+    })
+
+    expect(screen.getByTestId('terminal')).toHaveAttribute('data-command-source', 'ai')
+    expect(screen.getByTestId('transcript')).not.toHaveTextContent('command_source')
+  })
+
   it('applies theme slash commands locally without sending them to the server', () => {
     render(<App />)
     fireEvent.change(screen.getByTestId('username-input'), { target: { value: 'Alan' } })

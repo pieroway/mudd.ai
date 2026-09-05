@@ -31,6 +31,7 @@ services:
       DATABASE_URL: postgresql+asyncpg://muduser:mudpass@postgres_e2e:5432/muddb_e2e
       REDIS_URL: redis://redis_e2e:6379
       AI_PROVIDER: fake
+      AI_COMMAND_INTERPRETATION_ENABLED: "true"
       APP_ENV: test
       LOG_LEVEL: WARNING
       TRUSTED_ORIGINS: http://host.docker.internal:15173

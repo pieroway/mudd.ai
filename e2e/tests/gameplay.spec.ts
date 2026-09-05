@@ -22,6 +22,34 @@ test('player enters the world and moves north', async ({ page }) => {
   await expect(transcript).toContainText('Forest')
 })
 
+test('natural commands use AI fallback while classic commands bypass it', async ({ page }) => {
+  await page.goto('/')
+  await page.getByTestId('username-input').fill(`NaturalPlaywright-${Date.now()}`)
+  await page.getByTestId('login-button').click()
+
+  const terminal = page.getByTestId('terminal')
+  const transcript = page.getByTestId('transcript')
+  const commandInput = page.getByTestId('command-input')
+  await expect(page.getByText(/Online/)).toBeVisible()
+
+  await commandInput.fill('look')
+  await commandInput.press('Enter')
+  await expect(terminal).toHaveAttribute('data-command-source', 'classic')
+
+  await commandInput.fill('walk toward the docks')
+  await commandInput.press('Enter')
+  await expect(transcript).toContainText('You move south.')
+  await expect(transcript).toContainText('Docks')
+  await expect(terminal).toHaveAttribute('data-command-source', 'ai')
+
+  await commandInput.fill('perform an undocumented action')
+  await commandInput.press('Enter')
+  await expect(transcript).toContainText(
+    "I couldn't interpret that command. Try 'help' for available commands.",
+  )
+  await expect(terminal).toHaveAttribute('data-command-source', 'ai')
+})
+
 test('a connected username cannot be used by another player', async ({ browser }) => {
   const firstPage = await browser.newPage()
   const secondPage = await browser.newPage()

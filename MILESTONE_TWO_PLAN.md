@@ -53,7 +53,7 @@ state changes, and real-provider calls from tests.
 
 ### 4. Verification and optional real provider
 
-- [ ] Add WebSocket integration and Playwright coverage for natural language.
+- [x] Add WebSocket integration and Playwright coverage for natural language.
 - [ ] Verify AI proposals cannot bypass location, ownership, container, fuel, or
       multiplayer concurrency rules.
 - [ ] Run the complete deployment gate, including its smoke load test and state
