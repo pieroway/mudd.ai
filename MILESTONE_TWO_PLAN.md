@@ -4,6 +4,10 @@
 
 **In progress — started September 2, 2026.**
 
+The complete deployment gate passed on September 4, 2026 with 128 backend
+tests, 10 frontend tests, 5 Playwright tests, a 10-user smoke load test with
+zero command failures, and a passing authoritative-state invariant check.
+
 Security work is tracked in
 [`docs/SECURITY_REVIEW_2026-09-02.md`](docs/SECURITY_REVIEW_2026-09-02.md). Its
 pre-M2 dependency, origin, input-limit, and logging findings should be addressed
@@ -56,7 +60,7 @@ state changes, and real-provider calls from tests.
 - [x] Add WebSocket integration and Playwright coverage for natural language.
 - [x] Verify AI proposals cannot bypass location, ownership, container, fuel, or
       multiplayer concurrency rules.
-- [ ] Run the complete deployment gate, including its smoke load test and state
+- [x] Run the complete deployment gate, including its smoke load test and state
       invariant check.
 - [ ] Only then evaluate a real provider adapter behind explicit configuration.
 
