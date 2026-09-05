@@ -16,6 +16,7 @@ from app.domain.player import Player
 from app.domain.room import Room
 from app.engine.executor import execute_command
 from app.repositories.game import GameRepository
+from app.services.ai_usage import reserve_attempt
 
 
 class UsernameInUseError(ValueError):
@@ -53,10 +54,12 @@ class GameService:
         session_factory: async_sessionmaker[AsyncSession] | None = None,
         ai_provider: AIProvider | None = None,
         ai_command_timeout_seconds: float = 5.0,
+        ai_daily_request_limit: int = 20,
     ) -> None:
         self.session_factory = session_factory or get_session_factory()
         self.ai_provider = ai_provider
         self.ai_command_timeout_seconds = ai_command_timeout_seconds
+        self.ai_daily_request_limit = ai_daily_request_limit
         self._session_players: dict[str, str] = {}
         self._session_usernames: dict[str, str] = {}
         self._active_usernames: set[str] = set()
@@ -100,6 +103,7 @@ class GameService:
         raw_command: str,
         *,
         authorization_check: Callable[[], Awaitable[bool]] | None = None,
+        account_id: str | None = None,
     ) -> dict[str, Any]:
         player_id = self._session_players.get(session_id)
         if player_id is None:
@@ -109,6 +113,17 @@ class GameService:
         command_source = "classic"
         if command.get("action") == "unknown" and self.ai_provider is not None:
             command_source = "ai"
+            if authorization_check is not None and not await authorization_check():
+                return {"success": False, "output": "Session expired. Please sign in again."}
+            if account_id is not None and not await reserve_attempt(
+                self.session_factory, account_id, self.ai_daily_request_limit
+            ):
+                return {
+                    "success": False,
+                    "output": "Daily AI allowance exhausted. It resets at 00:00 UTC. "
+                    "Classic commands still work; type 'help' to see them.",
+                    "metadata": {"command_source": command_source},
+                }
             try:
                 proposed = await asyncio.wait_for(
                     self.ai_provider.interpret_command(

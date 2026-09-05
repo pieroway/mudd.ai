@@ -64,6 +64,7 @@ class Settings(BaseSettings):
     ai_command_max_output_tokens: int = Field(default=512, ge=16, le=2048)
     ai_command_max_requests: int = Field(default=100, gt=0, le=1000)
     ai_command_max_concurrent: int = Field(default=2, gt=0, le=10)
+    ai_daily_request_limit: int = Field(default=20, ge=0, le=10000)
 
     # Features
     ai_narration_enabled: bool = False

@@ -1,5 +1,9 @@
 # AI-Enhanced MUD
 
+AI interpretation now has a [persistent daily account allowance](docs/AI_USAGE.md),
+configured with `AI_DAILY_REQUEST_LIMIT` (default 20). Classic commands remain
+available after the allowance is exhausted.
+
 A persistent multiplayer text-based game (MUD) with a deterministic authoritative game engine and controlled AI layers.
 
 **Status:** Milestone Two — AI command interpretation in progress
@@ -267,8 +271,9 @@ redirects are not followed. Responses exceeding 64 KiB, refusals, incomplete
 output, and invalid commands fail safely. Classic commands remain available when
 AI capacity is exhausted. Limits reset on restart and multiply across processes;
 they are local safeguards, not persistent billing limits. Set appropriate project
-usage controls separately. Shared budget accounting and authenticated per-player
-quotas remain future work. Real interpretation is blocked outside development.
+usage controls separately. The separate [daily account allowance](docs/AI_USAGE.md)
+persists across restarts; shared monetary accounting remains future work.
+Real interpretation is blocked outside development.
 
 Automated gameplay tests retain `FakeAIProvider`; adapter contract tests use an
 in-memory HTTP transport with dummy credentials and make no external requests.

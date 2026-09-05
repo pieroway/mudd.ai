@@ -5,6 +5,7 @@ import { apiUrl } from '../services/api'
 import '../styles/Terminal.css'
 
 interface GameMessage {
+  ai_usage?: { remaining: number; limit: number; day: string }
   type: string
   text?: string
   room_name?: string
@@ -34,6 +35,7 @@ export default function Terminal({ username }: TerminalProps) {
   const [transcript, setTranscript] = useState<string[]>([])
   const [ws, setWs] = useState<WebSocket | null>(null)
   const [connected, setConnected] = useState(false)
+  const [aiUsage, setAIUsage] = useState<GameMessage['ai_usage']>()
   const [theme, setTheme] = useState<Theme>(getSavedTheme)
   const [commandSource, setCommandSource] = useState<'classic' | 'ai' | null>(null)
   const [debugEnabled, setDebugEnabled] = useState(false)
@@ -58,6 +60,7 @@ export default function Terminal({ username }: TerminalProps) {
 
     websocket.onmessage = (event) => {
       const message: GameMessage = JSON.parse(event.data)
+      if (message.ai_usage) setAIUsage(message.ai_usage)
       let output = ''
 
       if (message.type === 'system') {
@@ -169,6 +172,9 @@ export default function Terminal({ username }: TerminalProps) {
     >
       <div className="terminal-header">
         <h2>{username}'s Journey</h2>
+        {aiUsage && <span data-testid="ai-allowance" title={`Usage for ${aiUsage.day} UTC; refreshed after each command.`}>
+          AI requests: {aiUsage.remaining}/{aiUsage.limit} remaining · resets 00:00 UTC
+        </span>}
         <span className={`status ${connected ? 'connected' : 'disconnected'}`}>
           {connected ? '● Online' : '● Offline'}
         </span>

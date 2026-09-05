@@ -14,6 +14,7 @@ from app.commands.parser import parse_command
 from app.config import Settings
 from app.services.game import GameService, InvalidUsernameError, UsernameInUseError
 from app.services.auth import resolve_session
+from app.services.ai_usage import usage_status
 from app.api.auth import COOKIE_NAME
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,7 @@ settings = Settings()
 game_service = GameService(
     ai_provider=create_ai_provider(settings),
     ai_command_timeout_seconds=settings.ai_command_timeout_seconds,
+    ai_daily_request_limit=settings.ai_daily_request_limit,
 )
 connection_attempts: dict[str, deque[float]] = defaultdict(deque)
 
@@ -138,6 +140,11 @@ async def websocket_endpoint(websocket: WebSocket):
                 "text": f"Welcome to the MUD! You stand in the {room.name}.",
                 "room_name": room.name,
                 "room_description": room.description,
+                "ai_usage": await usage_status(
+                    game_service.session_factory,
+                    identity.account_id,
+                    settings.ai_daily_request_limit,
+                ),
             },
         )
 
@@ -181,7 +188,10 @@ async def websocket_endpoint(websocket: WebSocket):
 
             try:
                 result = await game_service.execute(
-                    session_id, data, authorization_check=still_authorized
+                    session_id,
+                    data,
+                    authorization_check=still_authorized,
+                    account_id=identity.account_id,
                 )
                 events = result.pop("events", [])
                 logger.debug(
@@ -199,6 +209,11 @@ async def websocket_endpoint(websocket: WebSocket):
                         "text": result.get("output", ""),
                         "room_id": result.get("room_id"),
                         "metadata": result.get("metadata", {}),
+                        "ai_usage": await usage_status(
+                            game_service.session_factory,
+                            identity.account_id,
+                            settings.ai_daily_request_limit,
+                        ),
                     },
                 )
                 for event in events:

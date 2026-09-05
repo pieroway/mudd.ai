@@ -196,5 +196,6 @@ stateless minimal prompts, `store=false`, a total deadline, strict local schema
 validation, generic errors, a redacted settings key, and bounded request/output
 limits without retries. Adapter tests use an in-memory mock HTTP transport with
 dummy credentials; gameplay tests continue to use FakeAIProvider. Production
-activation is rejected. Persistent/shared cost accounting and authenticated
-per-player quotas remain deferred; process-local limits reset on restart.
+activation is rejected. Authenticated daily request allowances now persist in
+PostgreSQL; see [AI usage](AI_USAGE.md). Shared monetary accounting remains
+deferred. The provider's separate process-local limits still reset on restart.

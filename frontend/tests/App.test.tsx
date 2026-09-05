@@ -37,6 +37,16 @@ class MockWebSocket {
 }
 
 describe('Terminal', () => {
+  it('updates the daily allowance from server messages', () => {
+    render(<Terminal username="Alan" />)
+    const socket = MockWebSocket.instances[0]
+    act(() => socket.receive({ type: 'system', ai_usage: { remaining: 20, limit: 20, day: '2026-09-04' } }))
+    expect(screen.getByTestId('ai-allowance')).toHaveTextContent('20/20 remaining')
+    act(() => socket.receive({ type: 'game_output', ai_usage: { remaining: 0, limit: 20, day: '2026-09-04' } }))
+    expect(screen.getByTestId('ai-allowance')).toHaveTextContent('0/20 remaining')
+    expect(screen.getByTestId('ai-allowance')).toHaveTextContent('resets 00:00 UTC')
+  })
+
   beforeEach(() => {
     MockWebSocket.instances = []
     window.localStorage.clear()

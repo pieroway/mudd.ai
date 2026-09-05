@@ -63,11 +63,13 @@ test('natural commands use AI fallback while classic commands bypass it', async 
   await commandInput.fill('look')
   await commandInput.press('Enter')
   await expect(terminal).toHaveAttribute('data-command-source', 'classic')
+  await expect(page.getByTestId('ai-allowance')).toContainText('20/20 remaining')
 
   await commandInput.fill('walk toward the docks')
   await commandInput.press('Enter')
   await expect(transcript).toContainText('You move south.')
   await expect(transcript).toContainText('Docks')
+  await expect(page.getByTestId('ai-allowance')).toContainText('19/20 remaining')
   await expect(terminal).toHaveAttribute('data-command-source', 'ai')
 
   await commandInput.fill('perform an undocumented action')
@@ -75,6 +77,7 @@ test('natural commands use AI fallback while classic commands bypass it', async 
   await expect(transcript).toContainText(
     "I couldn't interpret that command. Try 'help' for available commands.",
   )
+  await expect(page.getByTestId('ai-allowance')).toContainText('18/20 remaining')
   await expect(terminal).toHaveAttribute('data-command-source', 'ai')
 })
 

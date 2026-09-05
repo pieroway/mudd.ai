@@ -69,7 +69,8 @@ The adapter passed three live API smoke requests with `gpt-5.4-nano` for movemen
 examine, and inventory, with responses taking 0.94–2.43 seconds. The project owner
 also reported passing browser smoke testing with live AI enabled. These manual
 checks are separate from the deterministic automated suite. Production enablement
-remains blocked pending authentication and shared usage-budget controls. See
+remains blocked pending shared spending controls and public-launch security review.
+Authentication and persistent daily account request allowances are implemented. See
 README for privacy boundaries and local configuration.
 
 Adapter validation on September 4, 2026: `scripts\deploy.bat` exited 0 with
