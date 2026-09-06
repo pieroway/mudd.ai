@@ -90,8 +90,8 @@ See [AI_MUD_CODEX_PROJECT_PROMPT.md](AI_MUD_CODEX_PROJECT_PROMPT.md) for the com
 ├── .env.example
 ├── Makefile                 # Convenient commands
 ├── README.md
-├── CODEX.md                # Project-specific Codex instructions
-└── AI_MUD_CODEX_PROJECT_PROMPT.md
+├── docs/CODEX.md           # Project-specific Codex instructions
+└── docs/AI_MUD_CODEX_PROJECT_PROMPT.md
 ```
 
 ---
@@ -223,8 +223,8 @@ class AIProvider:
 Configuration:
 ```env
 AI_PROVIDER=fake        # Development/testing
-AI_PROVIDER=anthropic   # Production
-AI_PROVIDER=openai
+AI_PROVIDER=anthropic   # Planned; currently unsupported
+AI_PROVIDER=openai      # Development-only adapter
 ```
 
 **Never** call real AI from unit tests. Use FakeAIProvider.
@@ -396,8 +396,8 @@ make deploy
 ## Files to Review First
 
 1. [AI_MUD_CODEX_PROJECT_PROMPT.md](AI_MUD_CODEX_PROJECT_PROMPT.md) — Complete specification
-2. [README.md](README.md) — Developer setup (once created)
-3. [CODEX.md](CODEX.md) — Project-specific instructions (once created)
+2. [README.md](../README.md) — Developer setup
+3. [CODEX.md](CODEX.md) — Project-specific instructions
 
 ---
 

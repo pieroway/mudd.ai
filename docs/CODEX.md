@@ -6,7 +6,7 @@ This file contains project-specific instructions for Codex working on this repos
 
 **Project:** AI-Enhanced MUD (Milestone Two — AI command interpretation)
 
-**Current Status:** Milestone One complete; Milestone Two security preparation and provider-contract work in progress
+**Current Status:** Milestones One and Two complete. Authentication and persistent daily AI allowances are implemented. Real AI remains development-only.
 
 **Architecture:** 7-layer deterministic game engine with controlled AI abstraction
 
@@ -19,7 +19,7 @@ See [AI_MUD_CODEX_PROJECT_PROMPT.md](AI_MUD_CODEX_PROJECT_PROMPT.md) for complet
 ## Before You Start
 
 1. Review [AGENTS.md](AGENTS.md) — defines how to work on this project
-2. Review [MILESTONE_ONE_PLAN.md](MILESTONE_ONE_PLAN.md) — M1 implementation roadmap
+2. Review [MILESTONE_TWO_PLAN.md](../MILESTONE_TWO_PLAN.md) for completed scope and validation, and [docs/ROADMAP.md](ROADMAP.md) for future work.
 3. Read the relevant section of [AI_MUD_CODEX_PROJECT_PROMPT.md](AI_MUD_CODEX_PROJECT_PROMPT.md)
 
 ---
@@ -55,28 +55,22 @@ See [AI_MUD_CODEX_PROJECT_PROMPT.md](AI_MUD_CODEX_PROJECT_PROMPT.md) for complet
 
 ## Current Project Status
 
-### Phase 1: Complete ✅
-- Directory structure created
-- Docker Compose (dev + test) configured
-- FastAPI skeleton with WebSocket endpoint
-- React Terminal client skeleton
-- pytest infrastructure
-- Build/test/deploy scripts
+### Milestone One: Complete
+- Persistent five-room world, SQLAlchemy models, Alembic migrations, and seed data
+- Classic command parser, authoritative engine, movement, and item interactions
+- React terminal, WebSocket integration, and multiplayer events
+- Docker environments, automated tests, and deployment quality gate
 
-### Phase 2: Next (Foundation)
-- SQLAlchemy models (Player, Room, Item, Exit)
-- Database migrations (Alembic)
-- Seed script (5-room world)
-- Unit tests for data layer
+### Milestone Two: Complete
+- Strict AI command contract, validation, and deterministic FakeAIProvider
+- Classic-parser-first routing with optional natural-language fallback
+- Development-only OpenAI adapter with bounded usage and mocked HTTP tests
+- Backend, WebSocket, and browser coverage; historical gate results in the M2 plan
 
-### Subsequent Phases
-- Command parser
-- Game engine (executor + validator)
-- Narration service
-- WebSocket integration
-- Item system
-- Multiplayer events
-- Playwright E2E tests
+### Additional Implemented Work and Remaining Boundaries
+- Authenticated accounts, secure character ownership, and persistent daily AI allowances
+- Public live-AI access still requires shared spending controls and public-launch security review
+- AI narration, NPC intelligence, world generation, and richer UI panels remain future work
 
 ---
 
@@ -123,55 +117,46 @@ If a test fails, STOP. Do not proceed until:
 |------|---------|
 | [AI_MUD_CODEX_PROJECT_PROMPT.md](AI_MUD_CODEX_PROJECT_PROMPT.md) | Complete specification (source of truth) |
 | [AGENTS.md](AGENTS.md) | AI agent operating rules |
-| [MILESTONE_ONE_PLAN.md](MILESTONE_ONE_PLAN.md) | M1 roadmap with phases, schema, patterns |
+| [MILESTONE_ONE_PLAN.md](../MILESTONE_ONE_PLAN.md) | M1 roadmap with phases, schema, patterns |
+| [MILESTONE_TWO_PLAN.md](../MILESTONE_TWO_PLAN.md) | Completed M2 scope and validation record |
+| [MILESTONE_UI_PLAN.md](../MILESTONE_UI_PLAN.md) | Planned UI milestone and acceptance criteria |
+| [docs/ROADMAP.md](ROADMAP.md) | Future gameplay and deferred features |
 | [CODEX.md](CODEX.md) | This file — project-specific instructions |
-| [README.md](README.md) | Developer setup guide |
-| [compose.yaml](compose.yaml) | Development Docker stack |
-| [compose.test.yaml](compose.test.yaml) | Test Docker stack (isolated) |
-| [backend/pyproject.toml](backend/pyproject.toml) | Backend dependencies |
-| [frontend/package.json](frontend/package.json) | Frontend dependencies |
+| [README.md](../README.md) | Developer setup guide |
+| [compose.yaml](../compose.yaml) | Development Docker stack |
+| [compose.test.yaml](../compose.test.yaml) | Test Docker stack (isolated) |
+| [backend/pyproject.toml](../backend/pyproject.toml) | Backend dependencies |
+| [frontend/package.json](../frontend/package.json) | Frontend dependencies |
 
 ---
 
 ## Architecture Refresh
 
-### Current Layers (M1)
+### Current Command Flow
 
 ```
 Browser
     ↓ WebSocket
 FastAPI (main.py)
     ↓
-API Routes (websocket.py, health.py)
+Authenticated API / WebSocket routes
     ↓
-[Game Engine - TO BE BUILT]
+Game service: classic parser first; optional AI fallback with strict validation
     ↓
-[Database Layer - TO BE BUILT]
+Authoritative game engine
+    ↓
+Repository / SQLAlchemy persistence
     ↓
 PostgreSQL
 ```
 
-### Future Layers (Post-M1)
-
-```
-Browser
-    ↓ WebSocket
-FastAPI
-    ↓
-Command Parser (classic + AI)
-    ↓
-Game Engine (executor + validator)
-    ↓
-Narration Service
-    ↓
-AI Provider Abstraction
-    ↓
-PostgreSQL / Redis
-```
+AI interpretation proposes commands before engine execution. AI narration is
+future work and would describe authoritative results after execution.
+PostgreSQL owns persistent game state; Redis is reserved for ephemeral concerns.
 
 ---
 
-## Testing Strategy for M1
+## Testing Strategy
 
 ### Unit Tests (Fast)
 - Domain logic (rooms, players, items)
@@ -238,13 +223,13 @@ Open http://localhost:5173 in browser → F12 → Console tab
 
 ## Important Decisions Made
 
-### Username-Only Auth (M1)
-- Simple: no passwords, no auth middleware yet
-- Good enough for development and testing
-- Security added in M2+
+### Authenticated Character Ownership
+- Password-based accounts and authenticated sessions replace M1 username-only access
+- Each account owns one character initially
+- See [docs/AUTHENTICATION.md](AUTHENTICATION.md) for session and migration behavior
 
 ### FakeAIProvider
-- All tests use FakeAIProvider (deterministic)
+- Gameplay tests use FakeAIProvider; provider adapter tests use mocked HTTP
 - No real API calls from unit tests
 - Reduces costs and flakiness
 - Allows offline development
@@ -269,13 +254,13 @@ Open http://localhost:5173 in browser → F12 → Console tab
 → Read the error carefully. What layer? What assumption?
 
 ### "Docker won't build"
-→ Check [README.md#Troubleshooting](README.md#troubleshooting)
+→ Check [README.md#Troubleshooting](../README.md#troubleshooting)
 
 ### "I don't understand the architecture"
-→ Review [MILESTONE_ONE_PLAN.md](MILESTONE_ONE_PLAN.md) section 1-3, then ask for clarification
+→ Review [MILESTONE_ONE_PLAN.md](../MILESTONE_ONE_PLAN.md) section 1-3, then ask for clarification
 
 ### "Should I add X feature?"
-→ Check [MILESTONE_ONE_PLAN.md](MILESTONE_ONE_PLAN.md) for M1 scope. Out-of-scope → document as future work.
+→ Check the completed milestone plans and [docs/ROADMAP.md](ROADMAP.md), then agree on a small increment within the user's requested scope.
 
 ---
 
@@ -297,19 +282,19 @@ You will:
 
 ---
 
-## Next Steps (After Phase 1)
+## Next Work
 
-1. **Phase 2 (Foundation)**: Database models + migrations
-2. **Phase 3 (Parser)**: Command parsing
-3. **Phase 4 (Engine)**: Command execution & validation
-4. **Phase 5 (Narration)**: Convert results to prose
-5. **Phase 6 (WebSocket)**: Real-time communication
-6. **Continue through Phase 11**
+M1 and M2 are complete; no new milestone is declared active here.
+The [UI milestone](../MILESTONE_UI_PLAN.md) is planned, with its first increment
+proposed before M3. Implementation has not started.
+Use [docs/ROADMAP.md](ROADMAP.md) and the
+[UI inspiration brief](mud_ai_ui_inspiration.md) to scope the next requested increment.
+AI narration remains the planned M3 milestone. Public live-AI enablement still
+requires shared spending controls and a renewed security review.
 
-Each phase:
-- Starts with understanding
-- Proceeds with tests
-- Ends with passing tests + deployed code
+For each increment, define behavior, add appropriate tests, implement targeted
+changes, and run the required checks before deployment. Historical validation
+records do not substitute for testing new changes.
 
 ---
 
@@ -328,5 +313,5 @@ As the project grows, update this file:
 Refer to the specification files in order:
 1. [CODEX.md](CODEX.md) (this file)
 2. [AGENTS.md](AGENTS.md)
-3. [MILESTONE_ONE_PLAN.md](MILESTONE_ONE_PLAN.md)
+3. [MILESTONE_ONE_PLAN.md](../MILESTONE_ONE_PLAN.md)
 4. [AI_MUD_CODEX_PROJECT_PROMPT.md](AI_MUD_CODEX_PROJECT_PROMPT.md) (complete truth)

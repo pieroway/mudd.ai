@@ -1,5 +1,13 @@
 # Roadmap
 
+## Planned UI Milestone
+
+See [MILESTONE_UI_PLAN.md](../MILESTONE_UI_PLAN.md) for the modern command-first
+client milestone. Its first increment is proposed after M2 and before M3, without
+renumbering the AI milestones. Initial scope is a responsive shell, live status,
+and an authoritative inventory panel. Maps and multi-user chat remain extensions
+with separate backend requirements. Implementation has not started.
+
 ## Core Architecture
 Build early:
 - Docker / Compose / Docker Desktop

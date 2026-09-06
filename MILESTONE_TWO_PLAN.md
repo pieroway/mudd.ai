@@ -2,7 +2,8 @@
 
 ## Status
 
-**In progress — started September 2, 2026.**
+**Complete — status reconciled September 6, 2026 against the completed checklist
+and recorded September 4 validation.**
 
 The complete deployment gate passed on September 4, 2026 with 128 backend
 tests, 10 frontend tests, 5 Playwright tests, a 10-user smoke load test with
@@ -10,8 +11,9 @@ zero command failures, and a passing authoritative-state invariant check.
 
 Security work is tracked in
 [`docs/SECURITY_REVIEW_2026-09-02.md`](docs/SECURITY_REVIEW_2026-09-02.md). Its
-pre-M2 dependency, origin, input-limit, and logging findings should be addressed
-before expanding the command surface or enabling a real AI provider.
+pre-M2 dependency, origin, input-limit, and logging findings are resolved.
+Public-launch security review and shared spending controls remain outstanding;
+M2 completion does not enable production use of a real AI provider.
 
 Milestone One is complete. Milestone Two adds natural-language interpretation
 without weakening the deterministic engine: AI may propose a structured command,
@@ -83,7 +85,8 @@ authoritative-state invariants. Live AI was explicitly disabled during the gate.
 - Familiar deterministic commands work without an AI call.
 - Supported natural-language phrases become strictly validated commands.
 - Invalid, unavailable, or malicious provider output cannot mutate game state.
-- All automated tests use `FakeAIProvider`; no secrets or network calls are needed.
+- Gameplay tests use `FakeAIProvider`; adapter contract tests use mocked HTTP.
+  No real provider credentials or external AI calls are needed.
 - The full deployment gate passes.
 
 ## Deferred Feature

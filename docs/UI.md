@@ -1,5 +1,9 @@
 # UI
 
+The [UI milestone plan](../MILESTONE_UI_PLAN.md) defines the planned first release,
+delivery checklist, architectural boundaries, and validation requirements. The
+[inspiration brief](mud_ai_ui_inspiration.md) describes the broader visual direction.
+
 Primary interface remains command-first: transcript/output plus prompt input.
 
 Future optional panels may include map, inventory, equipment, health, stamina, mana, stats, skills, quests, journal, nearby players/NPCs, and combat status.

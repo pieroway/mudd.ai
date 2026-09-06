@@ -6,7 +6,7 @@ available after the allowance is exhausted.
 
 A persistent multiplayer text-based game (MUD) with a deterministic authoritative game engine and controlled AI layers.
 
-**Status:** Milestone Two — AI command interpretation in progress
+**Status:** Milestones One and Two complete — real AI remains development-only
 
 ## Development with Codex
 
@@ -135,9 +135,9 @@ mudd.ai/
 ├── compose.test.yaml    # Test Docker Compose
 ├── Makefile            # Common commands
 ├── README.md
-├── AGENTS.md           # AI agent guidance
-├── CODEX.md           # Codex project instructions
-└── AI_MUD_CODEX_PROJECT_PROMPT.md  # Full specification
+├── docs/AGENTS.md      # AI agent guidance
+├── docs/CODEX.md      # Codex project instructions
+└── docs/AI_MUD_CODEX_PROJECT_PROMPT.md  # Full specification
 ```
 
 ## Architecture Overview
@@ -282,8 +282,8 @@ The browser command `/debug on` appends safe structured WebSocket diagnostics to
 the transcript; `/debug off` disables them. Debug output includes message type,
 success, room identifier, and command source when available. It deliberately
 excludes raw payloads, command text, private messages, and AI prompts. The command
-is available to all users until authenticated accounts and administrator roles
-are implemented; restricting it to administrators is tracked as future work.
+is available to all authenticated users; administrator roles and restricting
+diagnostics to administrators are tracked as future work.
 
 ## Development Workflow
 
@@ -328,19 +328,21 @@ make dev
 ## Milestones
 
 - **M1** (Complete): Deterministic 5-room MUD with terminal client
-- **M2** (Current): AI natural-language command interpretation
+- **M2** (Complete): AI natural-language command interpretation
+- **UI** (Planned): Modern command-first client with live status and inventory panels; first increment proposed before M3
 - **M3**: AI narration
 - **M4**: One AI-powered NPC with personality/memory
 - **M5**: Controlled AI world generation
 
 ## Documentation
 
-- [AI_MUD_CODEX_PROJECT_PROMPT.md](AI_MUD_CODEX_PROJECT_PROMPT.md) — Complete specification
+- [AI_MUD_CODEX_PROJECT_PROMPT.md](docs/AI_MUD_CODEX_PROJECT_PROMPT.md) — Complete specification
 - [MILESTONE_ONE_PLAN.md](MILESTONE_ONE_PLAN.md) — M1 roadmap
-- [MILESTONE_TWO_PLAN.md](MILESTONE_TWO_PLAN.md) — Current M2 delivery plan
+- [MILESTONE_TWO_PLAN.md](MILESTONE_TWO_PLAN.md) — Completed M2 delivery plan and validation record
+- [MILESTONE_UI_PLAN.md](MILESTONE_UI_PLAN.md) — Planned UI scope, delivery increments, and acceptance criteria
 - [Security review](docs/SECURITY_REVIEW_2026-09-02.md) — Open risks and remediation status
-- [AGENTS.md](AGENTS.md) — AI agent operating guide
-- [CODEX.md](CODEX.md) — Codex project instructions
+- [AGENTS.md](docs/AGENTS.md) — AI agent operating guide
+- [CODEX.md](docs/CODEX.md) — Codex project instructions
 
 ## License
 
