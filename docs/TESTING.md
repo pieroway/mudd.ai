@@ -8,6 +8,20 @@ Many unit tests; some component/API/WebSocket/database integration tests; fewer 
 
 Playwright does not replace unit testing.
 
+## Compose isolation
+
+`compose.test.yaml` declares the project name `muddai-test`, so its network and
+cleanup are separate from the development project. Do not override it with the
+development project name through `-p` or `COMPOSE_PROJECT_NAME`.
+
+Previously both stacks used the same default project name. Test cleanup could
+remove the development network while stopped development containers still
+referenced its old ID, causing `network ... not found` at deployment startup.
+For that stale-container condition, after the required gate has passed, recreate
+the affected containers with `docker compose up -d --force-recreate --wait postgres redis`,
+then finish startup with `docker compose up -d --wait`. Existing database volumes
+are retained; no volume deletion is required.
+
 ## Deployment gate
 
 At minimum, unit tests must pass before Docker Desktop deployment.

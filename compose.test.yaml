@@ -1,3 +1,6 @@
+# Keep test cleanup from removing the development stack's network.
+name: muddai-test
+
 services:
   postgres_test:
     image: postgres:16-alpine
