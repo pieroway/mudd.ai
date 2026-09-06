@@ -329,7 +329,7 @@ make dev
 
 - **M1** (Complete): Deterministic 5-room MUD with terminal client
 - **M2** (Complete): AI natural-language command interpretation
-- **UI** (Planned): Modern command-first client with live status and inventory panels; first increment proposed before M3
+- **UI** (In progress): Modern command-first client with live status and inventory panels; first increment implemented; deployment gate pending
 - **M3**: AI narration
 - **M4**: One AI-powered NPC with personality/memory
 - **M5**: Controlled AI world generation
@@ -339,7 +339,7 @@ make dev
 - [AI_MUD_CODEX_PROJECT_PROMPT.md](docs/AI_MUD_CODEX_PROJECT_PROMPT.md) — Complete specification
 - [MILESTONE_ONE_PLAN.md](MILESTONE_ONE_PLAN.md) — M1 roadmap
 - [MILESTONE_TWO_PLAN.md](MILESTONE_TWO_PLAN.md) — Completed M2 delivery plan and validation record
-- [MILESTONE_UI_PLAN.md](MILESTONE_UI_PLAN.md) — Planned UI scope, delivery increments, and acceptance criteria
+- [MILESTONE_UI_PLAN.md](MILESTONE_UI_PLAN.md) — UI scope, delivery increments, and validation record
 - [Security review](docs/SECURITY_REVIEW_2026-09-02.md) — Open risks and remediation status
 - [AGENTS.md](docs/AGENTS.md) — AI agent operating guide
 - [CODEX.md](docs/CODEX.md) — Codex project instructions

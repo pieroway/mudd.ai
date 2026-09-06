@@ -13,6 +13,7 @@ from app.ai.provider import AIProvider, AIProviderError
 from app.commands.parser import parse_command
 from app.db import get_session_factory
 from app.domain.player import Player
+from app.domain.client_state import ClientState
 from app.domain.room import Room
 from app.engine.executor import execute_command
 from app.repositories.game import GameRepository
@@ -416,6 +417,11 @@ class GameService:
     async def inventory_for_player(self, player_id: str) -> list[str]:
         async with self.session_factory() as session:
             return await GameRepository(session).inventory_for_player(player_id)
+
+    async def client_state(self, session_id: str) -> ClientState:
+        player_id = self._session_players[session_id]
+        async with self.session_factory() as session:
+            return await GameRepository(session).client_state(player_id)
 
     async def room_for_player(self, player_id: str) -> Room:
         async with self.session_factory() as session:

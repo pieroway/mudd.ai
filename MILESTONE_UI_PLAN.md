@@ -2,7 +2,7 @@
 
 ## Status and Sequence
 
-**Planned — documented September 6, 2026. Implementation has not started.**
+**In progress — first UI implementation delivered September 6, 2026. The full deployment gate remains pending.**
 
 This is a separate UI milestone following M2, with the first delivery increment
 proposed before M3. It does not renumber M3 (AI narration), M4 (one AI NPC), or
@@ -66,33 +66,33 @@ any newly discovered persistence requirement needs an explicit design.
 
 ### 1. Layout and component plan
 
-- [ ] Inspect existing transport, transcript, theme, and test behavior.
-- [ ] Define component responsibilities and the inventory snapshot contract.
-- [ ] Build the responsive shell around the working transcript and prompt.
-- [ ] Show existing live status information in the top bar.
-- [ ] Check desktop and narrow-screen layouts and keyboard navigation.
+- [x] Inspect existing transport, transcript, theme, and test behavior.
+- [x] Define component responsibilities and the inventory snapshot contract.
+- [x] Build the responsive shell around the working transcript and prompt.
+- [x] Show existing live status information in the top bar.
+- [x] Check desktop and narrow-screen layouts and keyboard navigation.
 
 If an isolated mock prototype helps review, label its data as simulated. Integrate
 the existing live client incrementally rather than maintaining a second client.
 
 ### 2. Authoritative inventory panel
 
-- [ ] Add tests for authorized snapshots, empty inventory, successful take/drop,
+- [x] Add tests for authorized snapshots, empty inventory, successful take/drop,
   failed actions, and reconnect refresh.
-- [ ] Implement structured inventory delivery without parsing narrative text.
-- [ ] Render inventory and explicit empty, disconnected, and stale states.
-- [ ] Add panel controls and local panel commands; preserve classic commands.
-- [ ] Persist visibility preferences without storing authoritative inventory.
+- [x] Implement structured inventory delivery without parsing narrative text.
+- [x] Render inventory and explicit empty, disconnected, and stale states.
+- [x] Add panel controls and local panel commands; preserve classic commands.
+- [x] Persist visibility preferences without storing authoritative inventory.
 
 ### 3. Usability and verification
 
-- [ ] Preserve theme selection and existing authentication, command, and debug behavior.
-- [ ] Verify the prompt stays usable with panels open or hidden and on narrow screens.
-- [ ] Verify keyboard focus, control labels, and readable contrast.
-- [ ] Run relevant backend and frontend tests using deterministic doubles.
-- [ ] Add focused Playwright coverage for panel visibility, item changes, and reconnect.
+- [x] Preserve theme selection and existing authentication, command, and debug behavior.
+- [x] Verify the prompt stays usable with panels open or hidden and on narrow screens.
+- [x] Verify keyboard focus, control labels, and readable contrast.
+- [x] Run relevant backend and frontend tests using deterministic doubles.
+- [x] Add focused Playwright coverage for panel visibility, item changes, and reconnect.
 - [ ] Run the complete Docker deployment gate before deployment and record results.
-- [ ] Update README and UI documentation with supported commands and behavior.
+- [x] Update README and UI documentation with supported commands and behavior.
 
 ## Definition of Done
 
@@ -110,6 +110,9 @@ the existing live client incrementally rather than maintaining a second client.
 ## Deferred Extensions
 
 - Discovered-area map: requires a server-owned discovery and visibility contract.
+- Nearby-player map tracking: set radius, names when known, and distinct colors
+  for known versus not-yet-interacted-with players. Deferred to a later mapping
+  phase; see [the roadmap](docs/ROADMAP.md#deferred-map-player-tracking).
 - Multi-user communications panel: membership, privacy, and reconnect policy are
   tracked in [docs/ROADMAP.md](docs/ROADMAP.md).
 - Health, stats, equipment, quests, and NPC panels as their game systems arrive.
@@ -120,5 +123,23 @@ the existing live client incrementally rather than maintaining a second client.
 
 ## Validation Record
 
-Documentation only so far. No UI implementation or runtime validation is claimed.
-Add dated commands, exit codes, and results as increments are delivered.
+
+September 6, 2026:
+
+- Frontend baseline: 15 tests, lint, type checking, and build passed (exit 0).
+- Updated frontend Docker checks: 17 tests, lint, type checking, and build passed (exit 0).
+- Backend Docker suite: 183 tests passed (exit 0); separate Ruff and mypy checks passed (exit 0).
+- Playwright: 6 browser workflows passed, including inventory changes, reload,
+  saved visibility, keyboard panel controls, and a 390 × 844 viewport check (exit 0).
+- Visually reviewed desktop and mobile screenshots; prompt and inventory remain visible.
+- The full deployment gate has not been run and this increment is not deployed.
+
+The new optional `state` field on authenticated system/game-output messages contains
+`room_id`, `room_name`, and `inventory` entries with only `id` and `name`. A single
+SQL query scopes the snapshot to the session's player. Command responses and
+multiplayer event recipients receive current snapshots. InventoryPanel renders
+these values; Terminal owns transport and local visibility preferences.
+
+Known limits: reconnect currently uses page reload, following the existing client
+behavior. Snapshots add one read per command response/event recipient; revisit
+selective refresh if profiling shows this matters. The full deployment gate remains a milestone completion requirement.

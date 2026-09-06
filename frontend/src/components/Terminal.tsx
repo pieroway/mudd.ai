@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import Transcript from './Transcript'
 import CommandPrompt from './CommandPrompt'
+import InventoryPanel, { ClientState, isClientState } from './InventoryPanel'
 import { apiUrl } from '../services/api'
 import '../styles/Terminal.css'
+import '../styles/Panels.css'
 
 interface GameMessage {
+  state?: unknown
   ai_usage?: { remaining: number; limit: number; day: string }
   type: string
   text?: string
@@ -35,12 +38,19 @@ export default function Terminal({ username }: TerminalProps) {
   const [transcript, setTranscript] = useState<string[]>([])
   const [ws, setWs] = useState<WebSocket | null>(null)
   const [connected, setConnected] = useState(false)
+  const [state, setState] = useState<ClientState>()
+  const [inventoryVisible, setInventoryVisible] = useState(() =>
+    window.localStorage.getItem('mudd-inventory-visible') !== 'false')
   const [aiUsage, setAIUsage] = useState<GameMessage['ai_usage']>()
   const [theme, setTheme] = useState<Theme>(getSavedTheme)
   const [commandSource, setCommandSource] = useState<'classic' | 'ai' | null>(null)
   const [debugEnabled, setDebugEnabled] = useState(false)
   const debugEnabledRef = useRef(false)
   const transcriptEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    window.localStorage.setItem('mudd-inventory-visible', String(inventoryVisible))
+  }, [inventoryVisible])
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -59,7 +69,13 @@ export default function Terminal({ username }: TerminalProps) {
     }
 
     websocket.onmessage = (event) => {
-      const message: GameMessage = JSON.parse(event.data)
+      let message: GameMessage
+      try {
+        const parsed: unknown = JSON.parse(event.data)
+        if (!parsed || typeof parsed !== 'object') return
+        message = parsed as GameMessage
+      } catch { return }
+      if (isClientState(message.state)) setState(message.state)
       if (message.ai_usage) setAIUsage(message.ai_usage)
       let output = ''
 
@@ -103,6 +119,7 @@ export default function Terminal({ username }: TerminalProps) {
 
     websocket.onclose = () => {
       setConnected(false)
+      setState(undefined)
       setTranscript((prev) => [...prev, '[NOTICE] Disconnected from server'])
     }
 
@@ -129,6 +146,15 @@ export default function Terminal({ username }: TerminalProps) {
 
   const handleCommand = (command: string) => {
     const slashCommand = command.trim().toLowerCase().split(/\s+/)
+    if (slashCommand[0] === '/panel') {
+      const valid = slashCommand.length === 3 && slashCommand[1] === 'inventory'
+        && ['show', 'hide'].includes(slashCommand[2])
+      if (valid) setInventoryVisible(slashCommand[2] === 'show')
+      setTranscript(prev => [...prev, `> ${command}`, valid
+        ? `Inventory panel ${slashCommand[2] === 'show' ? 'shown' : 'hidden'}.`
+        : 'Usage: /panel inventory show | hide'])
+      return
+    }
     if (slashCommand[0] === '/theme') {
       const requestedTheme = slashCommand[1]
       setTranscript((prev) => [...prev, `> ${command}`])
@@ -171,7 +197,9 @@ export default function Terminal({ username }: TerminalProps) {
       data-debug={debugEnabled ? 'on' : 'off'}
     >
       <div className="terminal-header">
-        <h2>{username}'s Journey</h2>
+        <div><p className="eyebrow">MUD.AI · A shared world</p><h2>{username}'s Journey</h2>
+          <p data-testid="current-room">{connected ? state?.room_name ?? 'Entering the world…' : 'Offline'}</p>
+        </div>
         {aiUsage && <span data-testid="ai-allowance" title={`Usage for ${aiUsage.day} UTC; refreshed after each command.`}>
           AI requests: {aiUsage.remaining}/{aiUsage.limit} remaining · resets 00:00 UTC
         </span>}
@@ -180,7 +208,15 @@ export default function Terminal({ username }: TerminalProps) {
         </span>
       </div>
 
-      <Transcript lines={transcript} ref={transcriptEndRef} />
+      <nav className="panel-toolbar" aria-label="Game panels">
+        <span>Adventure</span>
+        <button type="button" aria-expanded={inventoryVisible} aria-controls="inventory-panel"
+          onClick={() => setInventoryVisible(visible => !visible)}>Inventory</button>
+      </nav>
+      <div className={`game-layout ${inventoryVisible ? 'with-panel' : ''}`}>
+        <Transcript lines={transcript} ref={transcriptEndRef} />
+        {inventoryVisible && <InventoryPanel state={state} connected={connected} />}
+      </div>
 
       <CommandPrompt onCommand={handleCommand} disabled={!connected} />
     </div>

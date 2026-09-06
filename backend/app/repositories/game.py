@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.item import Item
+from app.domain.client_state import ClientState, InventoryEntry
 from app.domain.player import Player
 from app.domain.room import Room
 from app.models import ExitRecord, ItemRecord, PlayerRecord, RoomRecord
@@ -15,6 +16,25 @@ from app.models import ExitRecord, ItemRecord, PlayerRecord, RoomRecord
 class GameRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
+
+    async def client_state(self, player_id: str) -> ClientState:
+        # One query gives a consistent snapshot without loading hidden world data.
+        statement = (
+            select(RoomRecord.id, RoomRecord.name, ItemRecord.id, ItemRecord.name)
+            .select_from(PlayerRecord)
+            .join(RoomRecord, RoomRecord.id == PlayerRecord.current_room_id)
+            .outerjoin(ItemRecord, ItemRecord.owner_id == PlayerRecord.id)
+            .where(PlayerRecord.id == player_id)
+            .order_by(ItemRecord.id)
+        )
+        rows = (await self.session.execute(statement)).all()
+        if not rows:
+            raise KeyError(f"Unknown player: {player_id}")
+        return ClientState(
+            room_id=rows[0][0],
+            room_name=rows[0][1],
+            inventory=[InventoryEntry(id=row[2], name=row[3]) for row in rows if row[2]],
+        )
 
     async def get_or_create_player(self, username: str, normalized_username: str) -> PlayerRecord:
         player_id = str(uuid4())

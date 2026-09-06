@@ -1,12 +1,12 @@
 # Roadmap
 
-## Planned UI Milestone
+## UI Milestone — In Progress
 
 See [MILESTONE_UI_PLAN.md](../MILESTONE_UI_PLAN.md) for the modern command-first
 client milestone. Its first increment is proposed after M2 and before M3, without
 renumbering the AI milestones. Initial scope is a responsive shell, live status,
 and an authoritative inventory panel. Maps and multi-user chat remain extensions
-with separate backend requirements. Implementation has not started.
+with separate backend requirements. The first implementation and automated feature checks are complete; the full deployment gate remains pending.
 
 ## Core Architecture
 Build early:
@@ -36,6 +36,23 @@ After core is stable:
 - one manually designed empowered artifact
 - basic optional UI panels
 - basic discovered-area map
+
+### Deferred Map Player Tracking
+
+Requested September 6, 2026 for consideration in a later mapping phase, outside
+the current UI increment:
+
+- Track other players within a set radius of the viewing player.
+- Display names when the viewing player knows them; otherwise use an unnamed marker.
+- Color-code known players separately from players the viewer has not interacted
+  with. Include a label or marker shape so color is not the only distinction.
+- Have the server determine range, visibility, and what the viewer knows. Send
+  only authorized nearby-player data, respecting map discovery and hidden areas.
+
+Decide during mapping design: the radius and distance metric (for example, room
+hops), what interaction establishes familiarity or reveals a name, whether that
+knowledge persists, and how markers update when players move or disconnect.
+These are open design decisions, not behavior implemented by the current UI.
 
 ### Deferred Multi-User Communications Panel
 

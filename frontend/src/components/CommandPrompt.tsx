@@ -54,6 +54,7 @@ export default function CommandPrompt({ onCommand, disabled = false }: CommandPr
       <input
         ref={inputRef}
         type="text"
+        aria-label="Game command"
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={handleKeyDown}

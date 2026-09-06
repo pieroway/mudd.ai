@@ -140,6 +140,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 "text": f"Welcome to the MUD! You stand in the {room.name}.",
                 "room_name": room.name,
                 "room_description": room.description,
+                "state": (await game_service.client_state(session_id)).model_dump(),
                 "ai_usage": await usage_status(
                     game_service.session_factory,
                     identity.account_id,
@@ -209,6 +210,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         "text": result.get("output", ""),
                         "room_id": result.get("room_id"),
                         "metadata": result.get("metadata", {}),
+                        "state": (await game_service.client_state(session_id)).model_dump(),
                         "ai_usage": await usage_status(
                             game_service.session_factory,
                             identity.account_id,
@@ -221,7 +223,12 @@ async def websocket_endpoint(websocket: WebSocket):
                     if recipient is not None:
                         await _send_json(
                             recipient,
-                            {"type": "game_output", "success": True, "text": event["text"]},
+                            {
+                                "type": "game_output", "success": True, "text": event["text"],
+                                "state": (await game_service.client_state(
+                                    event["session_id"]
+                                )).model_dump(),
+                            },
                         )
             except Exception:
                 logger.exception("Command execution error")

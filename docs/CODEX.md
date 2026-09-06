@@ -119,7 +119,7 @@ If a test fails, STOP. Do not proceed until:
 | [AGENTS.md](AGENTS.md) | AI agent operating rules |
 | [MILESTONE_ONE_PLAN.md](../MILESTONE_ONE_PLAN.md) | M1 roadmap with phases, schema, patterns |
 | [MILESTONE_TWO_PLAN.md](../MILESTONE_TWO_PLAN.md) | Completed M2 scope and validation record |
-| [MILESTONE_UI_PLAN.md](../MILESTONE_UI_PLAN.md) | Planned UI milestone and acceptance criteria |
+| [MILESTONE_UI_PLAN.md](../MILESTONE_UI_PLAN.md) | UI milestone, acceptance criteria, and validation record |
 | [docs/ROADMAP.md](ROADMAP.md) | Future gameplay and deferred features |
 | [CODEX.md](CODEX.md) | This file — project-specific instructions |
 | [README.md](../README.md) | Developer setup guide |
@@ -284,9 +284,9 @@ You will:
 
 ## Next Work
 
-M1 and M2 are complete; no new milestone is declared active here.
-The [UI milestone](../MILESTONE_UI_PLAN.md) is planned, with its first increment
-proposed before M3. Implementation has not started.
+M1 and M2 are complete; the UI milestone is now in progress.
+The [UI milestone](../MILESTONE_UI_PLAN.md) is in progress, with its first increment
+implemented before M3. The full deployment gate remains pending.
 Use [docs/ROADMAP.md](ROADMAP.md) and the
 [UI inspiration brief](mud_ai_ui_inspiration.md) to scope the next requested increment.
 AI narration remains the planned M3 milestone. Public live-AI enablement still

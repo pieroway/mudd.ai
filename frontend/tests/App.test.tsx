@@ -37,6 +37,51 @@ class MockWebSocket {
 }
 
 describe('Terminal', () => {
+  it('renders authoritative room and inventory snapshots and clears them on disconnect', () => {
+    render(<Terminal username="Alan" />)
+    const socket = MockWebSocket.instances[0]
+    act(() => {
+      socket.open()
+      socket.receive({ type: 'system', state: { room_id: 'town_square', room_name: 'Town Square', inventory: [] } })
+    })
+    expect(screen.getByTestId('current-room')).toHaveTextContent('Town Square')
+    expect(screen.getByTestId('inventory-panel')).toHaveTextContent('Your inventory is empty.')
+    act(() => socket.receive({ type: 'game_output', text: 'Unrelated narration', state: {
+      room_id: 'forest', room_name: 'Forest', inventory: [{ id: 'torch', name: 'Torch' }],
+    } }))
+    expect(screen.getByTestId('current-room')).toHaveTextContent('Forest')
+    expect(screen.getByTestId('inventory-panel')).toHaveTextContent('Torch')
+    act(() => socket.receive({ type: 'game_output', state: { inventory: 'invalid' } }))
+    expect(screen.getByTestId('inventory-panel')).toHaveTextContent('Torch')
+    act(() => socket.onclose?.())
+    expect(screen.getByTestId('inventory-panel')).toHaveTextContent('Disconnected')
+    expect(screen.getByTestId('inventory-panel')).not.toHaveTextContent('Torch')
+    expect(screen.getByTestId('command-input')).toBeDisabled()
+  })
+
+  it('persists panel visibility and handles panel commands locally while preserving inventory commands', () => {
+    const view = render(<Terminal username="Alan" />)
+    const socket = MockWebSocket.instances[0]
+    act(() => socket.open())
+    const submit = (value: string) => {
+      fireEvent.change(screen.getByTestId('command-input'), { target: { value } })
+      fireEvent.submit(screen.getByTestId('command-input').closest('form')!)
+    }
+    submit('/panel inventory hide')
+    expect(screen.queryByTestId('inventory-panel')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Inventory' })).toHaveAttribute('aria-expanded', 'false')
+    expect(localStorage.getItem('mudd-inventory-visible')).toBe('false')
+    submit('/panel inventory invalid')
+    expect(screen.getByTestId('transcript')).toHaveTextContent('Usage: /panel inventory show | hide')
+    expect(socket.send).not.toHaveBeenCalled()
+    submit('inventory')
+    expect(socket.send).toHaveBeenCalledWith('inventory')
+    view.unmount()
+    render(<Terminal username="Alan" />)
+    expect(screen.queryByTestId('inventory-panel')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Inventory' }))
+    expect(screen.getByTestId('inventory-panel')).toBeInTheDocument()
+  })
   it('updates the daily allowance from server messages', () => {
     render(<Terminal username="Alan" />)
     const socket = MockWebSocket.instances[0]
