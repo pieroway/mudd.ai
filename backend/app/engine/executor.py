@@ -358,13 +358,15 @@ def execute_command(command, player, world):
         return {
             "success": True,
             "output": (
-                "Available commands: look, north, south, east, west, inventory, "
-                "take, take <item> from <container>, put <item> in <container>, "
-                "look in <container>, "
-                "drop, give <item> to <player>, say <message>, "
-                "say to <player> <message>, tell <player> <message>, examine, "
-                "who [page], open, close, use, extinguish, help\n"
-                "Slash commands: /theme light | dark | techo; /debug on | off"
+                "Available commands:\n"
+                "look, north, south, east, west, inventory,\n"
+                "take, take <item> from <container>, drop, use, examine, open, close, extinguish,\n"
+                "put <item> in <container>, look in <container>, give <item> to <player>,\n"
+                "say <message>, say to <player> <message>, tell <player> <message>,\n"
+                "who [page],  help\n\n"
+                "Slash commands:\n"
+                "/theme light|dark|techno\n"
+                "/debug on|off\n"
             ),
         }
 

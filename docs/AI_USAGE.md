@@ -1,7 +1,8 @@
 # Daily AI request allowance
 
 Each authenticated account has a persistent daily allowance for natural-language
-command interpretation. `AI_DAILY_REQUEST_LIMIT` defaults to 20; set it in `.env`
+command interpretation and optional [narration](../MILESTONE_THREE_PLAN.md).
+`AI_DAILY_REQUEST_LIMIT` defaults to 20; set it in `.env`
 and recreate the backend to change it. Zero disables AI attempts while classic
 commands continue to work. The supported range is 0–10000.
 
@@ -19,8 +20,13 @@ the day. Reducing the configured limit never removes recorded usage.
 
 Every reserved attempt counts, including timeouts, invalid interpretations and
 upstream failures: their actual billing may be unknown. No automatic refund or
-retry is attempted. Classic commands and commands while AI is disabled do not
-consume allowance. A database reservation failure prevents the provider call.
+retry is attempted. Classic command execution does not consume allowance, but
+optional narration after it consumes one request. A natural-language action can
+use two requests (interpretation and narration). Disabled AI features consume none.
+Narration defaults off per account. Only admins can opt in using `/ai narration on`;
+`/ai narration off` disables it again. These commands consume no allowance.
+Narration exhaustion or failure leaves the completed engine action intact.
+A database reservation failure prevents the provider call.
 Fake AI uses the same budget path in browser tests.
 
 Revision `0007` adds `ai_daily_usage`, keyed by account and UTC day, without

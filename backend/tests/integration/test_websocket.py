@@ -6,6 +6,58 @@ from starlette.websockets import WebSocketDisconnect
 
 from app.ai.fake import FakeAIProvider
 from app.api import websocket as websocket_api
+from app.db import get_session_factory
+from app.services.ai_preferences import set_admin
+
+
+def test_narration_follows_authoritative_output_and_preserves_inventory(game_client, monkeypatch):
+    provider = FakeAIProvider()
+    monkeypatch.setattr(websocket_api.game_service, "narration_enabled", True)
+    monkeypatch.setattr(websocket_api.narration_service, "provider", provider)
+    monkeypatch.setattr(websocket_api.narration_service, "daily_request_limit", 1)
+    monkeypatch.setattr(websocket_api.settings, "ai_daily_request_limit", 1)
+    game_client.admin_usernames.add("narratortest")
+    with game_client.websocket_connect("/ws?username=NarratorTest") as websocket:
+        websocket.receive_json()
+        websocket.send_text("/ai narration on")
+        assert websocket.receive_json()["success"] is True
+        websocket.send_text("take torch")
+        result = websocket.receive_json()
+        assert result["type"] == "game_output"
+        assert result["text"] == "You take the torch."
+        assert result["state"]["inventory"] == [{"id": "torch", "name": "torch"}]
+        narration = websocket.receive_json()
+        assert narration["type"] == "narration"
+        assert narration["text"] == "You gather up the torch."
+        assert "state" not in narration and "success" not in narration
+        assert narration["ai_usage"]["remaining"] == 0
+        websocket.send_text("drop torch")
+        assert websocket.receive_json()["state"]["inventory"] == []
+        assert websocket.receive_json()["text"] is None
+        assert len(provider.narration_requests) == 1
+
+
+def test_narration_does_not_receive_other_players_or_private_speech(game_client, monkeypatch):
+    provider = FakeAIProvider()
+    monkeypatch.setattr(websocket_api.game_service, "narration_enabled", True)
+    monkeypatch.setattr(websocket_api.narration_service, "provider", provider)
+    game_client.admin_usernames.add("hiddenidentity")
+    with game_client.websocket_connect("/ws?username=HiddenIdentity") as first:
+        first.receive_json()
+        first.send_text("/ai narration on")
+        assert first.receive_json()["success"] is True
+        with game_client.websocket_connect("/ws?username=SecondIdentity") as second:
+            second.receive_json()
+            first.send_text("look")
+            assert "SecondIdentity" in first.receive_json()["text"]
+            first.receive_json()
+            assert "SecondIdentity" not in provider.narration_requests[0].authoritative_text
+            first.send_text("tell SecondIdentity private-speech")
+            assert "private-speech" in first.receive_json()["text"]
+            assert "private-speech" in second.receive_json()["text"]
+            first.send_text("inventory")
+            assert first.receive_json()["type"] == "game_output"
+            assert len(provider.narration_requests) == 1
 
 
 @pytest.fixture
@@ -14,6 +66,8 @@ def game_client(test_client):
     tokens = {}
 
     class GameClient:
+        admin_usernames = set()
+
         def websocket_connect(self, url, **kwargs):
             username = parse_qs(urlparse(url).query)["username"][0].strip()
             normalized = username.casefold()
@@ -26,6 +80,8 @@ def game_client(test_client):
                 )
                 assert response.status_code == 201
                 tokens[normalized] = test_client.cookies.get("mud_session")
+                if normalized in self.admin_usernames:
+                    test_client.portal.call(set_admin, get_session_factory(), username, True)
             headers = dict(kwargs.pop("headers", {}))
             headers["cookie"] = f"mud_session={tokens[normalized]}"
             return test_client.websocket_connect(url, headers=headers, **kwargs)

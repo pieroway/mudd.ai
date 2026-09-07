@@ -1,5 +1,63 @@
 import { expect, test } from '@playwright/test'
 
+test('admin can enable narration, retain it on reload, and disable it', async ({ page }) => {
+  await page.goto('/')
+  await page.getByTestId('username-input').fill('NarrationAdmin')
+  await page.getByTestId('password-input').fill('A long test-only passphrase1!')
+  await page.getByTestId('login-button').click()
+  const input = page.getByTestId('command-input')
+  const transcript = page.getByTestId('transcript')
+  await expect(page.getByText(/Online/)).toBeVisible()
+  const send = async (command: string) => {
+    await input.fill(command)
+    await input.press('Enter')
+  }
+  await send('help')
+  await expect(transcript).toContainText('Admin only: /ai narration on|off')
+  await send('look')
+  await expect(transcript).toContainText('Town Square')
+  await send('inventory')
+  await expect(transcript).toContainText('Inventory: empty')
+  await expect(transcript).not.toContainText('[AI narration]')
+  await expect(page.getByTestId('ai-allowance')).toContainText('20/20 remaining')
+  await send('/ai narration on')
+  await expect(transcript).toContainText('AI narration is on for your account.')
+  await send('look')
+  await expect(transcript).toContainText('[AI narration]')
+  await expect(page.getByTestId('ai-allowance')).toContainText('19/20 remaining')
+  await page.reload()
+  await expect(page.getByText(/Online/)).toBeVisible()
+  await send('look')
+  await expect(transcript).toContainText('[AI narration]')
+  await expect(page.getByTestId('ai-allowance')).toContainText('18/20 remaining')
+  const narrated = transcript.locator('.transcript-line').filter({ hasText: '[AI narration]' })
+  await expect(narrated).toHaveCount(1)
+  await send('/ai narration off')
+  await expect(transcript).toContainText('AI narration is off for your account.')
+  await send('look')
+  await send('inventory')
+  await expect(transcript).toContainText('Inventory: empty')
+  await expect(narrated).toHaveCount(1)
+  await expect(page.getByTestId('ai-allowance')).toContainText('18/20 remaining')
+})
+
+test('regular users cannot enable narration or spend allowance through /ai', async ({ page }) => {
+  await page.goto('/')
+  await page.getByTestId('register-toggle').click()
+  await page.getByTestId('username-input').fill(`Regular-${Date.now()}`)
+  await page.getByTestId('password-input').fill('A long test-only passphrase1!')
+  await page.getByTestId('login-button').click()
+  await expect(page.getByText(/Online/)).toBeVisible()
+  await page.getByTestId('command-input').fill('help')
+  await page.getByTestId('command-input').press('Enter')
+  await expect(page.getByTestId('transcript')).toContainText('Slash commands:')
+  await expect(page.getByTestId('transcript')).not.toContainText('Admin only:')
+  await page.getByTestId('command-input').fill('/ai narration on')
+  await page.getByTestId('command-input').press('Enter')
+  await expect(page.getByTestId('transcript')).toContainText('The /ai command is available to admin users only.')
+  await expect(page.getByTestId('ai-allowance')).toContainText('20/20 remaining')
+})
+
 test('account persists across reload, rejects wrong password, and signs out', async ({ page }) => {
   const username = `Auth-${Date.now()}`
   await page.goto('/')
@@ -48,7 +106,7 @@ test('player enters the world and moves north', async ({ page }) => {
   await expect(transcript).toContainText('Forest')
 })
 
-test('natural commands use AI fallback while classic commands bypass it', async ({ page }) => {
+test('natural commands use interpretation while narration defaults off', async ({ page }) => {
   await page.goto('/')
   await page.getByTestId('username-input').fill(`NaturalPlaywright-${Date.now()}`)
   await page.getByTestId('register-toggle').click()
@@ -70,6 +128,7 @@ test('natural commands use AI fallback while classic commands bypass it', async 
   await expect(transcript).toContainText('You move south.')
   await expect(transcript).toContainText('Docks')
   await expect(page.getByTestId('ai-allowance')).toContainText('19/20 remaining')
+  await expect(page.getByTestId('current-room')).toHaveText('Docks')
   await expect(terminal).toHaveAttribute('data-command-source', 'ai')
 
   await commandInput.fill('perform an undocumented action')
@@ -78,6 +137,7 @@ test('natural commands use AI fallback while classic commands bypass it', async 
     "I couldn't interpret that command. Try 'help' for available commands.",
   )
   await expect(page.getByTestId('ai-allowance')).toContainText('18/20 remaining')
+  await expect(transcript).not.toContainText('[AI narration]')
   await expect(terminal).toHaveAttribute('data-command-source', 'ai')
 })
 

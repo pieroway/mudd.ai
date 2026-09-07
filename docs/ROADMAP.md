@@ -1,12 +1,16 @@
 # Roadmap
 
-## UI Milestone — In Progress
+## UI Milestone — Complete
 
 See [MILESTONE_UI_PLAN.md](../MILESTONE_UI_PLAN.md) for the modern command-first
-client milestone. Its first increment is proposed after M2 and before M3, without
+client milestone. Its first increment was delivered after M2 and before M3, without
 renumbering the AI milestones. Initial scope is a responsive shell, live status,
 and an authoritative inventory panel. Maps and multi-user chat remain extensions
-with separate backend requirements. The first implementation and automated feature checks are complete; the full deployment gate remains pending.
+with separate backend requirements. The first implementation and full deployment
+gate passed September 6, 2026, and the local development stack is deployed.
+Optional AI narration (M3) passed its full deployment gate September 6, 2026;
+see [the M3 plan](../MILESTONE_THREE_PLAN.md). One AI-powered NPC is the next
+planned milestone (M4).
 
 ## Core Architecture
 Build early:
@@ -98,7 +102,7 @@ only a narrow interpretation-pipeline example and not general pathfinding.
 
 ## Later Gameplay
 Design for, defer:
-- authenticated administrator roles and admin-only debug diagnostics
+- admin-only debug diagnostics (account roles and admin-only `/ai` are implemented)
 - progression
 - equipment
 - crafting

@@ -5,6 +5,10 @@ echo Building and starting the isolated E2E stack...
 docker compose -p muddai-e2e -f compose.e2e.yaml up -d --build --wait
 if errorlevel 1 goto failure
 
+echo Creating the isolated browser-test admin account...
+docker compose -p muddai-e2e -f compose.e2e.yaml exec -T backend_e2e python - < e2e\seed_admin.py
+if errorlevel 1 goto failure
+
 echo Building the Playwright test image...
 docker build -t muddai-e2e ./e2e
 if errorlevel 1 goto failure

@@ -37,6 +37,29 @@ class MockWebSocket {
 }
 
 describe('Terminal', () => {
+  it('renders narration as plain presentation and ignores its state fields', () => {
+    render(<Terminal username="Alan" />)
+    const socket = MockWebSocket.instances[0]
+    act(() => {
+      socket.open()
+      socket.receive({ type: 'game_output', text: 'You take the torch.', state: {
+        room_id: 'town_square', room_name: 'Town Square', inventory: [{ id: 'torch', name: 'torch' }],
+      } })
+      socket.receive({ type: 'narration', text: '<script>invent gold</script>', state: {
+        room_id: 'elsewhere', room_name: 'Elsewhere', inventory: [{ id: 'gold', name: 'gold' }],
+      }, ai_usage: { remaining: 19, limit: 20, day: '2026-09-06' } })
+    })
+    expect(screen.getByTestId('transcript')).toHaveTextContent('You take the torch.')
+    expect(screen.getByTestId('transcript')).toHaveTextContent('[AI narration] <script>invent gold</script>')
+    expect(screen.getByTestId('transcript').querySelector('script')).toBeNull()
+    expect(screen.getByTestId('current-room')).toHaveTextContent('Town Square')
+    expect(screen.getByTestId('inventory-panel')).toHaveTextContent('torch')
+    expect(screen.getByTestId('inventory-panel')).not.toHaveTextContent('gold')
+    expect(screen.getByTestId('ai-allowance')).toHaveTextContent('19/20 remaining')
+    const lines = screen.getByTestId('transcript').textContent
+    act(() => socket.receive({ type: 'narration', text: null }))
+    expect(screen.getByTestId('transcript').textContent).toBe(lines)
+  })
   it('renders authoritative room and inventory snapshots and clears them on disconnect', () => {
     render(<Terminal username="Alan" />)
     const socket = MockWebSocket.instances[0]
@@ -167,7 +190,7 @@ describe('Terminal', () => {
     fireEvent.change(screen.getByTestId('command-input'), { target: { value: '/theme sepia' } })
     fireEvent.submit(screen.getByTestId('command-input').closest('form')!)
 
-    expect(screen.getByText('Usage: /theme light | dark | techo')).toBeInTheDocument()
+    expect(screen.getByText('Usage: /theme light|dark|techno')).toBeInTheDocument()
     expect(MockWebSocket.instances[0].send).not.toHaveBeenCalled()
   })
 
@@ -210,7 +233,7 @@ describe('Terminal', () => {
     fireEvent.change(screen.getByTestId('command-input'), { target: { value: '/debug maybe' } })
     fireEvent.submit(screen.getByTestId('command-input').closest('form')!)
 
-    expect(screen.getByText('Usage: /debug on | off')).toBeInTheDocument()
+    expect(screen.getByText('Usage: /debug on|off')).toBeInTheDocument()
     expect(MockWebSocket.instances[0].send).not.toHaveBeenCalled()
   })
 

@@ -1,5 +1,28 @@
 # Player authentication
 
+## Administrator access and narration
+
+New and existing accounts default to non-admin with narration off. Only a local
+operator can assign an admin role to an existing account:
+
+```bash
+docker compose exec backend python -m app.account_admin "Alan" --admin on
+docker compose exec backend python -m app.account_admin "Alan" --admin off
+```
+
+Granting admin access does not enable narration. Revocation turns narration off
+and takes effect on active connections without signing in again. Registration and
+login accept no role or narration fields.
+
+Admins can use `/ai narration on` and `/ai narration off` to save their own account
+preference. The server must have `AI_NARRATION_ENABLED=true` before opting in.
+Preferences survive reconnect and sign-in; they never affect another account.
+The whole `/ai` namespace is server-authorized and bypasses AI interpretation.
+Help lists admin-only commands only for admins. `/debug` remains available to all
+authenticated users; restricting it is separate future work.
+
+## Account sessions
+
 Accounts own characters; WebSocket connections do not choose an identity by
 username. Registration creates an account and a new character atomically.
 Passwords are hashed with Argon2id (19 MiB, two iterations, one lane); hashing

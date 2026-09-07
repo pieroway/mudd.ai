@@ -4,9 +4,9 @@ This file contains project-specific instructions for Codex working on this repos
 
 ## Quick Context
 
-**Project:** AI-Enhanced MUD (Milestone Two — AI command interpretation)
+**Project:** AI-Enhanced MUD (Milestone Three — optional AI narration)
 
-**Current Status:** Milestones One and Two complete. Authentication and persistent daily AI allowances are implemented. Real AI remains development-only.
+**Current Status:** M1, M2, M3, and the first UI milestone are complete. Real AI remains development-only; optional narration is disabled by default.
 
 **Architecture:** 7-layer deterministic game engine with controlled AI abstraction
 
@@ -69,8 +69,11 @@ See [AI_MUD_CODEX_PROJECT_PROMPT.md](AI_MUD_CODEX_PROJECT_PROMPT.md) for complet
 
 ### Additional Implemented Work and Remaining Boundaries
 - Authenticated accounts, secure character ownership, and persistent daily AI allowances
+- Operator-assigned admin roles; admin-only `/ai narration on|off`, saved per account
+  and off by default. Help includes admin-only commands only for current admins.
 - Public live-AI access still requires shared spending controls and public-launch security review
-- AI narration, NPC intelligence, world generation, and richer UI panels remain future work
+- Optional narration is implemented; see [M3](../MILESTONE_THREE_PLAN.md) for verification status
+- NPC intelligence, world generation, and further UI extensions remain future work
 
 ---
 
@@ -150,8 +153,9 @@ Repository / SQLAlchemy persistence
 PostgreSQL
 ```
 
-AI interpretation proposes commands before engine execution. AI narration is
-future work and would describe authoritative results after execution.
+AI interpretation proposes commands before engine execution. Optional AI narration
+describes committed outcomes after authoritative results and multiplayer events
+are delivered; its prose is never used to update game state.
 PostgreSQL owns persistent game state; Redis is reserved for ephemeral concerns.
 
 ---
@@ -284,12 +288,13 @@ You will:
 
 ## Next Work
 
-M1 and M2 are complete; the UI milestone is now in progress.
-The [UI milestone](../MILESTONE_UI_PLAN.md) is in progress, with its first increment
-implemented before M3. The full deployment gate remains pending.
+M1, M2, and the first [UI milestone](../MILESTONE_UI_PLAN.md) are complete.
+The UI increment passed the full deployment gate on September 6, 2026 and is
+deployed to the local development stack. Validation results are recorded in its plan.
 Use [docs/ROADMAP.md](ROADMAP.md) and the
 [UI inspiration brief](mud_ai_ui_inspiration.md) to scope the next requested increment.
-AI narration remains the planned M3 milestone. Public live-AI enablement still
+The [M3 narration milestone](../MILESTONE_THREE_PLAN.md) passed its full deployment
+gate September 6, 2026. M4 is one AI-powered NPC. Public live-AI enablement still
 requires shared spending controls and a renewed security review.
 
 For each increment, define behavior, add appropriate tests, implement targeted

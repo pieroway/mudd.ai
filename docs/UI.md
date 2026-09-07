@@ -14,7 +14,7 @@ Use the **Inventory** button or `/panel inventory show` and `/panel inventory hi
 Visibility is saved locally. Classic `inventory` / `i` still go to the game engine.
 The panel updates after commands and multiplayer events, including received items.
 On disconnect it hides stale contents; reload to reconnect and obtain fresh state.
-Existing `/theme light | dark | techo`, `/debug on | off`, and command history remain.
+Existing `/theme light | dark | techno`, `/debug on | off`, and command history remain.
 
 Future panels may include map, equipment, health, stats, quests, nearby players/NPCs,
 and combat status. These require their corresponding authoritative game systems.

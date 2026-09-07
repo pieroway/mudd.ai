@@ -15,6 +15,7 @@ from app.config import Settings
 from app.services.game import GameService, InvalidUsernameError, UsernameInUseError
 from app.services.auth import resolve_session
 from app.services.ai_usage import usage_status
+from app.services.narration import NarrationService
 from app.api.auth import COOKIE_NAME
 
 logger = logging.getLogger(__name__)
@@ -25,10 +26,18 @@ active_connections: Set[WebSocket] = set()
 connections_by_session: dict[str, WebSocket] = {}
 authenticated_tokens: dict[WebSocket, str] = {}
 settings = Settings()
+ai_provider = create_ai_provider(settings)
 game_service = GameService(
-    ai_provider=create_ai_provider(settings),
+    ai_provider=ai_provider if settings.ai_command_interpretation_enabled else None,
     ai_command_timeout_seconds=settings.ai_command_timeout_seconds,
     ai_daily_request_limit=settings.ai_daily_request_limit,
+    narration_enabled=settings.ai_narration_enabled,
+)
+narration_service = NarrationService(
+    game_service.session_factory,
+    ai_provider if settings.ai_narration_enabled else None,
+    timeout_seconds=settings.ai_command_timeout_seconds,
+    daily_request_limit=settings.ai_daily_request_limit,
 )
 connection_attempts: dict[str, deque[float]] = defaultdict(deque)
 
@@ -62,7 +71,7 @@ async def _send_json(websocket: WebSocket, message: dict) -> bool:
     try:
         token = authenticated_tokens.get(websocket)
         if (
-            message.get("type") in {"game_output", "system"}
+            message.get("type") in {"game_output", "system", "narration"}
             and token
             and await resolve_session(token) is None
         ):
@@ -195,6 +204,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     account_id=identity.account_id,
                 )
                 events = result.pop("events", [])
+                narration_request = result.pop("_narration_request", None)
                 logger.debug(
                     "Command completed session_id=%s action=%s success=%s elapsed_ms=%.1f",
                     session_id,
@@ -230,6 +240,21 @@ async def websocket_endpoint(websocket: WebSocket):
                                 )).model_dump(),
                             },
                         )
+                if narration_request is not None:
+                    narration = await narration_service.narrate(
+                        narration_request,
+                        account_id=identity.account_id,
+                        authorization_check=still_authorized,
+                    )
+                    await _send_json(websocket, {
+                        "type": "narration",
+                        "text": narration,
+                        "ai_usage": await usage_status(
+                            game_service.session_factory,
+                            identity.account_id,
+                            settings.ai_daily_request_limit,
+                        ),
+                    })
             except Exception:
                 logger.exception("Command execution error")
                 await _send_json(

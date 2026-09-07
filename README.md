@@ -1,12 +1,12 @@
 # AI-Enhanced MUD
 
-AI interpretation now has a [persistent daily account allowance](docs/AI_USAGE.md),
+AI interpretation and optional narration share a [persistent daily account allowance](docs/AI_USAGE.md),
 configured with `AI_DAILY_REQUEST_LIMIT` (default 20). Classic commands remain
 available after the allowance is exhausted.
 
 A persistent multiplayer text-based game (MUD) with a deterministic authoritative game engine and controlled AI layers.
 
-**Status:** Milestones One and Two complete — real AI remains development-only
+**Status:** Milestones One, Two, Three, and the first UI milestone complete — real AI remains development-only
 
 ## Development with Codex
 
@@ -244,6 +244,16 @@ players should not submit secrets or sensitive personal information.
 
 ### Local OpenAI command interpretation
 
+Optional AI narration is implemented separately; see the
+[M3 plan](MILESTONE_THREE_PLAN.md) for configuration, privacy, and fallback behavior.
+Set `AI_NARRATION_ENABLED=true` to make narration available on the server. Each
+account defaults to off; admins use `/ai narration on|off` to save their own
+preference. Help shows admin-only commands only to admins. See
+[administrator access](docs/AUTHENTICATION.md#administrator-access-and-narration)
+for role assignment. Narration uses the configured provider and shares the daily
+allowance and existing `AI_COMMAND_*` limits with interpretation. Classic commands
+still execute when narration is unavailable or allowance is exhausted.
+
 Set `AI_PROVIDER=openai`, `AI_COMMAND_INTERPRETATION_ENABLED=true`,
 `OPENAI_API_KEY`, and an explicit `AI_MODEL` in your ignored local `.env`.
 Choose a model available to your API project that supports the Responses API and
@@ -282,8 +292,8 @@ The browser command `/debug on` appends safe structured WebSocket diagnostics to
 the transcript; `/debug off` disables them. Debug output includes message type,
 success, room identifier, and command source when available. It deliberately
 excludes raw payloads, command text, private messages, and AI prompts. The command
-is available to all authenticated users; administrator roles and restricting
-diagnostics to administrators are tracked as future work.
+is available to all authenticated users; restricting diagnostics to administrators
+is tracked as future work. The `/ai` command is already admin-only.
 
 ## Development Workflow
 
@@ -329,8 +339,8 @@ make dev
 
 - **M1** (Complete): Deterministic 5-room MUD with terminal client
 - **M2** (Complete): AI natural-language command interpretation
-- **UI** (In progress): Modern command-first client with live status and inventory panels; first increment implemented; deployment gate pending
-- **M3**: AI narration
+- **UI** (Complete): Modern command-first client with live status and inventory panels; full deployment gate passed and local stack deployed September 6, 2026
+- **M3** (Complete): Optional AI narration with authoritative results preserved; full deployment gate passed September 6, 2026
 - **M4**: One AI-powered NPC with personality/memory
 - **M5**: Controlled AI world generation
 
@@ -340,6 +350,7 @@ make dev
 - [MILESTONE_ONE_PLAN.md](MILESTONE_ONE_PLAN.md) — M1 roadmap
 - [MILESTONE_TWO_PLAN.md](MILESTONE_TWO_PLAN.md) — Completed M2 delivery plan and validation record
 - [MILESTONE_UI_PLAN.md](MILESTONE_UI_PLAN.md) — UI scope, delivery increments, and validation record
+- [MILESTONE_THREE_PLAN.md](MILESTONE_THREE_PLAN.md) — Optional narration, privacy, limits, and validation
 - [Security review](docs/SECURITY_REVIEW_2026-09-02.md) — Open risks and remediation status
 - [AGENTS.md](docs/AGENTS.md) — AI agent operating guide
 - [CODEX.md](docs/CODEX.md) — Codex project instructions

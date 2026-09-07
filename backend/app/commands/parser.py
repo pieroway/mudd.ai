@@ -11,6 +11,9 @@ def parse_command(raw: str):
     command = parts[0]
     target = " ".join(parts[1:]) if len(parts) > 1 else None
 
+    if command == "/ai":
+        return {"action": "ai_settings", "arguments": parts[1:]}
+
     if command == "say" and len(parts) > 1 and parts[1] == "to":
         return {
             "action": "tell",

@@ -9,6 +9,7 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.ai.models import InterpretCommandRequest, InterpretCommandResponse
+from app.ai.narration import NARRATED_ACTIONS, NarrationRequest
 from app.ai.provider import AIProvider, AIProviderError
 from app.commands.parser import parse_command
 from app.db import get_session_factory
@@ -18,6 +19,7 @@ from app.domain.room import Room
 from app.engine.executor import execute_command
 from app.repositories.game import GameRepository
 from app.services.ai_usage import reserve_attempt
+from app.services.ai_preferences import account_is_admin, configure_narration, narration_allowed
 
 
 class UsernameInUseError(ValueError):
@@ -56,11 +58,13 @@ class GameService:
         ai_provider: AIProvider | None = None,
         ai_command_timeout_seconds: float = 5.0,
         ai_daily_request_limit: int = 20,
+        narration_enabled: bool = False,
     ) -> None:
         self.session_factory = session_factory or get_session_factory()
         self.ai_provider = ai_provider
         self.ai_command_timeout_seconds = ai_command_timeout_seconds
         self.ai_daily_request_limit = ai_daily_request_limit
+        self.narration_enabled = narration_enabled
         self._session_players: dict[str, str] = {}
         self._session_usernames: dict[str, str] = {}
         self._active_usernames: set[str] = set()
@@ -112,6 +116,14 @@ class GameService:
 
         command = parse_command(raw_command)
         command_source = "classic"
+        if command.get("action") == "ai_settings":
+            if authorization_check is not None and not await authorization_check():
+                return {"success": False, "output": "Session expired. Please sign in again."}
+            configured = await configure_narration(
+                self.session_factory, account_id, command["arguments"],
+                available=self.narration_enabled,
+            )
+            return {**configured, "metadata": {"command_source": "classic"}}
         if command.get("action") == "unknown" and self.ai_provider is not None:
             command_source = "ai"
             if authorization_check is not None and not await authorization_check():
@@ -149,12 +161,17 @@ class GameService:
                     "output": "Session expired. Please sign in again.",
                     "metadata": {"command_source": command_source},
                 }
-            result = await self._execute_locked(session_id, player_id, command)
+            narrate = self.narration_enabled and (
+                account_id is None or await narration_allowed(self.session_factory, account_id)
+            )
+            result = await self._execute_locked(session_id, player_id, command, narrate=narrate)
         result["metadata"] = {"command_source": command_source}
+        if command.get("action") == "help" and await account_is_admin(self.session_factory, account_id):
+            result["output"] += "Admin only: \n/ai narration on|off"
         return result
 
     async def _execute_locked(
-        self, session_id: str, player_id: str, command: dict[str, Any]
+        self, session_id: str, player_id: str, command: dict[str, Any], *, narrate: bool = False
     ) -> dict[str, Any]:
         active_sessions = dict(self._session_players)
         active_player_ids = list(active_sessions.values())
@@ -194,6 +211,15 @@ class GameService:
                         inventory=[],
                     )
                 result: dict[str, Any] = execute_command(command, player, world)
+                if narrate and command.get("action") in NARRATED_ACTIONS:
+                    try:
+                        result["_narration_request"] = NarrationRequest.model_validate({
+                            "action": command["action"],
+                            "success": result["success"],
+                            "authoritative_text": result["output"],
+                        })
+                    except ValidationError:
+                        pass  # An oversized outcome still works without narration.
                 if command.get("action") in {"look", "move"} and result.get("success"):
                     others = sorted(
                         candidate.name

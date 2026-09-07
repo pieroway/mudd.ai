@@ -24,10 +24,10 @@ interface TerminalProps {
   username: string
 }
 
-type Theme = 'light' | 'dark' | 'techo'
+type Theme = 'light' | 'dark' | 'techno'
 
 const THEME_STORAGE_KEY = 'mudd-theme'
-const themes: Theme[] = ['light', 'dark', 'techo']
+const themes: Theme[] = ['light', 'dark', 'techno']
 
 function getSavedTheme(): Theme {
   const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY)
@@ -75,7 +75,7 @@ export default function Terminal({ username }: TerminalProps) {
         if (!parsed || typeof parsed !== 'object') return
         message = parsed as GameMessage
       } catch { return }
-      if (isClientState(message.state)) setState(message.state)
+      if (message.type !== 'narration' && isClientState(message.state)) setState(message.state)
       if (message.ai_usage) setAIUsage(message.ai_usage)
       let output = ''
 
@@ -89,6 +89,10 @@ export default function Terminal({ username }: TerminalProps) {
         const source = message.metadata?.command_source
         if (source === 'classic' || source === 'ai') {
           setCommandSource(source)
+        }
+      } else if (message.type === 'narration') {
+        if (typeof message.text === 'string' && message.text.trim()) {
+          output = `[AI narration] ${message.text}`
         }
       } else if (message.type === 'error') {
         output = `[ERROR] ${message.text || 'Unknown server error'}`
@@ -163,7 +167,7 @@ export default function Terminal({ username }: TerminalProps) {
         setTheme(requestedTheme as Theme)
         setTranscript((prev) => [...prev, `Theme changed to ${requestedTheme}.`])
       } else {
-        setTranscript((prev) => [...prev, 'Usage: /theme light | dark | techo'])
+        setTranscript((prev) => [...prev, 'Usage: /theme light|dark|techno'])
       }
       return
     }
@@ -177,7 +181,7 @@ export default function Terminal({ username }: TerminalProps) {
         setDebugEnabled(enabled)
         setTranscript((prev) => [...prev, `Debug output ${enabled ? 'enabled' : 'disabled'}.`])
       } else {
-        setTranscript((prev) => [...prev, 'Usage: /debug on | off'])
+        setTranscript((prev) => [...prev, 'Usage: /debug on|off'])
       }
       return
     }

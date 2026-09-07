@@ -2,10 +2,10 @@
 
 ## Status and Sequence
 
-**In progress — first UI implementation delivered September 6, 2026. The full deployment gate remains pending.**
+**Complete — first UI implementation and full deployment gate passed September 6, 2026; deployed to the local development stack.**
 
 This is a separate UI milestone following M2, with the first delivery increment
-proposed before M3. It does not renumber M3 (AI narration), M4 (one AI NPC), or
+delivered before M3. It does not renumber M3 (AI narration), M4 (one AI NPC), or
 M5 (controlled world generation). This document defines delivery scope; the
 [UI inspiration brief](docs/mud_ai_ui_inspiration.md) supplies broader visual direction.
 
@@ -91,7 +91,7 @@ the existing live client incrementally rather than maintaining a second client.
 - [x] Verify keyboard focus, control labels, and readable contrast.
 - [x] Run relevant backend and frontend tests using deterministic doubles.
 - [x] Add focused Playwright coverage for panel visibility, item changes, and reconnect.
-- [ ] Run the complete Docker deployment gate before deployment and record results.
+- [x] Run the complete Docker deployment gate before deployment and record results.
 - [x] Update README and UI documentation with supported commands and behavior.
 
 ## Definition of Done
@@ -132,7 +132,20 @@ September 6, 2026:
 - Playwright: 6 browser workflows passed, including inventory changes, reload,
   saved visibility, keyboard panel controls, and a 390 × 844 viewport check (exit 0).
 - Visually reviewed desktop and mobile screenshots; prompt and inventory remain visible.
-- The full deployment gate has not been run and this increment is not deployed.
+- Full deployment gate: `scripts\deploy.bat` exited 0 on September 6, 2026.
+  Backend: 183 tests passed (91% coverage), Ruff passed, and mypy passed for
+  37 source files. Frontend: 17 tests, lint, type checking, and build passed.
+  Production-like Compose validation and production/development image builds
+  passed. All 6 Playwright workflows passed, including the UI panel checks.
+- The 10-user, 30-second smoke load test passed with zero command failures
+  (0 of 277 measured responses), command latency p95 of 663.59 ms, and passing
+  authoritative-state invariants. Automated stacks used the fake AI provider.
+- The script started the local development stack successfully; backend, frontend,
+  PostgreSQL, and Redis passed health checks. This was a local deployment;
+  production-like validation covered configuration and builds only.
+- The initial sandboxed attempt exited 1 because Docker access was denied;
+  rerunning with approved Docker access completed the full gate. No code fixes
+  were needed. Backend tests emitted two dependency deprecation warnings.
 
 The new optional `state` field on authenticated system/game-output messages contains
 `room_id`, `room_name`, and `inventory` entries with only `id` and `name`. A single
@@ -142,4 +155,4 @@ these values; Terminal owns transport and local visibility preferences.
 
 Known limits: reconnect currently uses page reload, following the existing client
 behavior. Snapshots add one read per command response/event recipient; revisit
-selective refresh if profiling shows this matters. The full deployment gate remains a milestone completion requirement.
+selective refresh if profiling shows this matters.
