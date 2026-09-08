@@ -18,8 +18,11 @@ from app.domain.client_state import ClientState
 from app.domain.room import Room
 from app.engine.executor import execute_command
 from app.repositories.game import GameRepository
-from app.services.ai_usage import reserve_attempt
+from app.services.ai_usage import reserve_attempt, usage_status
+from app.services.ai_credits import grant_credits
 from app.services.ai_preferences import account_is_admin, configure_narration, narration_allowed
+from app.repositories.npc import NPCRepository
+from app.services.npc import NPCService
 
 
 class UsernameInUseError(ValueError):
@@ -57,14 +60,19 @@ class GameService:
         session_factory: async_sessionmaker[AsyncSession] | None = None,
         ai_provider: AIProvider | None = None,
         ai_command_timeout_seconds: float = 5.0,
-        ai_daily_request_limit: int = 20,
+        ai_daily_request_limit: int = 50,
         narration_enabled: bool = False,
+        npc_provider: AIProvider | None = None,
     ) -> None:
         self.session_factory = session_factory or get_session_factory()
         self.ai_provider = ai_provider
         self.ai_command_timeout_seconds = ai_command_timeout_seconds
         self.ai_daily_request_limit = ai_daily_request_limit
         self.narration_enabled = narration_enabled
+        self.npc_service = NPCService(
+            self.session_factory, npc_provider,
+            timeout_seconds=ai_command_timeout_seconds, daily_request_limit=ai_daily_request_limit,
+        )
         self._session_players: dict[str, str] = {}
         self._session_usernames: dict[str, str] = {}
         self._active_usernames: set[str] = set()
@@ -116,9 +124,39 @@ class GameService:
 
         command = parse_command(raw_command)
         command_source = "classic"
+        if command.get("action") == "talk":
+            async def may_talk() -> bool:
+                return self._session_players.get(session_id) == player_id and (
+                    authorization_check is None or await authorization_check()
+                )
+
+            result = await self.npc_service.talk(
+                player_id, command.get("target_npc"), command.get("message"),
+                account_id=account_id, authorization_check=may_talk,
+            )
+            result["metadata"] = {"command_source": "classic"}
+            return result
         if command.get("action") == "ai_settings":
             if authorization_check is not None and not await authorization_check():
                 return {"success": False, "output": "Session expired. Please sign in again."}
+            if command["arguments"][:1] == ["credits"]:
+                granted = await grant_credits(
+                    self.session_factory, account_id, command["arguments"],
+                    authorization_check=authorization_check,
+                )
+                recipient_player = granted.pop("_credit_recipient_player_id", None)
+                recipient_account = granted.pop("_credit_recipient_account_id", None)
+                units = granted.pop("_credit_units", None)
+                if granted["success"] and isinstance(recipient_account, str):
+                    granted["events"] = [{
+                        "session_id": target_session,
+                        "text": f"An admin added {units} AI credits to your account.",
+                        "ai_usage": await usage_status(
+                            self.session_factory, recipient_account, self.ai_daily_request_limit,
+                        ),
+                    } for target_session, target_player in list(self._session_players.items())
+                        if target_player == recipient_player and target_session != session_id]
+                return {**granted, "metadata": {"command_source": "classic"}}
             configured = await configure_narration(
                 self.session_factory, account_id, command["arguments"],
                 available=self.narration_enabled,
@@ -167,7 +205,10 @@ class GameService:
             result = await self._execute_locked(session_id, player_id, command, narrate=narrate)
         result["metadata"] = {"command_source": command_source}
         if command.get("action") == "help" and await account_is_admin(self.session_factory, account_id):
-            result["output"] += "Admin only: \n/ai narration on|off"
+            result["output"] += (
+                "Admin only: \n/ai narration on|off\n"
+                "/ai credits add <username> [units] (default 50; quote names with spaces)"
+            )
         return result
 
     async def _execute_locked(
@@ -221,6 +262,12 @@ class GameService:
                     except ValidationError:
                         pass  # An oversized outcome still works without narration.
                 if command.get("action") in {"look", "move"} and result.get("success"):
+                    npc_names = await NPCRepository(session).visible_names(player.current_room_id)
+                    if npc_names:
+                        result["output"] += (
+                            f"\nNPCs here: {', '.join(npc_names)}. "
+                            "Use talk <npc> <message> for a private conversation."
+                        )
                     others = sorted(
                         candidate.name
                         for candidate in domain_players.values()

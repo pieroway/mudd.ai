@@ -16,6 +16,18 @@ def test_narration_can_enable_provider_without_interpretation():
     assert isinstance(create_ai_provider(settings), FakeAIProvider)
 
 
+def test_npc_can_enable_provider_without_interpretation_or_narration():
+    assert isinstance(create_ai_provider(Settings(_env_file=None, ai_npc_enabled=True)), FakeAIProvider)
+
+
+@pytest.mark.parametrize("provider_name", ["fake", "openai", "anthropic"])
+def test_npc_cannot_enable_a_production_provider(provider_name):
+    with pytest.raises(UnsupportedAIProviderError):
+        create_ai_provider(Settings(
+            _env_file=None, ai_npc_enabled=True, app_env="production", ai_provider=provider_name,
+        ))
+
+
 @pytest.mark.parametrize("provider_name", ["fake", "openai", "anthropic"])
 def test_narration_cannot_enable_a_production_provider(provider_name):
     settings = Settings(

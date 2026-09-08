@@ -1,7 +1,8 @@
 from app.models.base import Base
-from app.models.ai_usage import AIUsageRecord
+from app.models.ai_usage import AICreditGrantRecord, AIUsageRecord
 from app.models.auth import AccountRecord, AuthSessionRecord
 from app.models.game import ExitRecord, ItemRecord, PlayerRecord, RoomRecord
+from app.models.npc import NPCMemoryRecord, NPCRecord
 
 __all__ = [
     "Base",
@@ -12,4 +13,7 @@ __all__ = [
     "AccountRecord",
     "AuthSessionRecord",
     "AIUsageRecord",
+    "AICreditGrantRecord",
+    "NPCRecord",
+    "NPCMemoryRecord",
 ]

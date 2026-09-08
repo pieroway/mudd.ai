@@ -14,7 +14,7 @@ class UnsupportedAIProviderError(ValueError):
 
 def create_ai_provider(settings: Settings) -> AIProvider | None:
     """Share one bounded provider across enabled AI features."""
-    if not (settings.ai_command_interpretation_enabled or settings.ai_narration_enabled):
+    if not (settings.ai_command_interpretation_enabled or settings.ai_narration_enabled or settings.ai_npc_enabled):
         return None
     if settings.ai_provider == "fake":
         if settings.app_env.casefold() == "production":

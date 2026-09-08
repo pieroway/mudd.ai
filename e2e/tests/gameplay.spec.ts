@@ -1,5 +1,72 @@
 import { expect, test } from '@playwright/test'
 
+test('admin grants persistent AI credits to another user and himself', async ({ page, browser }) => {
+  const recipientContext = await browser.newContext()
+  const recipient = await recipientContext.newPage()
+  const username = `Credits-${Date.now()}`
+  try {
+    await recipient.goto('/')
+    await recipient.getByTestId('register-toggle').click()
+    await recipient.getByTestId('username-input').fill(username)
+    await recipient.getByTestId('password-input').fill('A long test-only passphrase1!')
+    await recipient.getByTestId('login-button').click()
+    await expect(recipient.getByText(/Online/)).toBeVisible()
+    await expect(recipient.getByTestId('ai-allowance')).toContainText('50/50 remaining today')
+    await page.goto('/')
+    await page.getByTestId('username-input').fill('CreditAdmin')
+    await page.getByTestId('password-input').fill('A long test-only passphrase1!')
+    await page.getByTestId('login-button').click()
+    await expect(page.getByText(/Online/)).toBeVisible()
+    await page.getByTestId('command-input').fill(`/ai credits add ${username} 75`)
+    await page.getByTestId('command-input').press('Enter')
+    await expect(page.getByTestId('transcript')).toContainText(`Added 75 AI credits to ${username}`)
+    await expect(recipient.getByTestId('ai-allowance')).toContainText('75 bonus credits')
+    await expect(recipient.getByTestId('ai-allowance')).toContainText('125 total available')
+    await recipient.reload()
+    await expect(recipient.getByText(/Online/)).toBeVisible()
+    await expect(recipient.getByTestId('ai-allowance')).toContainText('75 bonus credits')
+    await recipient.getByTestId('command-input').fill(`/ai credits add ${username}`)
+    await recipient.getByTestId('command-input').press('Enter')
+    await expect(recipient.getByTestId('transcript')).toContainText('available to admin users only')
+    await page.getByTestId('command-input').fill('/ai credits add CreditAdmin')
+    await page.getByTestId('command-input').press('Enter')
+    await expect(page.getByTestId('ai-allowance')).toContainText('50 bonus credits')
+    await expect(page.getByTestId('ai-allowance')).toContainText('100 total available')
+  } finally {
+    await recipientContext.close()
+  }
+})
+
+test('Edric remembers a private conversation after reload', async ({ page }) => {
+  await page.goto('/')
+  await page.getByTestId('register-toggle').click()
+  await page.getByTestId('username-input').fill(`NPC-${Date.now()}`)
+  await page.getByTestId('password-input').fill('A long test-only passphrase1!')
+  await page.getByTestId('login-button').click()
+  await expect(page.getByText(/Online/)).toBeVisible()
+  const input = page.getByTestId('command-input')
+  const transcript = page.getByTestId('transcript')
+  const send = async (command: string) => {
+    await input.fill(command)
+    await input.press('Enter')
+  }
+  await send('east')
+  await expect(transcript).toContainText('NPCs here: Edric')
+  await send('talk edric Hello from a traveler')
+  await expect(transcript).toContainText('[NPC] Edric tells you privately')
+  await expect(page.getByTestId('ai-allowance')).toContainText('49/50 remaining')
+  await page.reload()
+  await expect(page.getByText(/Online/)).toBeVisible()
+  await send('talk edric remember me?')
+  await expect(transcript).toContainText('Welcome back. Last time you said: Hello from a traveler')
+  await expect(page.getByTestId('ai-allowance')).toContainText('48/50 remaining')
+  await send('west')
+  await expect(transcript).toContainText('You move west.')
+  await send('talk edric hello')
+  await expect(transcript).toContainText('Edric is not here.')
+  await expect(page.getByTestId('ai-allowance')).toContainText('48/50 remaining')
+})
+
 test('admin can enable narration, retain it on reload, and disable it', async ({ page }) => {
   await page.goto('/')
   await page.getByTestId('username-input').fill('NarrationAdmin')
@@ -19,17 +86,17 @@ test('admin can enable narration, retain it on reload, and disable it', async ({
   await send('inventory')
   await expect(transcript).toContainText('Inventory: empty')
   await expect(transcript).not.toContainText('[AI narration]')
-  await expect(page.getByTestId('ai-allowance')).toContainText('20/20 remaining')
+  await expect(page.getByTestId('ai-allowance')).toContainText('50/50 remaining')
   await send('/ai narration on')
   await expect(transcript).toContainText('AI narration is on for your account.')
   await send('look')
   await expect(transcript).toContainText('[AI narration]')
-  await expect(page.getByTestId('ai-allowance')).toContainText('19/20 remaining')
+  await expect(page.getByTestId('ai-allowance')).toContainText('49/50 remaining')
   await page.reload()
   await expect(page.getByText(/Online/)).toBeVisible()
   await send('look')
   await expect(transcript).toContainText('[AI narration]')
-  await expect(page.getByTestId('ai-allowance')).toContainText('18/20 remaining')
+  await expect(page.getByTestId('ai-allowance')).toContainText('48/50 remaining')
   const narrated = transcript.locator('.transcript-line').filter({ hasText: '[AI narration]' })
   await expect(narrated).toHaveCount(1)
   await send('/ai narration off')
@@ -38,7 +105,7 @@ test('admin can enable narration, retain it on reload, and disable it', async ({
   await send('inventory')
   await expect(transcript).toContainText('Inventory: empty')
   await expect(narrated).toHaveCount(1)
-  await expect(page.getByTestId('ai-allowance')).toContainText('18/20 remaining')
+  await expect(page.getByTestId('ai-allowance')).toContainText('48/50 remaining')
 })
 
 test('regular users cannot enable narration or spend allowance through /ai', async ({ page }) => {
@@ -55,7 +122,7 @@ test('regular users cannot enable narration or spend allowance through /ai', asy
   await page.getByTestId('command-input').fill('/ai narration on')
   await page.getByTestId('command-input').press('Enter')
   await expect(page.getByTestId('transcript')).toContainText('The /ai command is available to admin users only.')
-  await expect(page.getByTestId('ai-allowance')).toContainText('20/20 remaining')
+  await expect(page.getByTestId('ai-allowance')).toContainText('50/50 remaining')
 })
 
 test('account persists across reload, rejects wrong password, and signs out', async ({ page }) => {
@@ -121,13 +188,13 @@ test('natural commands use interpretation while narration defaults off', async (
   await commandInput.fill('look')
   await commandInput.press('Enter')
   await expect(terminal).toHaveAttribute('data-command-source', 'classic')
-  await expect(page.getByTestId('ai-allowance')).toContainText('20/20 remaining')
+  await expect(page.getByTestId('ai-allowance')).toContainText('50/50 remaining')
 
   await commandInput.fill('walk toward the docks')
   await commandInput.press('Enter')
   await expect(transcript).toContainText('You move south.')
   await expect(transcript).toContainText('Docks')
-  await expect(page.getByTestId('ai-allowance')).toContainText('19/20 remaining')
+  await expect(page.getByTestId('ai-allowance')).toContainText('49/50 remaining')
   await expect(page.getByTestId('current-room')).toHaveText('Docks')
   await expect(terminal).toHaveAttribute('data-command-source', 'ai')
 
@@ -136,7 +203,7 @@ test('natural commands use interpretation while narration defaults off', async (
   await expect(transcript).toContainText(
     "I couldn't interpret that command. Try 'help' for available commands.",
   )
-  await expect(page.getByTestId('ai-allowance')).toContainText('18/20 remaining')
+  await expect(page.getByTestId('ai-allowance')).toContainText('48/50 remaining')
   await expect(transcript).not.toContainText('[AI narration]')
   await expect(terminal).toHaveAttribute('data-command-source', 'ai')
 })

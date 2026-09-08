@@ -115,6 +115,22 @@ describe('Terminal', () => {
     expect(screen.getByTestId('ai-allowance')).toHaveTextContent('resets 00:00 UTC')
   })
 
+  it('shows daily units separately from persistent granted credits', () => {
+    render(<Terminal username="Alan" />)
+    const socket = MockWebSocket.instances[0]
+    act(() => socket.receive({ type: 'game_output', ai_usage: {
+      remaining: 75, limit: 50, daily_remaining: 25, bonus_credits: 50, day: '2026-09-07',
+    } }))
+    expect(screen.getByTestId('ai-allowance')).toHaveTextContent('25/50 remaining today')
+    expect(screen.getByTestId('ai-allowance')).toHaveTextContent('50 bonus credits (do not expire)')
+    expect(screen.getByTestId('ai-allowance')).toHaveTextContent('75 total available')
+    act(() => socket.receive({ type: 'narration', text: null, ai_usage: {
+      remaining: 49, limit: 50, daily_remaining: 0, bonus_credits: 49, day: '2026-09-07',
+    } }))
+    expect(screen.getByTestId('ai-allowance')).toHaveTextContent('0/50 remaining today')
+    expect(screen.getByTestId('ai-allowance')).toHaveTextContent('49 bonus credits')
+  })
+
   beforeEach(() => {
     MockWebSocket.instances = []
     window.localStorage.clear()

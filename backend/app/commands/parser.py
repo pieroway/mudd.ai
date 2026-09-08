@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import shlex
+
 
 def parse_command(raw: str):
     """Parse a raw command string into a simple normalized form."""
@@ -12,7 +14,18 @@ def parse_command(raw: str):
     target = " ".join(parts[1:]) if len(parts) > 1 else None
 
     if command == "/ai":
-        return {"action": "ai_settings", "arguments": parts[1:]}
+        try:
+            arguments = [part.casefold() for part in shlex.split(text)[1:]]
+        except ValueError:
+            arguments = []
+        return {"action": "ai_settings", "arguments": arguments}
+
+    if command == "talk":
+        return {
+            "action": "talk",
+            "target_npc": parts[1] if len(parts) > 1 else None,
+            "message": " ".join(text.split()[2:]) or None,
+        }
 
     if command == "say" and len(parts) > 1 and parts[1] == "to":
         return {

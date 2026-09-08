@@ -8,7 +8,7 @@ import '../styles/Panels.css'
 
 interface GameMessage {
   state?: unknown
-  ai_usage?: { remaining: number; limit: number; day: string }
+  ai_usage?: { remaining: number; limit: number; day: string; daily_remaining?: number; bonus_credits?: number }
   type: string
   text?: string
   room_name?: string
@@ -205,7 +205,9 @@ export default function Terminal({ username }: TerminalProps) {
           <p data-testid="current-room">{connected ? state?.room_name ?? 'Entering the world…' : 'Offline'}</p>
         </div>
         {aiUsage && <span data-testid="ai-allowance" title={`Usage for ${aiUsage.day} UTC; refreshed after each command.`}>
-          AI requests: {aiUsage.remaining}/{aiUsage.limit} remaining · resets 00:00 UTC
+          AI units: {aiUsage.daily_remaining ?? aiUsage.remaining}/{aiUsage.limit} remaining today · daily resets 00:00 UTC
+          {' · '}{aiUsage.bonus_credits ?? 0} bonus credits (do not expire)
+          {(aiUsage.bonus_credits ?? 0) > 0 && <> · {aiUsage.remaining} total available</>}
         </span>}
         <span className={`status ${connected ? 'connected' : 'disconnected'}`}>
           {connected ? '● Online' : '● Offline'}

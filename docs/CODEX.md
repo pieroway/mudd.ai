@@ -4,7 +4,7 @@ This file contains project-specific instructions for Codex working on this repos
 
 ## Quick Context
 
-**Project:** AI-Enhanced MUD (Milestone Three — optional AI narration)
+**Project:** AI-Enhanced MUD (Milestone Four — one AI-powered NPC)
 
 **Current Status:** M1, M2, M3, and the first UI milestone are complete. Real AI remains development-only; optional narration is disabled by default.
 
@@ -69,11 +69,16 @@ See [AI_MUD_CODEX_PROJECT_PROMPT.md](AI_MUD_CODEX_PROJECT_PROMPT.md) for complet
 
 ### Additional Implemented Work and Remaining Boundaries
 - Authenticated accounts, secure character ownership, and persistent daily AI allowances
+- Daily AI units default to 50. Admins grant persistent bonus credits with
+  `/ai credits add <username> [units]` (default 50), including self-grants;
+  see [AI usage](AI_USAGE.md) for accounting and validation.
 - Operator-assigned admin roles; admin-only `/ai narration on|off`, saved per account
   and off by default. Help includes admin-only commands only for current admins.
 - Public live-AI access still requires shared spending controls and public-launch security review
 - Optional narration is implemented; see [M3](../MILESTONE_THREE_PLAN.md) for verification status
-- NPC intelligence, world generation, and further UI extensions remain future work
+- M4 adds Edric's private conversations and persistent per-character memory; see
+  [the M4 plan](../MILESTONE_FOUR_PLAN.md) for scope and verification status.
+- World generation and further UI extensions remain future work
 
 ---
 
@@ -294,7 +299,9 @@ deployed to the local development stack. Validation results are recorded in its 
 Use [docs/ROADMAP.md](ROADMAP.md) and the
 [UI inspiration brief](mud_ai_ui_inspiration.md) to scope the next requested increment.
 The [M3 narration milestone](../MILESTONE_THREE_PLAN.md) passed its full deployment
-gate September 6, 2026. M4 is one AI-powered NPC. Public live-AI enablement still
+gate September 6, 2026. [M4](../MILESTONE_FOUR_PLAN.md) implements one AI-powered NPC;
+its plan records current verification status. M5 is controlled world generation.
+Public live-AI enablement still
 requires shared spending controls and a renewed security review.
 
 For each increment, define behavior, add appropriate tests, implement targeted

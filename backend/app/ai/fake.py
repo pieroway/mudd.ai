@@ -6,6 +6,7 @@ from collections.abc import Mapping
 
 from app.ai.models import InterpretCommandRequest, InterpretCommandResponse
 from app.ai.narration import NarrationRequest, NarrationResponse
+from app.ai.npc import NPCRequest, NPCResponse
 from app.ai.provider import AIProvider, CommandNotInterpretedError
 
 
@@ -30,6 +31,21 @@ class FakeAIProvider(AIProvider):
         }
         self.requests: list[InterpretCommandRequest] = []
         self.narration_requests: list[NarrationRequest] = []
+        self.npc_requests: list[NPCRequest] = []
+
+    async def npc_response(self, request: NPCRequest) -> NPCResponse:
+        self.npc_requests.append(request.model_copy(deep=True))
+        greeting = "Welcome, traveler." if request.relationship == "stranger" else "Welcome back."
+        message = request.message.casefold()
+        if "remember" in message and request.recent_conversation:
+            detail = "Last time you said: " + request.recent_conversation[0].player_text
+        elif "square" in message:
+            detail = request.knowledge[2]
+        elif "inn" in message:
+            detail = request.knowledge[1]
+        else:
+            detail = "I tend the Inn. Ask me about the inn or the Town Square."
+        return NPCResponse(text=f"{greeting} {detail}")
 
     async def narrate_result(self, request: NarrationRequest) -> NarrationResponse:
         self.narration_requests.append(request.model_copy(deep=True))

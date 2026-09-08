@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, false
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Integer, String, false
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -10,9 +10,13 @@ from app.models.base import Base
 
 class AccountRecord(Base):
     __tablename__ = "accounts"
+    __table_args__ = (
+        CheckConstraint("ai_bonus_credits BETWEEN 0 AND 1000000", name="ck_accounts_ai_bonus_credits"),
+    )
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     normalized_username: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    ai_bonus_credits: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=false())
     ai_narration_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=false()

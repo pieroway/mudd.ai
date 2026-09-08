@@ -32,6 +32,7 @@ game_service = GameService(
     ai_command_timeout_seconds=settings.ai_command_timeout_seconds,
     ai_daily_request_limit=settings.ai_daily_request_limit,
     narration_enabled=settings.ai_narration_enabled,
+    npc_provider=ai_provider if settings.ai_npc_enabled else None,
 )
 narration_service = NarrationService(
     game_service.session_factory,
@@ -235,6 +236,7 @@ async def websocket_endpoint(websocket: WebSocket):
                             recipient,
                             {
                                 "type": "game_output", "success": True, "text": event["text"],
+                                **({"ai_usage": event["ai_usage"]} if "ai_usage" in event else {}),
                                 "state": (await game_service.client_state(
                                     event["session_id"]
                                 )).model_dump(),

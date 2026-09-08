@@ -1,12 +1,14 @@
 # AI-Enhanced MUD
 
-AI interpretation and optional narration share a [persistent daily account allowance](docs/AI_USAGE.md),
-configured with `AI_DAILY_REQUEST_LIMIT` (default 20). Classic commands remain
+AI interpretation, optional narration, and NPC conversations share a [persistent daily account allowance](docs/AI_USAGE.md),
+configured with `AI_DAILY_REQUEST_LIMIT` (default 50 units). Admins can add persistent
+bonus credits using `/ai credits add <username> [units]`, including to themselves;
+the default grant is 50 units. Classic commands remain
 available after the allowance is exhausted.
 
 A persistent multiplayer text-based game (MUD) with a deterministic authoritative game engine and controlled AI layers.
 
-**Status:** Milestones One, Two, Three, and the first UI milestone complete — real AI remains development-only
+**Status:** Milestones One, Two, Three, and the first UI milestone complete; M4 NPC implemented and verified in isolated tests, awaiting local deployment — real AI remains development-only
 
 ## Development with Codex
 
@@ -295,6 +297,15 @@ excludes raw payloads, command text, private messages, and AI prompts. The comma
 is available to all authenticated users; restricting diagnostics to administrators
 is tracked as future work. The `/ai` command is already admin-only.
 
+### Talk with Edric
+
+M4 adds Edric, an innkeeper with private per-character memory. With
+`AI_NPC_ENABLED=true`, enter the Inn (`east` from Town Square) and use
+`talk edric hello` or `talk edric what do you know about the inn?`.
+He remembers the latest successful exchange across reconnects and gradually
+recognizes returning visitors. Each attempted reply uses one shared AI request.
+See the [M4 plan](MILESTONE_FOUR_PLAN.md) for configuration, privacy, and limits.
+
 ## Development Workflow
 
 1. **Make a small change** to backend or frontend
@@ -341,7 +352,7 @@ make dev
 - **M2** (Complete): AI natural-language command interpretation
 - **UI** (Complete): Modern command-first client with live status and inventory panels; full deployment gate passed and local stack deployed September 6, 2026
 - **M3** (Complete): Optional AI narration with authoritative results preserved; full deployment gate passed September 6, 2026
-- **M4**: One AI-powered NPC with personality/memory
+- **M4** (Implemented and verified; awaiting local deployment): Edric, an innkeeper with private conversations, bounded knowledge, and persistent memory
 - **M5**: Controlled AI world generation
 
 ## Documentation
@@ -351,6 +362,7 @@ make dev
 - [MILESTONE_TWO_PLAN.md](MILESTONE_TWO_PLAN.md) — Completed M2 delivery plan and validation record
 - [MILESTONE_UI_PLAN.md](MILESTONE_UI_PLAN.md) — UI scope, delivery increments, and validation record
 - [MILESTONE_THREE_PLAN.md](MILESTONE_THREE_PLAN.md) — Optional narration, privacy, limits, and validation
+- [MILESTONE_FOUR_PLAN.md](MILESTONE_FOUR_PLAN.md) — Edric's conversations, memory, knowledge boundaries, and validation
 - [Security review](docs/SECURITY_REVIEW_2026-09-02.md) — Open risks and remediation status
 - [AGENTS.md](docs/AGENTS.md) — AI agent operating guide
 - [CODEX.md](docs/CODEX.md) — Codex project instructions

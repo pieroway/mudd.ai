@@ -10,6 +10,61 @@ from app.db import get_session_factory
 from app.services.ai_preferences import set_admin
 
 
+def test_admin_grants_refresh_only_recipient_and_support_self(game_client):
+    game_client.admin_usernames.add("creditadmin")
+    with game_client.websocket_connect("/ws?username=CreditAdmin") as admin:
+        assert admin.receive_json()["ai_usage"]["remaining"] == 50
+        with game_client.websocket_connect("/ws?username=Recipient") as recipient:
+            recipient.receive_json()
+            with game_client.websocket_connect("/ws?username=Bystander") as bystander:
+                bystander.receive_json()
+                admin.send_text("/ai credits add Recipient 75")
+                assert "Added 75 AI credits" in admin.receive_json()["text"]
+                notice = recipient.receive_json()
+                assert notice["ai_usage"]["bonus_credits"] == 75
+                assert notice["ai_usage"]["remaining"] == 125
+                bystander.send_text("look")
+                assert bystander.receive_json()["ai_usage"]["bonus_credits"] == 0
+                recipient.send_text("/ai credits add Recipient")
+                assert not recipient.receive_json()["success"]
+                admin.send_text("/ai credits add CreditAdmin")
+                result = admin.receive_json()
+                assert result["success"] and result["ai_usage"]["bonus_credits"] == 50
+                assert result["ai_usage"]["used"] == 0
+    with game_client.websocket_connect("/ws?username=Recipient") as recipient:
+        assert recipient.receive_json()["ai_usage"]["bonus_credits"] == 75
+
+
+def test_npc_dialogue_is_private_and_memory_survives_reconnect(game_client, monkeypatch):
+    provider = FakeAIProvider()
+    monkeypatch.setattr(websocket_api.game_service.npc_service, "provider", provider)
+    with game_client.websocket_connect("/ws?username=Visitor") as first:
+        first.receive_json()
+        first.send_text("east")
+        assert "NPCs here: Edric" in first.receive_json()["text"]
+        with game_client.websocket_connect("/ws?username=Bystander") as second:
+            second.receive_json()
+            second.send_text("east")
+            second.receive_json()
+            assert "Bystander arrives" in first.receive_json()["text"]
+            first.send_text("talk edric private-keepsake-7419")
+            reply = first.receive_json()
+            assert reply["type"] == "game_output" and reply["success"]
+            assert "[NPC] Edric" in reply["text"]
+            assert reply["state"]["room_id"] == "inn"
+            assert reply["ai_usage"]["remaining"] == 49
+            second.send_text("look")
+            # FIFO: any leaked dialogue would arrive before this look result.
+            assert "NPCs here: Edric" in second.receive_json()["text"]
+            second.send_text("talk edric hello")
+            assert "Welcome, traveler" in second.receive_json()["text"]
+            assert provider.npc_requests[-1].recent_conversation == []
+    with game_client.websocket_connect("/ws?username=Visitor") as reconnected:
+        reconnected.receive_json()
+        reconnected.send_text("talk edric remember me?")
+        assert "private-keepsake-7419" in reconnected.receive_json()["text"]
+
+
 def test_narration_follows_authoritative_output_and_preserves_inventory(game_client, monkeypatch):
     provider = FakeAIProvider()
     monkeypatch.setattr(websocket_api.game_service, "narration_enabled", True)

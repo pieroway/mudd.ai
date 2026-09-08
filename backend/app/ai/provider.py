@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 
 from app.ai.models import InterpretCommandRequest, InterpretCommandResponse
 from app.ai.narration import NarrationRequest, NarrationResponse
+from app.ai.npc import NPCRequest, NPCResponse
 
 
 class AIProviderError(RuntimeError):
@@ -29,3 +30,7 @@ class AIProvider(ABC):
     async def narrate_result(self, request: NarrationRequest) -> NarrationResponse:
         """Describe an already committed outcome; never propose or execute actions."""
         raise AIProviderError("Narration is unavailable for this provider.")
+
+    async def npc_response(self, request: NPCRequest) -> NPCResponse:
+        """Return dialogue only, using an explicitly authorized context."""
+        raise AIProviderError("NPC conversation is unavailable for this provider.")

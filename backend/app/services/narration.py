@@ -18,7 +18,7 @@ class NarrationService:
         provider: AIProvider | None,
         *,
         timeout_seconds: float = 5.0,
-        daily_request_limit: int = 20,
+        daily_request_limit: int = 50,
     ) -> None:
         self.session_factory = session_factory
         self.provider = provider

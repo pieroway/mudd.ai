@@ -3,8 +3,11 @@
 ## Status
 
 Complete — full deployment gate passed September 6, 2026 (America/Toronto),
-and the local development stack is deployed. The per-account admin control
-increment below is awaiting deployment verification. M4 remains one AI-powered NPC.
+and the local development stack is deployed. The project owner confirmed
+`/ai narration on|off` is working on September 7, 2026. This is manual behavior
+confirmation; no new full deployment-gate result is recorded here.
+Poetic narration style improvements are deferred for a later pass.
+M4 remains one AI-powered NPC.
 
 ## Delivered behavior
 

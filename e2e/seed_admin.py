@@ -13,8 +13,9 @@ async def main():
     if settings.app_env != "test" or "@postgres_e2e:5432/muddb_e2e" not in settings.database_url:
         raise RuntimeError("This fixture requires the isolated E2E database.")
     try:
-        await register_account("NarrationAdmin", "A long test-only passphrase1!")
-        await set_admin(get_session_factory(), "NarrationAdmin", True)
+        for username in ("NarrationAdmin", "CreditAdmin"):
+            await register_account(username, "A long test-only passphrase1!")
+            await set_admin(get_session_factory(), username, True)
     finally:
         await engine.dispose()
 

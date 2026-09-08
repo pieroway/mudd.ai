@@ -6,6 +6,8 @@ import pytest
 
 from app.ai.models import InterpretCommandRequest
 from app.ai.narration import NarrationRequest
+from app.ai.npc import NPCRequest
+from app.domain.npc import EDRIC_GOALS, EDRIC_KNOWLEDGE, EDRIC_PERSONALITY
 from app.ai.openai import OpenAIProvider, command_schema
 from app.ai.provider import AIProviderError
 from app.config import Settings
@@ -29,6 +31,44 @@ def envelope(text='{"command":{"action":"move","direction":"north"}}'):
             }
         ],
     }
+
+
+def npc_request():
+    return NPCRequest(
+        name="Edric", personality=EDRIC_PERSONALITY, goals=EDRIC_GOALS,
+        knowledge=EDRIC_KNOWLEDGE, relationship="stranger", recent_conversation=[], message="Hello",
+    )
+
+
+async def test_npc_contract_and_shared_request_limit():
+    calls = []
+
+    def handler(request):
+        body = json.loads(request.content)
+        calls.append(body)
+        assert body["store"] is False
+        assert "tools" not in body and "previous_response_id" not in body
+        assert json.loads(body["input"][0]["content"]) == npc_request().model_dump()
+        assert body["text"]["format"]["name"] == "mud_npc"
+        assert body["text"]["format"]["schema"]["additionalProperties"] is False
+        assert list(body["text"]["format"]["schema"]["properties"]) == ["text"]
+        return httpx.Response(200, json=envelope('{"text":"Welcome, traveler."}'))
+
+    adapter = provider(handler, ai_command_max_requests=1)
+    assert (await adapter.npc_response(npc_request())).text == "Welcome, traveler."
+    with pytest.raises(AIProviderError, match="limit"):
+        await adapter.interpret_command(InterpretCommandRequest(raw_input="head north please"))
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize("text", [
+    '{"text":"ok","inventory":["gold"]}', '{"text":""}',
+    json.dumps({"text": "x" * 601}), '{"text":42}', 'not json',
+])
+async def test_npc_rejects_invalid_provider_text(text):
+    adapter = provider(lambda request: httpx.Response(200, json=envelope(text)))
+    with pytest.raises(AIProviderError, match="unavailable"):
+        await adapter.npc_response(npc_request())
 
 
 async def test_narration_contract_and_shared_request_limit():

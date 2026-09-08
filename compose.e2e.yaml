@@ -33,6 +33,7 @@ services:
       AI_PROVIDER: fake
       AI_COMMAND_INTERPRETATION_ENABLED: "true"
       AI_NARRATION_ENABLED: "true"
+      AI_NPC_ENABLED: "true"
       APP_ENV: test
       LOG_LEVEL: WARNING
       TRUSTED_ORIGINS: http://host.docker.internal:15173

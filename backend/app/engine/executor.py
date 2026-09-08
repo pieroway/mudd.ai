@@ -363,6 +363,7 @@ def execute_command(command, player, world):
                 "take, take <item> from <container>, drop, use, examine, open, close, extinguish,\n"
                 "put <item> in <container>, look in <container>, give <item> to <player>,\n"
                 "say <message>, say to <player> <message>, tell <player> <message>,\n"
+                "talk <npc> <message> (private NPC conversation),\n"
                 "who [page],  help\n\n"
                 "Slash commands:\n"
                 "/theme light|dark|techno\n"
