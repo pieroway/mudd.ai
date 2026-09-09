@@ -39,6 +39,10 @@ e2e/playwright-report/
 !e2e/.dockerignore
 
 # Logs
+backups/
+*.dump
+*.dump.sha256
+*.dump.partial
 *.log
 logs/
 load-tests/results/*.json

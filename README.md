@@ -158,6 +158,9 @@ The game consists of layers:
 
 ## Database Setup
 
+For manual backups, nightly Windows scheduling, and safe restore into a new database,
+see [database backup and recovery](docs/BACKUPS.md).
+
 PostgreSQL runs in Docker. No local installation needed.
 
 ```bash
