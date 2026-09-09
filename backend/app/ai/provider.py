@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Awaitable, Callable
 
 from app.ai.models import InterpretCommandRequest, InterpretCommandResponse
 from app.ai.narration import NarrationRequest, NarrationResponse
 from app.ai.npc import NPCRequest, NPCResponse
+from app.ai.world import RoomProposalContent, WorldGenerationRequest
 
 
 class AIProviderError(RuntimeError):
@@ -34,3 +36,8 @@ class AIProvider(ABC):
     async def npc_response(self, request: NPCRequest) -> NPCResponse:
         """Return dialogue only, using an explicitly authorized context."""
         raise AIProviderError("NPC conversation is unavailable for this provider.")
+
+    async def generate_room(self, request: WorldGenerationRequest, *,
+                            before_dispatch: Callable[[], Awaitable[bool]]) -> RoomProposalContent:
+        """Check capacity, reserve allowance via callback, then dispatch exactly once."""
+        raise AIProviderError("World generation is unavailable for this provider.")

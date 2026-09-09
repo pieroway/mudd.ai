@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shlex
+from app.domain.directions import DIRECTIONS
 
 
 def parse_command(raw: str):
@@ -12,6 +13,16 @@ def parse_command(raw: str):
     parts = text.lower().split()
     command = parts[0]
     target = " ".join(parts[1:]) if len(parts) > 1 else None
+
+    if command == "/world":
+        description_parts = text.split(maxsplit=2)
+        if len(description_parts) >= 2 and description_parts[1].casefold() == "describe":
+            return {"action": "world_admin", "arguments": ["describe", *description_parts[2:]]}
+        world_parts = text.split(maxsplit=3)
+        arguments = [part.casefold() for part in world_parts[1:3]]
+        if len(world_parts) == 4:
+            arguments.append(world_parts[3])
+        return {"action": "world_admin", "arguments": arguments}
 
     if command == "/ai":
         try:
@@ -116,14 +127,8 @@ def parse_command(raw: str):
 
     if command in {"look", "l"}:
         return {"action": "look", "raw": text}
-    if command in {"north", "n"}:
-        return {"action": "move", "direction": "north", "raw": text}
-    if command in {"south", "s"}:
-        return {"action": "move", "direction": "south", "raw": text}
-    if command in {"east", "e"}:
-        return {"action": "move", "direction": "east", "raw": text}
-    if command in {"west", "w"}:
-        return {"action": "move", "direction": "west", "raw": text}
+    if command in DIRECTIONS:
+        return {"action": "move", "direction": DIRECTIONS[command], "raw": text}
     if command in {"inventory", "i"}:
         return {"action": "inventory", "raw": text}
     if command in {"get", "take"}:

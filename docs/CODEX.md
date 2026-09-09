@@ -78,7 +78,10 @@ See [AI_MUD_CODEX_PROJECT_PROMPT.md](AI_MUD_CODEX_PROJECT_PROMPT.md) for complet
 - Optional narration is implemented; see [M3](../MILESTONE_THREE_PLAN.md) for verification status
 - M4 adds Edric's private conversations and persistent per-character memory; see
   [the M4 plan](../MILESTONE_FOUR_PLAN.md) for scope and verification status.
-- World generation and further UI extensions remain future work
+- M5 implements admin-reviewed room generation, bounded atmospheric descriptions,
+  and atomic room/exit approval; see [M5](../MILESTONE_FIVE_PLAN.md) for current
+  validation/deployment status and [operator usage](WORLD_GENERATION.md).
+- Multi-room generation and further UI extensions remain future work
 
 ---
 

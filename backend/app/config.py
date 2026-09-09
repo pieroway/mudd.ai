@@ -62,6 +62,7 @@ class Settings(BaseSettings):
     ai_command_timeout_seconds: float = Field(default=5.0, gt=0)
     ai_command_max_input_bytes: int = Field(default=4096, gt=0, le=4096)
     ai_command_max_output_tokens: int = Field(default=512, ge=16, le=2048)
+    ai_world_max_output_tokens: int = Field(default=1024, ge=16, le=2048)
     ai_command_max_requests: int = Field(default=100, gt=0, le=1000)
     ai_command_max_concurrent: int = Field(default=2, gt=0, le=10)
     ai_daily_request_limit: int = Field(default=50, ge=0, le=10000)

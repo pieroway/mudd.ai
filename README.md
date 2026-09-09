@@ -8,7 +8,7 @@ available after the allowance is exhausted.
 
 A persistent multiplayer text-based game (MUD) with a deterministic authoritative game engine and controlled AI layers.
 
-**Status:** Milestones One, Two, Three, and the first UI milestone complete; M4 NPC deployed locally and confirmed working; M5 planned — real AI remains development-only
+**Status:** Milestones One, Two, Three, and the first UI milestone complete; M4 NPC and the first M5 room-generation increment deployed locally — real AI remains development-only
 
 ## Development with Codex
 
@@ -356,10 +356,15 @@ make dev
 - **UI** (Complete): Modern command-first client with live status and inventory panels; full deployment gate passed and local stack deployed September 6, 2026
 - **M3** (Complete): Optional AI narration with authoritative results preserved; full deployment gate passed September 6, 2026
 - **M4** (Deployed locally; owner confirmed working): Edric, an innkeeper with private conversations, bounded knowledge, and persistent memory
-- **M5** (Planned): Controlled AI world generation
+- **M5** (First increment deployed locally): Admin-reviewed room generation, atmospheric descriptions, admin description editing, and persistent relative movement
 
 See the [M5 implementation plan](MILESTONE_FIVE_PLAN.md) for admin-reviewed room
 generation with atmospheric descriptions of up to five sentences.
+See [world generation commands and configuration](docs/WORLD_GENERATION.md) to
+propose, preview, approve, or reject rooms using an admin account.
+Admins can also use `/world describe <text>` to edit the current room. Movement
+supports left/right/forward/backwards relative to the last horizontal move;
+`look` shows the character's persistent facing direction.
 
 ## Documentation
 

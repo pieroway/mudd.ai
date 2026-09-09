@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.domain.directions import HORIZONTAL, resolve_direction
 
 
 def _find_item(items, target):
@@ -35,6 +36,7 @@ def execute_command(command, player, world):
             if item.is_in_room(player.current_room_id)
         ]
         output = room.look(items_here)
+        output += f"\nFacing: {player.facing_direction}."
         has_lit_light = any(
             item.owned_by == player.id and item.is_light_source and item.is_lit
             for item in world["items"].values()
@@ -74,13 +76,15 @@ def execute_command(command, player, world):
         }
 
     if action == "move":
-        direction = command.get("direction")
+        direction = resolve_direction(command.get("direction", ""), player.facing_direction)
         room = world["rooms"][player.current_room_id]
         next_room_id = room.exits.get(direction)
         if not next_room_id:
             return {"success": False, "output": f"You cannot go {direction} from here.", "room_id": room.id}
 
         player.move(next_room_id)
+        if direction in HORIZONTAL:
+            player.facing_direction = direction
         destination = world["rooms"][next_room_id]
         # Find items in destination room
         items_here = [
@@ -101,6 +105,7 @@ def execute_command(command, player, world):
                     extinguished.append(item.name)
 
         output = f"You move {direction}.\n{destination.look(items_here)}"
+        output += f"\nFacing: {player.facing_direction}."
         for item_name in sorted(extinguished):
             output += f"\nThe {item_name} sputters out."
 
@@ -359,7 +364,8 @@ def execute_command(command, player, world):
             "success": True,
             "output": (
                 "Available commands:\n"
-                "look, north, south, east, west, inventory,\n"
+                "look, north, south, east, west, up, down, inventory,\n"
+                "left, right, forward, backwards (relative to last horizontal move; look shows facing),\n"
                 "take, take <item> from <container>, drop, use, examine, open, close, extinguish,\n"
                 "put <item> in <container>, look in <container>, give <item> to <player>,\n"
                 "say <message>, say to <player> <message>, tell <player> <message>,\n"

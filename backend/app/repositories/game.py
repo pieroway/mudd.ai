@@ -119,6 +119,7 @@ class GameRepository:
             name=player_record.username,
             current_room_id=player_record.current_room_id,
             inventory=inventory,
+            facing_direction=player_record.facing_direction,
         )
         world: dict[str, object] = {"rooms": rooms, "items": items, "players": {player.id: player}}
         return world, player
@@ -132,6 +133,7 @@ class GameRepository:
         persist_items: bool,
     ) -> None:
         player_record.current_room_id = player.current_room_id
+        player_record.facing_direction = player.facing_direction
         if not persist_items:
             return
 

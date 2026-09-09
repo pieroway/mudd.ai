@@ -7,6 +7,7 @@ import pytest
 from app.ai.models import InterpretCommandRequest
 from app.ai.narration import NarrationRequest
 from app.ai.npc import NPCRequest
+from app.ai.world import WorldGenerationRequest
 from app.domain.npc import EDRIC_GOALS, EDRIC_KNOWLEDGE, EDRIC_PERSONALITY
 from app.ai.openai import OpenAIProvider, command_schema
 from app.ai.provider import AIProviderError
@@ -38,6 +39,44 @@ def npc_request():
         name="Edric", personality=EDRIC_PERSONALITY, goals=EDRIC_GOALS,
         knowledge=EDRIC_KNOWLEDGE, relationship="stranger", recent_conversation=[], message="Hello",
     )
+
+
+async def test_world_contract_budget_and_capacity_before_allowance():
+    charges = []
+    calls = []
+    async def reserve():
+        charges.append(True)
+        return True
+    def handler(request):
+        body = json.loads(request.content)
+        calls.append(body)
+        assert body["max_output_tokens"] == 1024
+        assert body["store"] is False and "tools" not in body
+        assert body["text"]["format"]["name"] == "mud_room"
+        assert set(body["text"]["format"]["schema"]["properties"]) == {"name", "description"}
+        return httpx.Response(200, json=envelope('{"name":"Glade","description":"Still air."}'))
+    adapter = provider(handler, ai_command_max_requests=1)
+    request = WorldGenerationRequest(brief="Quiet", source_name="Forest", source_description="Trees.",
+                                     direction="north", return_direction="south")
+    assert (await adapter.generate_room(request, before_dispatch=reserve)).name == "Glade"
+    with pytest.raises(AIProviderError):
+        await adapter.generate_room(request, before_dispatch=reserve)
+    assert len(charges) == len(calls) == 1
+
+
+async def test_world_allowance_refusal_does_not_dispatch():
+    calls = []
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(500)
+    async def denied():
+        return False
+    adapter = provider(handler)
+    request = WorldGenerationRequest(brief="Quiet", source_name="Forest", source_description="Trees.",
+                                     direction="north", return_direction="south")
+    with pytest.raises(AIProviderError):
+        await adapter.generate_room(request, before_dispatch=denied)
+    assert calls == [] and adapter._active == adapter._requests == 0
 
 
 async def test_npc_contract_and_shared_request_limit():

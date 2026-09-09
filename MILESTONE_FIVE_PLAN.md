@@ -2,7 +2,8 @@
 
 ## Status and goal
 
-Planned; no M5 implementation or deployment is claimed. M4 is deployed and working,
+First increment implemented and deployed locally after all required checks passed,
+including the owner's description-editing and relative-movement additions. M4 is deployed and working,
 as confirmed by the project owner on September 8, 2026. Local nightly database
 backups and isolated restore verification are available; a second backup location
 is deferred until non-local storage is available.
@@ -16,7 +17,7 @@ milestone, not a multi-room region generator.
 
 ## Admin workflow
 
-Proposed command syntax, implemented through the existing authenticated WebSocket:
+Command syntax, implemented through the existing authenticated WebSocket:
 
 ```text
 /world propose north A quiet clearing with mossy stones
@@ -49,12 +50,13 @@ Proposed command syntax, implemented through the existing authenticated WebSocke
 ## Scope and limits
 
 - One generated room and exactly two reciprocal exits per approval.
-- No generated items, NPCs, quests, regions, mechanics, extra connections, edits
-  to existing rooms, room deletion, automatic expansion, or in-game restore.
+- No generated items, NPCs, quests, regions, mechanics, extra connections,
+  room deletion, automatic expansion, or in-game restore. The owner's follow-up
+  adds direct admin edits to the current room's description (see below).
 - No draft editing: reject and request a new proposal. Previewed content is
   immutable so approval always refers to the exact content the admin reviewed.
 - Command-first text output; no new frontend panel or transport is required.
-- Proposed `AI_WORLD_GENERATION_ENABLED=false` feature flag. When disabled,
+- `AI_WORLD_GENERATION_ENABLED=false` feature flag. When disabled,
   proposal creation and approval are blocked; preview/list/reject remain usable.
 - Real generation remains development-only, matching existing real-provider
   restrictions. Add a deterministic fake and mocked adapter contract coverage.
@@ -73,6 +75,25 @@ Proposed command syntax, implemented through the existing authenticated WebSocke
   truncating prose. Provider work holds no game lock or database transaction.
 
 ## Description quality: set the mood
+
+### Accepted follow-up: editing and relative movement
+
+The owner requested `/world describe <description>` to edit the current room using
+the same five-sentence/2,000-character limits. This direct admin operation makes no
+AI call and works with generation disabled. It takes the world-writing lock,
+preserves other room state, and notifies nearby players after commit. Pending
+proposals revalidate their source fingerprint and become stale at approval after
+an edit. No per-room undo or prose history is included.
+
+The owner selected directions relative to the character's last successful horizontal
+move: left/right/forward/backwards, with backward accepted too. Characters start
+north-facing; migration `0012` persists facing. Failed and vertical moves preserve
+it. Successful horizontal moves, including backwards, update facing to the compass
+direction traveled. `look` and movement show facing. Generation accepts these
+directions and pins the proposal to resolved compass exits without moving/turning
+the player. Classic up/down routing is also enabled.
+
+### Atmospheric prose
 
 The owner requested longer, atmospheric descriptions on September 8, 2026. Give
 each generated room a sense of place, using up to five sentences when needed.
@@ -194,35 +215,36 @@ No player is moved automatically and no long-lived world cache may hide new room
 
 ### 1. Deterministic proposal and approval core
 
-- [ ] Add schema/migration and pure validators with invalid-input cases.
-- [ ] Accept atmospheric descriptions up to five sentences and 2,000 characters;
+- [x] Add schema/migration and pure validators with invalid-input cases.
+- [x] Accept atmospheric descriptions up to five sentences and 2,000 characters;
   reject longer responses and verify full prose survives persistence and display.
-- [ ] Implement persistence and approval using authored fixture proposals.
-- [ ] Verify no draft changes rooms, movement, or player-visible state.
-- [ ] Verify atomic room/two-exit creation, persistence after seeding/restart, and
+- [x] Implement persistence and approval using authored fixture proposals.
+- [x] Verify no draft changes rooms, movement, or player-visible state.
+- [x] Verify atomic room/two-exit creation, persistence after seeding/restart, and
   absence of orphan rooms after a forced insertion failure.
-- [ ] Verify simultaneous approvals for one exit, repeated approval, approve/reject
+- [x] Verify simultaneous approvals for one exit, repeated approval, approve/reject
   races, occupied exits, duplicate names, changed context, and creator isolation.
 
 ### 2. Provider generation and admin commands
 
-- [ ] Add fake generation and mocked real-provider contract tests; no paid test calls.
-- [ ] Verify bounded context excludes unrelated/secret data and extra response fields.
-- [ ] Verify disabled feature, revoked admin/session, movement during generation,
+- [x] Add fake generation and mocked real-provider contract tests; no paid test calls.
+- [x] Verify bounded context excludes unrelated/secret data and extra response fields.
+- [x] Verify disabled feature, revoked admin/session, movement during generation,
   malformed replies, timeout, capacity races, quota accounting, and provider failure.
-- [ ] Verify `/world` bypasses interpretation/narration and all commands enforce roles.
-- [ ] Verify draft list/preview, approval/rejection, and actionable conflict messages.
+- [x] Verify `/world` bypasses interpretation/narration and all commands enforce roles.
+- [x] Verify draft list/preview, approval/rejection, and actionable conflict messages.
 
 ### 3. Multiplayer experience and deployment readiness
 
-- [ ] Browser workflow: admin proposes from Forest, previews unchanged geography,
+- [x] Browser workflow: admin proposes from Forest, previews unchanged geography,
   approves, and a second player traverses the new exit and returns.
-- [ ] Browser workflow: non-admin denial and draft recovery after reconnect.
-- [ ] Check privacy, escaped text, source-room notifications, and normal commands.
-- [ ] Run the complete required deployment gate, including load smoke, and record
+- [x] Browser workflow: non-admin denial and draft recovery after reconnect.
+- [x] Check privacy, escaped text, source-room notifications, and normal commands.
+- [x] Run the complete required deployment gate, including load smoke, and record
   actual command exit codes. Take a current database backup before live migrations.
-- [ ] Deploy locally only after the gate passes; separately evaluate real generation
-  quality using the configured development provider and explicitly record results.
+- [x] Deploy locally only after all gate stages pass.
+- [ ] Separately evaluate real generation quality through owner playtesting; the
+  agent's verification uses fake or mocked providers and does not establish literary quality.
 
 ## Definition of done
 
@@ -231,5 +253,47 @@ players can enter and return, and the room survives restart. Invalid, unauthoriz
 stale, failed, and repeated operations cannot create duplicates or partial world
 state. Tests establish isolation and concurrency behavior. Documentation records
 the implemented scope, passing gate, backup, and local deployment separately from
-any real-provider quality assessment. No M5 tests have been run for this plan-only
-change.
+any real-provider quality assessment. See the validation record below and
+[operator documentation](docs/WORLD_GENERATION.md) for the implemented behavior.
+
+## Validation record
+
+September 8, 2026 (America/Toronto):
+
+- Initial focused backend run: 88 tests passed, exit 0.
+- First full gate: 309 tests passed and four test-only deadline cases failed;
+  deployment correctly stopped, exit 1. A 100 ms test timeout could expire during
+  account reservation before dispatch. Corrected non-timeout scenarios to the
+  normal deadline and gave the deliberate timeout scenario a delayed response.
+- Pre-migration local backup created successfully, exit 0:
+  `backups/muddb-20260909T004110301Z-064db757.dump` (UTC filename).
+- Corrected full backend suite: 313 passed, 93% coverage, exit 0. Two existing
+  dependency deprecation warnings remain. Backend lint passed, exit 0.
+- The pre-migration archive restored successfully in isolation, exit 0: migration
+  `0010`, 5 rooms, 11 players, and 2 NPC memories.
+- Initial M5 full deployment gate passed, exit 0, including backend types (50 files),
+  frontend lint/types/19 unit tests/build, production-like validation/builds,
+  Playwright, and load smoke/invariants. M5 deployed locally with generation enabled.
+- The owner's subsequent room-editing and relative-movement additions are under
+  verification. The local site temporarily uses the previously verified image
+  without a source bind mount while the new player-facing migration is tested.
+- Follow-up focused checks passed, exit 0: 57 tests, Ruff, and mypy for 51 files.
+  Pre-facing-migration backup created, exit 0:
+  `backups/pre-heading/muddb-20260909T011425333Z-9727cfa9.dump`.
+  Isolated restore verification also passed, exit 0: migration `0011`, 8 rooms,
+  11 players, and 2 NPC memories.
+- No live-provider requests have been made by the agent.
+- Follow-up full backend suite passed: 335 tests, 93% coverage, exit 0; Ruff,
+  mypy (51 files), frontend lint/types/19 tests/build, production-like configuration,
+  and application image builds all passed. The browser stage initially stopped
+  on a test expecting facing in the reconnect greeting. Corrected the test to use
+  `look`, where facing is displayed; application code did not change. Resumed the
+  gate at the browser stage rather than repeating already-passing application checks.
+- Final browser rerun: all 11 workflows passed, exit 0, including room editing,
+  reconnect persistence, relative directions, and non-admin denial.
+- Load smoke: 10 users for 30 seconds, zero failures in 280 measured commands,
+  command latency p95 358.5 ms; authoritative-state invariants passed, exit 0.
+- Local `docker compose up -d --wait` completed after those checks, exit 0.
+  Migration `0012` is active, all existing players have a facing value, generation
+  is enabled locally, and `/health` returns `ok`. The normal development source
+  mount is restored; the temporary verified-image override has been removed.

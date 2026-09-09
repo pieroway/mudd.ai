@@ -12,9 +12,11 @@ Optional AI narration (M3) passed its full deployment gate September 6, 2026;
 see [the M3 plan](../MILESTONE_THREE_PLAN.md). The [M4 NPC](../MILESTONE_FOUR_PLAN.md)
 is deployed locally and confirmed working by the owner September 8, 2026: Edric at the Inn, with private
 conversations, bounded knowledge, and persistent per-character memory.
-Controlled AI world generation is next; see the [M5 implementation plan](../MILESTONE_FIVE_PLAN.md).
+Controlled AI world generation is implemented; see the [M5 implementation plan](../MILESTONE_FIVE_PLAN.md).
 The first increment is one admin-reviewed room with reciprocal exits and atmospheric
-descriptions of up to five sentences. This scope is planned, not implemented.
+descriptions of up to five sentences. Required checks passed and the first increment
+is deployed locally, including admin description editing and persistent relative movement.
+See [world generation commands](WORLD_GENERATION.md) for operator usage.
 Local nightly backups are available; a second copy is deferred until non-local
 storage is available. See [backup and recovery](BACKUPS.md).
 

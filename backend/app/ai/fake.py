@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Awaitable, Callable, Mapping
 
 from app.ai.models import InterpretCommandRequest, InterpretCommandResponse
 from app.ai.narration import NarrationRequest, NarrationResponse
 from app.ai.npc import NPCRequest, NPCResponse
-from app.ai.provider import AIProvider, CommandNotInterpretedError
+from app.ai.provider import AIProvider, AIProviderError, CommandNotInterpretedError
+from app.ai.world import RoomProposalContent, WorldGenerationRequest
 
 
 DEFAULT_COMMAND_FIXTURES: dict[str, dict[str, object]] = {
@@ -32,6 +33,20 @@ class FakeAIProvider(AIProvider):
         self.requests: list[InterpretCommandRequest] = []
         self.narration_requests: list[NarrationRequest] = []
         self.npc_requests: list[NPCRequest] = []
+        self.world_requests: list[WorldGenerationRequest] = []
+
+    async def generate_room(self, request: WorldGenerationRequest, *,
+                            before_dispatch: Callable[[], Awaitable[bool]]) -> RoomProposalContent:
+        if not await before_dispatch():
+            raise AIProviderError("Daily AI allowance exhausted or session unavailable.")
+        self.world_requests.append(request.model_copy(deep=True))
+        return RoomProposalContent(name="Mossy Clearing", description=(
+            "The forest opens into a small clearing where pale light rests on a ring of moss-covered stones. "
+            "Water beads along their weathered faces and gathers in the dark hollows between them. "
+            "The air smells of damp earth and cedar, cool beneath the shelter of the surrounding branches. "
+            "Somewhere beyond the clearing, a bird calls once, then falls silent. "
+            "Even the wind seems quieter here."
+        ))
 
     async def npc_response(self, request: NPCRequest) -> NPCResponse:
         self.npc_requests.append(request.model_copy(deep=True))

@@ -2,7 +2,11 @@
 
 Each authenticated account has a persistent daily allowance for natural-language
 command interpretation, optional [narration](../MILESTONE_THREE_PLAN.md),
-and [NPC conversations](../MILESTONE_FOUR_PLAN.md).
+[NPC conversations](../MILESTONE_FOUR_PLAN.md), and admin-requested
+[room generation](WORLD_GENERATION.md). Room proposal generation consumes one
+dispatched attempt; preview, list, approval, rejection, and direct room-description
+edits are free. Relative movement uses the classic engine without interpretation;
+optional enabled narration can still consume a unit for its movement outcome.
 `AI_DAILY_REQUEST_LIMIT` defaults to 50 units; one unit permits one attempted AI
 request. Set it in `.env`
 and recreate the backend to change it. Zero disables AI attempts while classic

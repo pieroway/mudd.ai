@@ -33,6 +33,7 @@ game_service = GameService(
     ai_daily_request_limit=settings.ai_daily_request_limit,
     narration_enabled=settings.ai_narration_enabled,
     npc_provider=ai_provider if settings.ai_npc_enabled else None,
+    world_provider=ai_provider if settings.ai_world_generation_enabled else None,
 )
 narration_service = NarrationService(
     game_service.session_factory,

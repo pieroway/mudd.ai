@@ -28,10 +28,14 @@ class ExitRecord(Base):
 
 class PlayerRecord(Base):
     __tablename__ = "players"
+    __table_args__ = (
+        CheckConstraint("facing_direction IN ('north','east','south','west')", name="ck_player_facing"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     username: Mapped[str] = mapped_column(String(50), nullable=False)
     normalized_username: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
+    facing_direction: Mapped[str] = mapped_column(String(5), nullable=False, default="north", server_default="north")
     current_room_id: Mapped[str] = mapped_column(
         ForeignKey("rooms.id", ondelete="RESTRICT"), nullable=False
     )

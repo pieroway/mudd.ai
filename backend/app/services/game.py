@@ -16,6 +16,7 @@ from app.db import get_session_factory
 from app.domain.player import Player
 from app.domain.client_state import ClientState
 from app.domain.room import Room
+from app.domain.directions import resolve_direction
 from app.engine.executor import execute_command
 from app.repositories.game import GameRepository
 from app.services.ai_usage import reserve_attempt, usage_status
@@ -23,6 +24,7 @@ from app.services.ai_credits import grant_credits
 from app.services.ai_preferences import account_is_admin, configure_narration, narration_allowed
 from app.repositories.npc import NPCRepository
 from app.services.npc import NPCService
+from app.services.world_generation import WORLD_HELP, WorldGenerationService
 
 
 class UsernameInUseError(ValueError):
@@ -63,6 +65,7 @@ class GameService:
         ai_daily_request_limit: int = 50,
         narration_enabled: bool = False,
         npc_provider: AIProvider | None = None,
+        world_provider: AIProvider | None = None,
     ) -> None:
         self.session_factory = session_factory or get_session_factory()
         self.ai_provider = ai_provider
@@ -72,6 +75,10 @@ class GameService:
         self.npc_service = NPCService(
             self.session_factory, npc_provider,
             timeout_seconds=ai_command_timeout_seconds, daily_request_limit=ai_daily_request_limit,
+        )
+        self.world_service = WorldGenerationService(
+            self.session_factory, world_provider, timeout_seconds=ai_command_timeout_seconds,
+            daily_request_limit=ai_daily_request_limit,
         )
         self._session_players: dict[str, str] = {}
         self._session_usernames: dict[str, str] = {}
@@ -124,6 +131,26 @@ class GameService:
 
         command = parse_command(raw_command)
         command_source = "classic"
+        if command.get("action") == "world_admin":
+            async def may_build() -> bool:
+                return self._session_players.get(session_id) == player_id and (
+                    authorization_check is None or await authorization_check())
+
+            result = await self.world_service.execute(
+                player_id, command["arguments"], account_id=account_id, authorization_check=may_build)
+            source = result.pop("_world_source", None)
+            direction = result.pop("_world_direction", None)
+            notice = result.pop("_world_notice", None)
+            if source is not None:
+                active_sessions = dict(self._session_players)
+                async with self.session_factory() as session:
+                    players = await GameRepository(session).load_players(list(active_sessions.values()))
+                present = {p.id for p in players if p.current_room_id == source}
+                result["events"] = [{"session_id": sid,
+                    "text": notice or f"A new exit {direction} is available. Use look to view the room."}
+                    for sid, pid in active_sessions.items() if pid in present and sid != session_id]
+            result["metadata"] = {"command_source": "classic"}
+            return result
         if command.get("action") == "talk":
             async def may_talk() -> bool:
                 return self._session_players.get(session_id) == player_id and (
@@ -208,6 +235,7 @@ class GameService:
             result["output"] += (
                 "Admin only: \n/ai narration on|off\n"
                 "/ai credits add <username> [units] (default 50; quote names with spaces)"
+                "\n" + WORLD_HELP
             )
         return result
 
@@ -242,6 +270,9 @@ class GameService:
                 repository = GameRepository(session)
                 player_record = await repository.load_player_for_update(player_id)
                 world, player = await repository.load_world(player_record, lock_items=lock_items)
+                if command.get("action") == "move":
+                    command = {**command, "direction": resolve_direction(
+                        command.get("direction", ""), player.facing_direction)}
                 domain_players: dict[str, Player] = world["players"]  # type: ignore[assignment]
                 active_players = await repository.load_players(active_player_ids)
                 for record in active_players:
@@ -250,6 +281,7 @@ class GameService:
                         name=record.username,
                         current_room_id=record.current_room_id,
                         inventory=[],
+                        facing_direction=record.facing_direction,
                     )
                 result: dict[str, Any] = execute_command(command, player, world)
                 if narrate and command.get("action") in NARRATED_ACTIONS:

@@ -11,6 +11,17 @@ def test_command_interpretation_is_disabled_by_default():
     assert create_ai_provider(settings) is None
 
 
+def test_world_generation_enables_fake_provider():
+    assert isinstance(create_ai_provider(Settings(_env_file=None, ai_world_generation_enabled=True)), FakeAIProvider)
+
+
+@pytest.mark.parametrize("provider_name", ["fake", "openai", "anthropic"])
+def test_world_generation_cannot_enable_production_provider(provider_name):
+    with pytest.raises(UnsupportedAIProviderError):
+        create_ai_provider(Settings(_env_file=None, ai_world_generation_enabled=True,
+                                    app_env="production", ai_provider=provider_name))
+
+
 def test_narration_can_enable_provider_without_interpretation():
     settings = Settings(_env_file=None, ai_narration_enabled=True)
     assert isinstance(create_ai_provider(settings), FakeAIProvider)
