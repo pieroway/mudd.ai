@@ -2,8 +2,8 @@
 
 ## Status
 
-Implemented and verified in isolated test environments. Edric is a stationary
-innkeeper in the Inn. The local development stack has not been redeployed for M4.
+Implemented and deployed locally. The project owner confirmed Edric is working
+on September 8, 2026. Edric is a stationary innkeeper in the Inn.
 Poetic narration improvements remain a separate, deferred task.
 
 ## Player workflow
@@ -105,6 +105,7 @@ Verification on September 7, 2026; every command below exited 0:
 - Migration `0009` applied successfully to fresh isolated PostgreSQL databases.
   Test containers were removed after verification; no live AI requests were made.
 
-The full local deployment script and load smoke test were not run for this
-implementation. Run `scripts\deploy.bat` before deploying it. This record does not
-claim a full deployment-gate pass or live-provider quality evaluation.
+The initial implementation verification did not include the full local deployment
+script or load smoke test. The project owner subsequently confirmed local deployment
+and working dialogue on September 8, 2026. That confirmation does not establish
+unrecorded deployment-gate results or a formal live-provider quality evaluation.

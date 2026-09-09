@@ -8,7 +8,7 @@ available after the allowance is exhausted.
 
 A persistent multiplayer text-based game (MUD) with a deterministic authoritative game engine and controlled AI layers.
 
-**Status:** Milestones One, Two, Three, and the first UI milestone complete; M4 NPC implemented and verified in isolated tests, awaiting local deployment — real AI remains development-only
+**Status:** Milestones One, Two, Three, and the first UI milestone complete; M4 NPC deployed locally and confirmed working; M5 planned — real AI remains development-only
 
 ## Development with Codex
 
@@ -355,8 +355,11 @@ make dev
 - **M2** (Complete): AI natural-language command interpretation
 - **UI** (Complete): Modern command-first client with live status and inventory panels; full deployment gate passed and local stack deployed September 6, 2026
 - **M3** (Complete): Optional AI narration with authoritative results preserved; full deployment gate passed September 6, 2026
-- **M4** (Implemented and verified; awaiting local deployment): Edric, an innkeeper with private conversations, bounded knowledge, and persistent memory
-- **M5**: Controlled AI world generation
+- **M4** (Deployed locally; owner confirmed working): Edric, an innkeeper with private conversations, bounded knowledge, and persistent memory
+- **M5** (Planned): Controlled AI world generation
+
+See the [M5 implementation plan](MILESTONE_FIVE_PLAN.md) for admin-reviewed room
+generation with atmospheric descriptions of up to five sentences.
 
 ## Documentation
 

@@ -10,9 +10,13 @@ with separate backend requirements. The first implementation and full deployment
 gate passed September 6, 2026, and the local development stack is deployed.
 Optional AI narration (M3) passed its full deployment gate September 6, 2026;
 see [the M3 plan](../MILESTONE_THREE_PLAN.md). The [M4 NPC](../MILESTONE_FOUR_PLAN.md)
-is implemented and verified in isolated tests, awaiting local deployment: Edric at the Inn, with private
+is deployed locally and confirmed working by the owner September 8, 2026: Edric at the Inn, with private
 conversations, bounded knowledge, and persistent per-character memory.
-Controlled AI world generation remains the next numbered milestone (M5).
+Controlled AI world generation is next; see the [M5 implementation plan](../MILESTONE_FIVE_PLAN.md).
+The first increment is one admin-reviewed room with reciprocal exits and atmospheric
+descriptions of up to five sentences. This scope is planned, not implemented.
+Local nightly backups are available; a second copy is deferred until non-local
+storage is available. See [backup and recovery](BACKUPS.md).
 
 The project owner confirmed `/ai narration on|off` is working September 7, 2026.
 Making narration sound more like a poet is deferred for a later refinement pass.
