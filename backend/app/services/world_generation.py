@@ -2,6 +2,7 @@
 
 import asyncio
 import hashlib
+import shlex
 from collections.abc import Awaitable, Callable
 from typing import Any
 from uuid import UUID, uuid4
@@ -147,6 +148,19 @@ class WorldGenerationService:
                     await session.execute(delete(RoomRecord).where(RoomRecord.id.in_(branch)))
                     await session.delete(deletion_plan)
                     return result(f'Deleted {len(branch)} downstream rooms and their objects.', True)
+                if arguments[:1] == ['interaction']:
+                    try:
+                        parts = shlex.split(arguments[1]) if len(arguments) == 2 else []
+                    except ValueError:
+                        parts = []
+                    if len(parts) != 3 or parts[0] not in {'wipe', 'unlock', 'repair', 'light', 'read', 'reveal'}:
+                        return result('Usage: /world interaction <verb> "tool name" "target name"')
+                    verb, tool_name, target_name = parts
+                    await repo.lock_world()
+                    target_id, tool_id = str(uuid4()), str(uuid4())
+                    session.add(ItemRecord(id=target_id, name=target_name, description=f'A {target_name} awaits attention.', room_id=player.current_room_id, portable=False))
+                    session.add(ItemRecord(id=tool_id, name=tool_name, description=f'A {tool_name} made for careful use.', room_id=player.current_room_id, portable=True, interaction_target_id=target_id, interaction_verb=verb))
+                    return result(f'Created {tool_name} and {target_name}. Take the tool, then {verb} the target with it.', True)
                 if arguments[:1] == ["describe"]:
                     if len(arguments) != 2:
                         return result("Usage: /world describe <description> (up to five sentences, 2000 characters).")
