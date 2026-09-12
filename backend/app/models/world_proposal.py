@@ -33,3 +33,13 @@ class WorldProposalRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     result_room_id: Mapped[str | None] = mapped_column(ForeignKey("rooms.id", ondelete="RESTRICT"))
+
+class WorldDeletionPlanRecord(Base):
+    __tablename__ = 'world_deletion_plans'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    creator_account_id: Mapped[str] = mapped_column(ForeignKey('accounts.id', ondelete='CASCADE'), index=True)
+    source_room_id: Mapped[str] = mapped_column(ForeignKey('rooms.id', ondelete='CASCADE'))
+    direction: Mapped[str] = mapped_column(String(5))
+    fingerprint: Mapped[str] = mapped_column(String(64))
+    room_ids: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
