@@ -267,6 +267,13 @@ class GameService:
             "extinguish",
             "move",
             "give",
+            "wipe",
+            "unlock",
+            "repair",
+            "light",
+            "read",
+            "reveal",
+            "interact",
         }
         async with self.session_factory() as session:
             async with session.begin():
