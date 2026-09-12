@@ -13,7 +13,7 @@ from sqlalchemy import func, select
 
 from app.ai.neighborhood import NeighborhoodDraft, NeighborhoodRequest, validate_budget, draft_failure
 from app.ai.provider import AIProviderError, AIProviderFailure, AIFailureReason
-from app.domain.directions import DIRECTIONS, OPPOSITE, resolve_direction
+from app.domain.directions import DIRECTIONS, HORIZONTAL, OPPOSITE, resolve_direction
 from app.models import ExitRecord, ItemRecord, RoomRecord, WorldProposalRecord
 from app.models.game import BuildingRecord, DoorRecord
 from app.repositories.world_proposals import WorldProposalRepository
