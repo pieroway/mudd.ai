@@ -117,7 +117,7 @@ async def expansion_anchor(repo, player, settings):
     direction = settings['direction']
     if direction != 'around':
         direction = resolve_direction(direction, player.facing_direction)
-        if direction in exits[player.current_room_id] or rooms[player.current_room_id].building_id:
+        if direction in exits[player.current_room_id] or (rooms[player.current_room_id].building_id and direction in HORIZONTAL):
             raise ValueError('Choose an unused outdoor exit, or use /world generate around.')
         return player.current_room_id, direction
     seen = {player.current_room_id}
