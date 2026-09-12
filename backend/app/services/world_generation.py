@@ -141,6 +141,8 @@ class WorldGenerationService:
                         item_ids |= children
                     if item_ids:
                         await session.execute(delete(ItemRecord).where(ItemRecord.id.in_(item_ids)))
+                    await session.execute(delete(WorldDeletionPlanRecord).where(WorldDeletionPlanRecord.source_room_id.in_(branch)))
+                    await session.execute(delete(WorldProposalRecord).where((WorldProposalRecord.source_room_id.in_(branch)) | (WorldProposalRecord.result_room_id.in_(branch))))
                     await session.execute(delete(ExitRecord).where((ExitRecord.room_id.in_(branch)) | (ExitRecord.destination_room_id.in_(branch))))
                     await session.execute(delete(RoomRecord).where(RoomRecord.id.in_(branch)))
                     await session.delete(deletion_plan)
