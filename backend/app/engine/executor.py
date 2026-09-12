@@ -308,6 +308,9 @@ def execute_command(command, player, world):
                 " It seems heavier than you might expect, and something rattles "
                 "inside when you shake it."
             )
+        if item.interaction_state:
+            output += f" It has been {item.interaction_state}."
+
         if item.is_light_source:
             light_description = (
                 "Its flame flickers" if item.is_lit else "It is not lit"
@@ -378,6 +381,9 @@ def execute_command(command, player, world):
             }
         if not item.can_use:
             return {"success": False, "output": f"The {item.name} cannot be used."}
+
+        if item.interaction_state:
+            output += f" It has been {item.interaction_state}."
 
         if item.is_light_source:
             if item.is_lit:
