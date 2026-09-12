@@ -21,6 +21,8 @@ class Item:
     portable: bool = True
     interaction_target_id: str | None = None
     is_clean: bool = False
+    interaction_verb: str | None = None
+    interaction_state: str | None = None
 
     def is_in_room(self, room_id: str) -> bool:
         return self.room_id == room_id and self.owned_by is None

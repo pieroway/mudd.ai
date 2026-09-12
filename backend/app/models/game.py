@@ -108,3 +108,5 @@ class ItemRecord(Base):
     portable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
     interaction_target_id: Mapped[str | None] = mapped_column(ForeignKey("items.id", ondelete="SET NULL"))
     is_clean: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    interaction_verb: Mapped[str | None] = mapped_column(String(12))
+    interaction_state: Mapped[str | None] = mapped_column(String(12))

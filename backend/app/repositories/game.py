@@ -148,6 +148,7 @@ class GameRepository:
                 portable=record.portable,
                 interaction_target_id=record.interaction_target_id,
                 is_clean=record.is_clean,
+                interaction_verb=record.interaction_verb, interaction_state=record.interaction_state,
             )
             for record in item_records
         }
@@ -193,6 +194,7 @@ class GameRepository:
             record.is_lit = domain_item.is_lit
             record.fuel_remaining = domain_item.fuel_remaining
             record.is_clean = domain_item.is_clean
+            record.interaction_state = domain_item.interaction_state
 
     async def load_player(self, player_id: str) -> Player:
         player_record = await self.session.get(PlayerRecord, player_id)

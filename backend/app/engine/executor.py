@@ -346,7 +346,7 @@ def execute_command(command, player, world):
         item.is_open = action == "open"
         return {"success": True, "output": f"You {action} the {item.name}."}
 
-    if action == "wipe":
+    if action in {"wipe", "unlock", "repair", "light", "read", "reveal", "interact"}:
         target, tool = command.get("target"), command.get("tool")
         item = _find_item(world["items"], tool, player, owned_only=True)
         surface = _find_item(world["items"], target, player, room_only=True)
@@ -354,12 +354,14 @@ def execute_command(command, player, world):
             return {"success": False, "output": f"You need to be carrying the {tool} to wipe with it."}
         if surface is None:
             return {"success": False, "output": f"You do not see a {target} here."}
-        if item.interaction_target_id != surface.id:
+        verb = item.interaction_verb or ("wipe" if action == "wipe" else None)
+        if item.interaction_target_id != surface.id or verb is None or (action != "interact" and verb != action):
             return {"success": False, "output": f"The {item.name} cannot be used on the {surface.name}."}
-        if surface.is_clean:
+        if surface.interaction_state == verb:
             return {"success": False, "output": f"The {surface.name} is already clean."}
-        surface.is_clean = True
-        return {"success": True, "output": f"You wipe the {surface.name} clean with the {item.name}."}
+        surface.is_clean = verb == "wipe"
+        surface.interaction_state = verb
+        return {"success": True, "output": f"You {verb} the {surface.name} with the {item.name}."}
     if action == "use":
         target = command.get("target")
         if not target:
