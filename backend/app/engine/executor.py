@@ -363,10 +363,11 @@ def execute_command(command, player, world):
             verb = item.interaction_verb or ("wipe" if action == "wipe" else None)
         if item.interaction_target_id != surface.id or verb is None or (action != "interact" and verb != action):
             return {"success": False, "output": f"The {item.name} cannot be used on the {surface.name}."}
-        if surface.interaction_state == verb:
+        completed = {"wipe": "wiped", "unlock": "unlocked", "repair": "repaired", "light": "lit", "read": "read", "reveal": "revealed"}[verb]
+        if surface.interaction_state == completed:
             return {"success": False, "output": f"The {surface.name} is already clean."}
         surface.is_clean = verb == "wipe"
-        surface.interaction_state = verb
+        surface.interaction_state = completed
         return {"success": True, "output": f"You {verb} the {surface.name} with the {item.name}."}
     if action == "use":
         target = command.get("target")
