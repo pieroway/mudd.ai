@@ -6,14 +6,15 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import ValidationError
-from sqlalchemy import func
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.ai.provider import AIProvider, AIProviderError
 from app.ai.world import RoomProposalContent, WorldGenerationRequest
 from app.domain.directions import DIRECTIONS, OPPOSITE, resolve_direction
-from app.models.world_proposal import WorldProposalRecord
+from app.models import ExitRecord, ItemRecord, RoomRecord
+from app.models.world_proposal import WorldDeletionPlanRecord, WorldProposalRecord
 from app.repositories.world_proposals import WorldProposalRepository
 from app.services.ai_usage import reserve_attempt
 from app.services import neighborhood
@@ -100,6 +101,49 @@ class WorldGenerationService:
                 player = await repo.admin_player(account_id, player_id)
                 if player is None or not await authorization_check():
                     return result("The /world command is available to admin users only.")
+                if arguments[:1] == ['delete']:
+                    if len(arguments) != 2 or arguments[1] not in DIRECTIONS:
+                        return result('Usage: /world delete <direction>')
+                    direction = resolve_direction(arguments[1], player.facing_direction)
+                    await repo.lock_world()
+                    rows = (await session.scalars(select(ExitRecord))).all()
+                    exits: dict[str, dict[str, str]] = {}
+                    for edge in rows:
+                        exits.setdefault(edge.room_id, {})[edge.direction] = edge.destination_room_id
+                    branch = downstream_branch(player.current_room_id, direction, exits)
+                    plan = WorldDeletionPlanRecord(id=str(uuid4()), creator_account_id=account_id,
+                        source_room_id=player.current_room_id, direction=direction,
+                        fingerprint='|'.join(sorted(branch)), room_ids={'rooms': sorted(branch)})
+                    session.add(plan)
+                    return result(f'Delete preview {plan.id}: {len(branch)} rooms and their objects will be removed. Confirm with /world confirm-delete {plan.id}', True)
+                if arguments[:1] == ['confirm-delete']:
+                    if len(arguments) != 2:
+                        return result('Usage: /world confirm-delete <token>')
+                    plan = await session.get(WorldDeletionPlanRecord, arguments[1])
+                    if plan is None or plan.creator_account_id != account_id:
+                        return result('Deletion plan not found.')
+                    await repo.lock_world()
+                    rows = (await session.scalars(select(ExitRecord))).all()
+                    exits: dict[str, dict[str, str]] = {}
+                    for edge in rows:
+                        exits.setdefault(edge.room_id, {})[edge.direction] = edge.destination_room_id
+                    branch = downstream_branch(plan.source_room_id, plan.direction, exits)
+                    if sorted(branch) != plan.room_ids.get('rooms') or '|'.join(sorted(branch)) != plan.fingerprint:
+                        return result('The map changed. Request a new deletion preview.')
+                    if player.current_room_id in branch:
+                        return result('Move out of the branch before deleting it.')
+                    item_ids = set((await session.scalars(select(ItemRecord.id).where(ItemRecord.room_id.in_(branch)))).all())
+                    while item_ids:
+                        children = set((await session.scalars(select(ItemRecord.id).where(ItemRecord.container_id.in_(item_ids)))).all()) - item_ids
+                        if not children:
+                            break
+                        item_ids |= children
+                    if item_ids:
+                        await session.execute(delete(ItemRecord).where(ItemRecord.id.in_(item_ids)))
+                    await session.execute(delete(ExitRecord).where((ExitRecord.room_id.in_(branch)) | (ExitRecord.destination_room_id.in_(branch))))
+                    await session.execute(delete(RoomRecord).where(RoomRecord.id.in_(branch)))
+                    await session.delete(plan)
+                    return result(f'Deleted {len(branch)} downstream rooms and their objects.', True)
                 if arguments[:1] == ["describe"]:
                     if len(arguments) != 2:
                         return result("Usage: /world describe <description> (up to five sentences, 2000 characters).")
