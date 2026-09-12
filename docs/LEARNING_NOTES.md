@@ -3,6 +3,7 @@
 Grow this file gradually with concise explanations tied to real project work.
 
 Suggested sections:
+
 - Python
 - pytest
 - Playwright
