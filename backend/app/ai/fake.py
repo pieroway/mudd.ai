@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Mapping
+from typing import Any
 
 from app.ai.models import InterpretCommandRequest, InterpretCommandResponse
 from app.ai.narration import NarrationRequest, NarrationResponse
 from app.ai.npc import NPCRequest, NPCResponse
 from app.ai.provider import AIProvider, AIProviderError, CommandNotInterpretedError
 from app.ai.world import RoomProposalContent, WorldGenerationRequest
+from app.ai.neighborhood import NeighborhoodDraft, NeighborhoodRequest
 
 
 DEFAULT_COMMAND_FIXTURES: dict[str, dict[str, object]] = {
@@ -34,6 +36,29 @@ class FakeAIProvider(AIProvider):
         self.narration_requests: list[NarrationRequest] = []
         self.npc_requests: list[NPCRequest] = []
         self.world_requests: list[WorldGenerationRequest] = []
+        self.neighborhood_requests: list[NeighborhoodRequest] = []
+
+    async def generate_neighborhood(self, request: NeighborhoodRequest, *,
+                                    before_dispatch: Callable[[], Awaitable[bool]]) -> NeighborhoodDraft:
+        if not await before_dispatch():
+            raise AIProviderError("Daily AI allowance exhausted or session unavailable.")
+        self.neighborhood_requests.append(request.model_copy(deep=True))
+        rooms = [{"key": "lane", "name": "Cedar Lane", "description": "Cedar shade falls across worn cobbles.", "building": None}]
+        buildings = []
+        connections: list[dict[str, Any]] = [{"source": "anchor", "direction": request.direction, "destination": "lane", "door": None}]
+        objects = [{"key": "bench", "name": "stone bench", "description": "Moss softens a heavy stone bench.",
+                    "kind": "fixture", "room": "lane", "container": None}]
+        if request.max_rooms >= 2 and request.max_buildings >= 1:
+            buildings.append({"key": "workshop", "name": "Cedar Workshop"})
+            rooms.append({"key": "workroom", "name": "Cedar Workroom", "description": "Wood shavings scent the quiet workshop.", "building": "workshop"})
+            connections.append({"source": "lane", "direction": request.direction, "destination": "workroom",
+                                "door": {"name": "cedar door", "description": "A plain cedar door hangs on iron hinges."}})
+            objects.extend([
+                {"key": "box", "name": "wooden box", "description": "A small wooden box rests on the floor.", "kind": "container", "room": "workroom", "container": None},
+                {"key": "cup", "name": "clay cup", "description": "A blue glaze covers the little cup.", "kind": "portable", "room": None, "container": "box"},
+            ])
+        return NeighborhoodDraft.model_validate({"buildings": buildings, "rooms": rooms,
+                                                  "connections": connections, "objects": objects})
 
     async def generate_room(self, request: WorldGenerationRequest, *,
                             before_dispatch: Callable[[], Awaitable[bool]]) -> RoomProposalContent:

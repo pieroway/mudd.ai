@@ -66,6 +66,7 @@ class GameService:
         narration_enabled: bool = False,
         npc_provider: AIProvider | None = None,
         world_provider: AIProvider | None = None,
+        ai_neighborhood_timeout_seconds: float = 60,
     ) -> None:
         self.session_factory = session_factory or get_session_factory()
         self.ai_provider = ai_provider
@@ -79,6 +80,7 @@ class GameService:
         self.world_service = WorldGenerationService(
             self.session_factory, world_provider, timeout_seconds=ai_command_timeout_seconds,
             daily_request_limit=ai_daily_request_limit,
+            neighborhood_timeout_seconds=ai_neighborhood_timeout_seconds,
         )
         self._session_players: dict[str, str] = {}
         self._session_usernames: dict[str, str] = {}
@@ -104,6 +106,7 @@ class GameService:
                         )
                         player_id = player_record.id
                     player = await repository.load_player(player_id)
+                    await repository.discover_room(player.id, player.current_room_id)
 
             self._session_players[session_id] = player.id
             self._session_usernames[session_id] = normalized_username
@@ -284,6 +287,12 @@ class GameService:
                         facing_direction=record.facing_direction,
                     )
                 result: dict[str, Any] = execute_command(command, player, world)
+                door_rooms = result.pop('_door_rooms', None)
+                door_notice = result.pop('_door_notice', None)
+                if door_rooms:
+                    result['events'] = [{'session_id': sid, 'text': door_notice}
+                        for sid, pid in active_sessions.items() if sid != session_id
+                        and any(record.id == pid and record.current_room_id in door_rooms for record in active_players)]
                 if narrate and command.get("action") in NARRATED_ACTIONS:
                     try:
                         result["_narration_request"] = NarrationRequest.model_validate({
@@ -323,7 +332,7 @@ class GameService:
                         result["events"] = [
                             {"session_id": recipient_session, "text": recipient_output}
                         ]
-                if result.get("success"):
+                if result.get("success") and not door_rooms:
                     activity_events = self._activity_events(
                         session_id,
                         command,

@@ -10,6 +10,12 @@ A persistent multiplayer text-based game (MUD) with a deterministic authoritativ
 
 **Status:** Milestones One, Two, Three, and the first UI milestone complete; M4 NPC and the first M5 room-generation increment deployed locally — real AI remains development-only
 
+The [discovered-world map](docs/MAP.md) is also deployed locally, with persistent
+visited rooms, known exits, current position, and zoom/pan controls.
+
+Admins can use `/world generate` for a bounded neighborhood with buildings, doors,
+and objects; see [review and publication commands](docs/NEIGHBORHOODS.md).
+
 ## Development with Codex
 
 This project is being developed with help from OpenAI Codex. Codex assists with
@@ -368,6 +374,7 @@ supports left/right/forward/backwards relative to the last horizontal move;
 
 ## Documentation
 
+- [Discovered-world map](docs/MAP.md) — discovery, map controls, and validation
 - [AI_MUD_CODEX_PROJECT_PROMPT.md](docs/AI_MUD_CODEX_PROJECT_PROMPT.md) — Complete specification
 - [MILESTONE_ONE_PLAN.md](MILESTONE_ONE_PLAN.md) — M1 roadmap
 - [MILESTONE_TWO_PLAN.md](MILESTONE_TWO_PLAN.md) — Completed M2 delivery plan and validation record

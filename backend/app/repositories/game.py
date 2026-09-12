@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.item import Item
-from app.domain.client_state import ClientState, InventoryEntry
+from app.domain.client_state import ClientState, InventoryEntry, MapState, MapRoom, MapExit
+from app.models.game import PlayerDiscoveryRecord
+from app.models.game import DoorRecord
+from app.domain.door import Door
 from app.domain.player import Player
 from app.domain.room import Room
 from app.models import ExitRecord, ItemRecord, PlayerRecord, RoomRecord
@@ -16,6 +19,26 @@ from app.models import ExitRecord, ItemRecord, PlayerRecord, RoomRecord
 class GameRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
+
+    async def discover_room(self, player_id: str, room_id: str) -> None:
+        await self.session.execute(insert(PlayerDiscoveryRecord).values(
+            player_id=player_id, room_id=room_id,
+        ).on_conflict_do_nothing())
+
+    async def map_state(self, player_id: str) -> MapState:
+        known = select(PlayerDiscoveryRecord.room_id).where(
+            PlayerDiscoveryRecord.player_id == player_id
+        )
+        rooms = (await self.session.scalars(select(RoomRecord).where(
+            RoomRecord.id.in_(known)).order_by(RoomRecord.id))).all()
+        exits = (await self.session.scalars(select(ExitRecord).where(
+            ExitRecord.room_id.in_(known), ExitRecord.destination_room_id.in_(known)
+        ).order_by(ExitRecord.room_id, ExitRecord.direction))).all()
+        return MapState(
+            rooms=[MapRoom(id=room.id, name=room.name) for room in rooms],
+            exits=[MapExit(room_id=edge.room_id, direction=edge.direction,
+                           destination_room_id=edge.destination_room_id) for edge in exits],
+        )
 
     async def client_state(self, player_id: str) -> ClientState:
         # One query gives a consistent snapshot without loading hidden world data.
@@ -34,6 +57,7 @@ class GameRepository:
             room_id=rows[0][0],
             room_name=rows[0][1],
             inventory=[InventoryEntry(id=row[2], name=row[3]) for row in rows if row[2]],
+            map=await self.map_state(player_id),
         )
 
     async def get_or_create_player(self, username: str, normalized_username: str) -> PlayerRecord:
@@ -77,8 +101,17 @@ class GameRepository:
     async def load_world(
         self, player_record: PlayerRecord, *, lock_items: bool = False
     ) -> tuple[dict[str, object], Player]:
+        # Keep rooms, exits, doors and items consistent while a builder publishes.
+        # Shared locks allow concurrent gameplay; publication takes the exclusive lock.
+        await self.session.execute(text("SELECT pg_advisory_xact_lock_shared(50615001)"))
         room_records = (await self.session.scalars(select(RoomRecord))).all()
         exit_records = (await self.session.scalars(select(ExitRecord))).all()
+        door_statement = select(DoorRecord).order_by(DoorRecord.id)
+        if lock_items:
+            door_statement = door_statement.with_for_update()
+        door_records = (await self.session.scalars(door_statement)).all()
+        doors = {record.id: Door(record.id, record.name, record.description, record.room_id,
+                                record.destination_room_id, record.is_open) for record in door_records}
         item_statement = select(ItemRecord).order_by(ItemRecord.id)
         if lock_items:
             item_statement = item_statement.with_for_update()
@@ -94,6 +127,8 @@ class GameRepository:
         }
         for record in exit_records:
             rooms[record.room_id].exits[record.direction] = record.destination_room_id
+            if record.door_id:
+                rooms[record.room_id].doors[record.direction] = doors[record.door_id]
 
         items = {
             record.id: Item(
@@ -110,6 +145,7 @@ class GameRepository:
                 is_light_source=record.is_light_source,
                 is_lit=record.is_lit,
                 fuel_remaining=record.fuel_remaining,
+                portable=record.portable,
             )
             for record in item_records
         }
@@ -134,11 +170,18 @@ class GameRepository:
     ) -> None:
         player_record.current_room_id = player.current_room_id
         player_record.facing_direction = player.facing_direction
+        await self.discover_room(player.id, player.current_room_id)
         if not persist_items:
             return
 
+        rooms: dict[str, Room] = world['rooms']  # type: ignore[assignment]
+        domain_doors = {door.id: door for room in rooms.values() for door in room.doors.values()}
+        door_records = (await self.session.scalars(select(DoorRecord).where(DoorRecord.id.in_(domain_doors)))).all()
+        for door_record in door_records:
+            door_record.is_open = domain_doors[door_record.id].is_open
+
         domain_items: dict[str, Item] = world["items"]  # type: ignore[assignment]
-        item_records = (await self.session.scalars(select(ItemRecord))).all()
+        item_records = (await self.session.scalars(select(ItemRecord).where(ItemRecord.id.in_(domain_items)))).all()
         for record in item_records:
             domain_item = domain_items[record.id]
             record.room_id = domain_item.room_id

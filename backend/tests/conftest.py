@@ -10,6 +10,7 @@ os.environ.setdefault("DATABASE_POOL_ENABLED", "false")
 
 from app.db import get_session_factory  # noqa: E402
 from app.db.seed import seed_world  # noqa: E402
+from app.models.game import DoorRecord, BuildingRecord  # noqa: E402
 from app.models import (  # noqa: E402
     AccountRecord,
     AuthSessionRecord,
@@ -36,7 +37,9 @@ async def reset_persistent_database():
             await session.execute(delete(ItemRecord))
             await session.execute(delete(PlayerRecord))
             await session.execute(delete(ExitRecord))
+            await session.execute(delete(DoorRecord))
             await session.execute(delete(RoomRecord))
+            await session.execute(delete(BuildingRecord))
             await seed_world(session)
     yield
 

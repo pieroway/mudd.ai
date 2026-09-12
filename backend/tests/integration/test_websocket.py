@@ -364,7 +364,8 @@ def test_movement_output_lists_players_already_in_the_destination(game_client):
 def test_client_state_tracks_inventory_failures_movement_and_reconnect(game_client):
     with game_client.websocket_connect("/ws?username=PanelPlayer") as socket:
         state = socket.receive_json()["state"]
-        assert state == {"room_id": "town_square", "room_name": "Town Square", "inventory": []}
+        assert state == {"room_id": "town_square", "room_name": "Town Square", "inventory": [],
+                         "map": {"rooms": [{"id": "town_square", "name": "Town Square"}], "exits": []}}
         socket.send_text("take torch")
         held = socket.receive_json()["state"]
         assert held["inventory"] == [{"id": "torch", "name": "torch"}]

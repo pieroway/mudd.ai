@@ -16,7 +16,11 @@ The panel updates after commands and multiplayer events, including received item
 On disconnect it hides stale contents; reload to reconnect and obtain fresh state.
 Existing `/theme light | dark | techno`, `/debug on | off`, and command history remain.
 
-Future panels may include map, equipment, health, stats, quests, nearby players/NPCs,
+The [discovered-world map](MAP.md) adds persistent visited rooms, known exits,
+current position, zoom, drag/button panning, and an expanded viewport. Use the Map
+button or `/map show | hide | expand | collapse`.
+
+Future panels may include equipment, health, stats, quests, nearby players/NPCs,
 and combat status. These require their corresponding authoritative game systems.
 
 Frontend consumes structured server state instead of parsing narration text.

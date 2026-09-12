@@ -6,12 +6,29 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.models.base import Base
 
 
+class BuildingRecord(Base):
+    __tablename__ = "buildings"
+    id: Mapped[str] = mapped_column(String(50), primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+
+
 class RoomRecord(Base):
     __tablename__ = "rooms"
 
     id: Mapped[str] = mapped_column(String(50), primary_key=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
+    building_id: Mapped[str | None] = mapped_column(ForeignKey("buildings.id", ondelete="RESTRICT"), index=True)
+
+
+class DoorRecord(Base):
+    __tablename__ = "doors"
+    id: Mapped[str] = mapped_column(String(50), primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    room_id: Mapped[str] = mapped_column(ForeignKey("rooms.id", ondelete="CASCADE"))
+    destination_room_id: Mapped[str] = mapped_column(ForeignKey("rooms.id", ondelete="CASCADE"))
+    is_open: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
 
 class ExitRecord(Base):
@@ -21,6 +38,7 @@ class ExitRecord(Base):
         ForeignKey("rooms.id", ondelete="CASCADE"), primary_key=True
     )
     direction: Mapped[str] = mapped_column(String(20), primary_key=True)
+    door_id: Mapped[str | None] = mapped_column(ForeignKey("doors.id", ondelete="RESTRICT"))
     destination_room_id: Mapped[str] = mapped_column(
         ForeignKey("rooms.id", ondelete="CASCADE"), nullable=False
     )
@@ -38,6 +56,17 @@ class PlayerRecord(Base):
     facing_direction: Mapped[str] = mapped_column(String(5), nullable=False, default="north", server_default="north")
     current_room_id: Mapped[str] = mapped_column(
         ForeignKey("rooms.id", ondelete="RESTRICT"), nullable=False
+    )
+
+
+class PlayerDiscoveryRecord(Base):
+    __tablename__ = "player_discoveries"
+
+    player_id: Mapped[str] = mapped_column(
+        ForeignKey("players.id", ondelete="CASCADE"), primary_key=True
+    )
+    room_id: Mapped[str] = mapped_column(
+        ForeignKey("rooms.id", ondelete="CASCADE"), primary_key=True
     )
 
 
@@ -76,3 +105,4 @@ class ItemRecord(Base):
     is_light_source: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_lit: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     fuel_remaining: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    portable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")

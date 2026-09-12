@@ -9,6 +9,7 @@ from app.ai.models import InterpretCommandRequest, InterpretCommandResponse
 from app.ai.narration import NarrationRequest, NarrationResponse
 from app.ai.npc import NPCRequest, NPCResponse
 from app.ai.world import RoomProposalContent, WorldGenerationRequest
+from app.ai.neighborhood import NeighborhoodDraft, NeighborhoodRequest
 
 
 class AIProviderError(RuntimeError):
@@ -21,6 +22,11 @@ class CommandNotInterpretedError(AIProviderError):
 
 class AIProvider(ABC):
     """Translate player language into a validated, non-authoritative command."""
+
+    async def generate_neighborhood(self, request: NeighborhoodRequest, *,
+                                    before_dispatch: Callable[[], Awaitable[bool]]) -> NeighborhoodDraft:
+        """Propose a bounded draft after reserving capacity and allowance."""
+        raise AIProviderError("Neighborhood generation is unavailable for this provider.")
 
     @abstractmethod
     async def interpret_command(

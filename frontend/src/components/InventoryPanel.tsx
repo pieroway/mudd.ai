@@ -1,7 +1,10 @@
+import type { MapState } from './MapPanel'
+
 export interface ClientState {
   room_id: string
   room_name: string
   inventory: { id: string; name: string }[]
+  map?: MapState
 }
 
 // Socket JSON is untrusted at runtime, even when TypeScript types match the server.

@@ -2,6 +2,11 @@
 
 ## Status and goal
 
+The subsequent [neighborhood increment](docs/NEIGHBORHOODS.md) passed its required
+checks and deployed locally September 11, 2026. It extends generation to reviewed
+connected rooms, buildings, doors, fixtures, and containers. The original single-room
+increment and its historical validation remain documented below.
+
 First increment implemented and deployed locally after all required checks passed,
 including the owner's description-editing and relative-movement additions. M4 is deployed and working,
 as confirmed by the project owner on September 8, 2026. Local nightly database

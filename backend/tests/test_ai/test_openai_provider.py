@@ -8,6 +8,8 @@ from app.ai.models import InterpretCommandRequest
 from app.ai.narration import NarrationRequest
 from app.ai.npc import NPCRequest
 from app.ai.world import WorldGenerationRequest
+from app.ai.neighborhood import NeighborhoodRequest
+from app.ai.fake import FakeAIProvider
 from app.domain.npc import EDRIC_GOALS, EDRIC_KNOWLEDGE, EDRIC_PERSONALITY
 from app.ai.openai import OpenAIProvider, command_schema
 from app.ai.provider import AIProviderError
@@ -39,6 +41,55 @@ def npc_request():
         name="Edric", personality=EDRIC_PERSONALITY, goals=EDRIC_GOALS,
         knowledge=EDRIC_KNOWLEDGE, relationship="stranger", recent_conversation=[], message="Hello",
     )
+
+
+async def test_neighborhood_contract_capacity_and_allowance():
+    request = NeighborhoodRequest(brief='Quiet', origin_name='Forest', anchor_name='Forest',
+        anchor_description='Trees.', direction='north', max_rooms=2, max_buildings=1)
+    charges, calls = [], []
+    async def reserve():
+        charges.append(True)
+        return True
+    async def allowed():
+        return True
+    draft = await FakeAIProvider().generate_neighborhood(request, before_dispatch=allowed)
+    def handler(http_request):
+        body = json.loads(http_request.content)
+        calls.append(body)
+        assert body['max_output_tokens'] == 8192
+        assert body['store'] is False and 'tools' not in body
+        assert json.loads(body['input'][0]['content']) == request.model_dump()
+        schema = body['text']['format']['schema']
+        assert body['text']['format']['name'] == 'mud_neighborhood'
+        for model in [schema, *schema['$defs'].values()]:
+            assert model['additionalProperties'] is False
+            assert set(model['required']) == set(model['properties'])
+        return httpx.Response(200, json=envelope(draft.model_dump_json()))
+    adapter = provider(handler, ai_command_max_requests=1)
+    assert await adapter.generate_neighborhood(request, before_dispatch=reserve) == draft
+    with pytest.raises(AIProviderError):
+        await adapter.generate_neighborhood(request, before_dispatch=reserve)
+    assert len(charges) == len(calls) == 1
+
+
+async def test_neighborhood_denied_allowance_and_invalid_response():
+    request = NeighborhoodRequest(brief='Quiet', origin_name='Forest', anchor_name='Forest',
+        anchor_description='Trees.', direction='north', max_rooms=1, max_buildings=0)
+    calls = []
+    def handler(http_request):
+        calls.append(http_request)
+        return httpx.Response(200, json=envelope('{"rooms": [], "secret": "PRIVATE"}'))
+    async def denied():
+        return False
+    async def allowed():
+        return True
+    adapter = provider(handler)
+    with pytest.raises(AIProviderError):
+        await adapter.generate_neighborhood(request, before_dispatch=denied)
+    assert calls == [] and adapter._active == adapter._requests == 0
+    with pytest.raises(AIProviderError, match='Neighborhood generation unavailable'):
+        await adapter.generate_neighborhood(request, before_dispatch=allowed)
+    assert len(calls) == 1 and adapter._active == 0
 
 
 async def test_world_contract_budget_and_capacity_before_allowance():

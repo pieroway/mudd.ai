@@ -2,7 +2,7 @@ from __future__ import annotations
 from app.domain.directions import HORIZONTAL, resolve_direction
 
 
-def _find_item(items, target):
+def _find_item(items, target, player=None, *, room_only=False, owned_only=False, container_id=None):
     if not target:
         return None
 
@@ -11,7 +11,11 @@ def _find_item(items, target):
         (
             item
             for item in items.values()
-            if item.id.casefold() == normalized_target or item.name.casefold() == normalized_target
+            if (item.id.casefold() == normalized_target or item.name.casefold() == normalized_target)
+            and (player is None or (
+                item.container_id == container_id if container_id else
+                item.is_in_room(player.current_room_id) if room_only else
+                item.owned_by == player.id if owned_only else _is_accessible(item, player)))
         ),
         None,
     )
@@ -27,6 +31,24 @@ def _is_accessible(item, player):
 def execute_command(command, player, world):
     """Execute a parsed command against a deterministic test world."""
     action = command.get("action")
+    room = world['rooms'][player.current_room_id]
+    if action in {'open', 'close', 'examine'}:
+        target = (command.get('target') or '').casefold()
+        matches = [door for direction, door in room.doors.items()
+                   if target in {door.id.casefold(), door.name.casefold(), 'door', f'{direction} door'}]
+        if len(matches) > 1:
+            return {'success': False, 'output': 'Which door? Use its direction, such as open north door.'}
+        if matches:
+            door = matches[0]
+            if action == 'examine':
+                return {'success': True, 'output': f"{door.description} It is {'open' if door.is_open else 'closed'}."}
+            opened = action == 'open'
+            if door.is_open == opened:
+                return {'success': False, 'output': f"The {door.name} is already {'open' if opened else 'closed'}."}
+            door.is_open = opened
+            return {'success': True, 'output': f'You {action} the {door.name}.',
+                    '_door_rooms': [door.room_id, door.destination_room_id],
+                    '_door_notice': f"The {door.name} {'opens' if opened else 'closes'}."}
 
     if action == "look":
         room = world["rooms"][player.current_room_id]
@@ -54,7 +76,7 @@ def execute_command(command, player, world):
         if not container_target:
             return {"success": False, "output": "Usage: look in <container>."}
 
-        container = _find_item(world["items"], container_target)
+        container = _find_item(world["items"], container_target, player)
         if not _is_accessible(container, player):
             return {
                 "success": False,
@@ -81,6 +103,8 @@ def execute_command(command, player, world):
         next_room_id = room.exits.get(direction)
         if not next_room_id:
             return {"success": False, "output": f"You cannot go {direction} from here.", "room_id": room.id}
+        if direction in room.doors and not room.doors[direction].is_open:
+            return {'success': False, 'output': f'The {room.doors[direction].name} is closed. Use open {direction} door.', 'room_id': room.id}
 
         player.move(next_room_id)
         if direction in HORIZONTAL:
@@ -116,17 +140,20 @@ def execute_command(command, player, world):
         }
 
     if action == "inventory":
-        return {"success": True, "output": f"Inventory: {', '.join(player.inventory) if player.inventory else 'empty'}"}
+        names = [world['items'][item_id].name for item_id in player.inventory]
+        return {"success": True, "output": f"Inventory: {', '.join(names) if names else 'empty'}"}
 
     if action == "take":
         target = command.get("target")
         if not target:
             return {"success": False, "output": "Take what?"}
 
-        item = _find_item(world["items"], target)
+        item = _find_item(world["items"], target, player, room_only=True)
         if item is None or not item.is_in_room(player.current_room_id):
             return {"success": False, "output": f"You do not see a {target} here."}
 
+        if not item.portable:
+            return {'success': False, 'output': f'The {item.name} is fixed in place.'}
         item.take_by(player.id)
         player.inventory.append(item.id)
         return {"success": True, "output": f"You take the {item.name}."}
@@ -136,7 +163,7 @@ def execute_command(command, player, world):
         if not target:
             return {"success": False, "output": "Drop what?"}
 
-        item = _find_item(world["items"], target)
+        item = _find_item(world["items"], target, player, owned_only=True)
         if item is None or item.id not in player.inventory or item.owned_by != player.id:
             return {"success": False, "output": f"You are not carrying a {target}."}
 
@@ -174,7 +201,7 @@ def execute_command(command, player, world):
         if recipient.current_room_id != player.current_room_id:
             return {"success": False, "output": f"{recipient.name} is not here."}
 
-        item = _find_item(world["items"], target)
+        item = _find_item(world["items"], target, player, owned_only=True)
         if item is None or item.id not in player.inventory or item.owned_by != player.id:
             return {"success": False, "output": f"You are not carrying a {target}."}
         if item.is_light_source and item.is_lit:
@@ -196,11 +223,11 @@ def execute_command(command, player, world):
         if not target or not container_target:
             return {"success": False, "output": "Usage: put <item> in <container>."}
 
-        item = _find_item(world["items"], target)
+        item = _find_item(world["items"], target, player, owned_only=True)
         if item is None or item.id not in player.inventory or item.owned_by != player.id:
             return {"success": False, "output": f"You are not carrying a {target}."}
 
-        container = _find_item(world["items"], container_target)
+        container = _find_item(world["items"], container_target, player)
         if not _is_accessible(container, player):
             return {
                 "success": False,
@@ -234,7 +261,7 @@ def execute_command(command, player, world):
         if not target or not container_target:
             return {"success": False, "output": "Usage: take <item> from <container>."}
 
-        container = _find_item(world["items"], container_target)
+        container = _find_item(world["items"], container_target, player)
         if not _is_accessible(container, player):
             return {
                 "success": False,
@@ -245,13 +272,15 @@ def execute_command(command, player, world):
         if not container.is_open:
             return {"success": False, "output": f"The {container.name} is closed."}
 
-        item = _find_item(world["items"], target)
+        item = _find_item(world["items"], target, player, container_id=container.id)
         if item is None or item.container_id != container.id:
             return {
                 "success": False,
                 "output": f"There is no {target} in the {container.name}.",
             }
 
+        if not item.portable:
+            return {'success': False, 'output': f'The {item.name} is fixed in place.'}
         item.take_by(player.id)
         player.inventory.append(item.id)
         return {
@@ -264,7 +293,7 @@ def execute_command(command, player, world):
         if not target:
             return {"success": False, "output": "Examine what?"}
 
-        item = _find_item(world["items"], target)
+        item = _find_item(world["items"], target, player)
         item_is_accessible = _is_accessible(item, player)
         if not item_is_accessible:
             return {"success": False, "output": f"You do not see a {target} here."}
@@ -303,7 +332,7 @@ def execute_command(command, player, world):
         if not target:
             return {"success": False, "output": f"{verb} what?"}
 
-        item = _find_item(world["items"], target)
+        item = _find_item(world["items"], target, player)
         item_is_accessible = _is_accessible(item, player)
         if not item_is_accessible:
             return {"success": False, "output": f"You do not see a {target} here."}
@@ -322,7 +351,7 @@ def execute_command(command, player, world):
         if not target:
             return {"success": False, "output": "Use what?"}
 
-        item = _find_item(world["items"], target)
+        item = _find_item(world["items"], target, player, owned_only=True)
         if item is None or item.id not in player.inventory or item.owned_by != player.id:
             return {
                 "success": False,
@@ -345,7 +374,7 @@ def execute_command(command, player, world):
         if not target:
             return {"success": False, "output": "Extinguish what?"}
 
-        item = _find_item(world["items"], target)
+        item = _find_item(world["items"], target, player, owned_only=True)
         if item is None or item.id not in player.inventory or item.owned_by != player.id:
             return {
                 "success": False,

@@ -81,7 +81,8 @@ See [AI_MUD_CODEX_PROJECT_PROMPT.md](AI_MUD_CODEX_PROJECT_PROMPT.md) for complet
 - M5 implements admin-reviewed room generation, bounded atmospheric descriptions,
   and atomic room/exit approval; see [M5](../MILESTONE_FIVE_PLAN.md) for current
   validation/deployment status and [operator usage](WORLD_GENERATION.md).
-- Multi-room generation and further UI extensions remain future work
+- Reviewed multi-room generation is implemented; see [neighborhoods](NEIGHBORHOODS.md)
+  for scope and current validation status. Further UI extensions remain future work.
 
 ---
 

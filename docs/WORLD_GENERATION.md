@@ -1,8 +1,12 @@
-# Admin-reviewed room generation
+# Admin-reviewed world generation
 
-M5 creates one room and a return connection at a time. Generated content stays
+`/world propose` creates one room and a return connection at a time. Generated content stays
 private until its creating admin explicitly approves it. Normal movement never
 invokes generation.
+
+For multiple rooms, buildings, doors, and objects, use `/world generate`;
+see [reviewed neighborhood generation](NEIGHBORHOODS.md). The single-room commands
+and limits below continue to work independently.
 
 ## Commands
 

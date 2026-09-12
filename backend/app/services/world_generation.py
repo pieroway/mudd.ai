@@ -16,8 +16,10 @@ from app.domain.directions import DIRECTIONS, OPPOSITE, resolve_direction
 from app.models.world_proposal import WorldProposalRecord
 from app.repositories.world_proposals import WorldProposalRepository
 from app.services.ai_usage import reserve_attempt
+from app.services import neighborhood
 
 WORLD_HELP = (
+    neighborhood.GENERATE_HELP + "\n"
     "/world propose <direction> <brief> (up to 400 characters)\n"
     "/world proposals\n/world preview <proposal-id>\n"
     "/world approve <proposal-id>\n/world reject <proposal-id>"
@@ -34,6 +36,8 @@ def result(text: str, success: bool = False, **extra: Any) -> dict[str, Any]:
 
 
 def preview(proposal: WorldProposalRecord, source_name: str) -> str:
+    if proposal.schema_version == 2:
+        return neighborhood.preview(proposal, source_name)
     return (
         f"Room proposal {proposal.id} [{proposal.status}]\n"
         f"Source: {source_name} ({proposal.source_room_id})\n"
@@ -47,17 +51,22 @@ def preview(proposal: WorldProposalRecord, source_name: str) -> str:
 
 class WorldGenerationService:
     def __init__(self, factory: async_sessionmaker[AsyncSession], provider: AIProvider | None,
-                 *, timeout_seconds: float = 5, daily_request_limit: int = 50):
+                 *, timeout_seconds: float = 5, daily_request_limit: int = 50,
+                 neighborhood_timeout_seconds: float = 60):
         self.factory = factory
         self.provider = provider
         self.timeout_seconds = timeout_seconds
         self.daily_request_limit = daily_request_limit
+        self.neighborhood_timeout_seconds = neighborhood_timeout_seconds
 
     async def execute(self, player_id: str, arguments: list[str], *, account_id: str | None,
                       authorization_check: Callable[[], Awaitable[bool]]) -> dict[str, Any]:
         if account_id is None or not await authorization_check():
             return result("The /world command requires an active admin session.")
         try:
+            if arguments[:1] == ["generate"]:
+                return await neighborhood.generate(self, player_id, account_id,
+                    arguments[1] if len(arguments) == 2 else "", authorization_check)
             if arguments[:1] == ["propose"]:
                 return await self._propose(player_id, account_id, arguments, authorization_check)
             async with self.factory() as session, session.begin():
@@ -82,7 +91,7 @@ class WorldGenerationService:
                                   _world_notice="This room's description has changed. Use look to read it.")
                 if arguments == ["proposals"]:
                     drafts = await repo.recent(account_id)
-                    return result("Your latest room proposals:\n" + ("\n".join(
+                    return result("Your latest world proposals:\n" + ("\n".join(
                         f"{p.id} [{p.status}] {p.name}" for p in drafts) or "No proposals yet."), True)
                 if len(arguments) != 2 or arguments[0] not in {"preview", "approve", "reject"}:
                     return result("Usage:\n" + WORLD_HELP)
@@ -112,6 +121,9 @@ class WorldGenerationService:
                                   room_id=proposal.result_room_id)
                 if proposal.status != "pending":
                     return result(f"Proposal is {proposal.status}. Request a new proposal.")
+                if proposal.schema_version == 2:
+                    return await neighborhood.approve(repo, proposal, player, authorization_check,
+                                                       lambda: self.provider is not None)
                 if player.current_room_id != proposal.source_room_id:
                     return result("Return to the source room before approving.")
                 await repo.lock_world()
@@ -135,7 +147,7 @@ class WorldGenerationService:
             return result(str(error))
         except IntegrityError:
             return result("World conflict; nothing was added. Preview or request a new proposal.")
-        except (AIProviderError, TimeoutError, ValidationError):
+        except (AIProviderError, TimeoutError, ValueError):
             return result("World generation unavailable or invalid. No room was added; try again later.")
 
     async def _propose(self, player_id: str, account_id: str, arguments: list[str],

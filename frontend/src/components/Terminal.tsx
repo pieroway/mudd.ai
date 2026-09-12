@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Transcript from './Transcript'
 import CommandPrompt from './CommandPrompt'
+import MapPanel from './MapPanel'
 import InventoryPanel, { ClientState, isClientState } from './InventoryPanel'
 import { apiUrl } from '../services/api'
 import '../styles/Terminal.css'
@@ -39,6 +40,8 @@ export default function Terminal({ username }: TerminalProps) {
   const [ws, setWs] = useState<WebSocket | null>(null)
   const [connected, setConnected] = useState(false)
   const [state, setState] = useState<ClientState>()
+  const [mapVisible, setMapVisible] = useState(() => window.localStorage.getItem('mudd-map-visible') !== 'false')
+  const [mapExpanded, setMapExpanded] = useState(false)
   const [inventoryVisible, setInventoryVisible] = useState(() =>
     window.localStorage.getItem('mudd-inventory-visible') !== 'false')
   const [aiUsage, setAIUsage] = useState<GameMessage['ai_usage']>()
@@ -47,6 +50,10 @@ export default function Terminal({ username }: TerminalProps) {
   const [debugEnabled, setDebugEnabled] = useState(false)
   const debugEnabledRef = useRef(false)
   const transcriptEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    window.localStorage.setItem('mudd-map-visible', String(mapVisible))
+  }, [mapVisible])
 
   useEffect(() => {
     window.localStorage.setItem('mudd-inventory-visible', String(inventoryVisible))
@@ -150,6 +157,17 @@ export default function Terminal({ username }: TerminalProps) {
 
   const handleCommand = (command: string) => {
     const slashCommand = command.trim().toLowerCase().split(/\s+/)
+    if (['/map', 'map'].includes(slashCommand[0]) || (slashCommand[0] === '/panel' && slashCommand[1] === 'map')) {
+      const args = slashCommand.slice(slashCommand[0] === '/panel' ? 2 : 1)
+      const action = args[0] ?? 'show'
+      const valid = args.length <= 1 && ['show', 'hide', 'expand', 'collapse'].includes(action)
+      if (valid) {
+        setMapVisible(action !== 'hide')
+        if (action === 'expand' || action === 'collapse') setMapExpanded(action === 'expand')
+      }
+      setTranscript(prev => [...prev, `> ${command}`, valid ? `Map: ${action}.` : 'Usage: /map show | hide | expand | collapse'])
+      return
+    }
     if (slashCommand[0] === '/panel') {
       const valid = slashCommand.length === 3 && slashCommand[1] === 'inventory'
         && ['show', 'hide'].includes(slashCommand[2])
@@ -216,12 +234,17 @@ export default function Terminal({ username }: TerminalProps) {
 
       <nav className="panel-toolbar" aria-label="Game panels">
         <span>Adventure</span>
+        <button type="button" aria-expanded={mapVisible} aria-controls="map-panel"
+          onClick={() => setMapVisible(visible => !visible)}>Map</button>
         <button type="button" aria-expanded={inventoryVisible} aria-controls="inventory-panel"
           onClick={() => setInventoryVisible(visible => !visible)}>Inventory</button>
       </nav>
-      <div className={`game-layout ${inventoryVisible ? 'with-panel' : ''}`}>
+      <div className={`game-layout ${inventoryVisible || mapVisible ? 'with-panel' : ''} ${mapVisible && mapExpanded ? 'map-expanded' : ''}`}>
         <Transcript lines={transcript} ref={transcriptEndRef} />
-        {inventoryVisible && <InventoryPanel state={state} connected={connected} />}
+        {(inventoryVisible || mapVisible) && <div className="context-panels">
+          {mapVisible && <MapPanel state={state} connected={connected} expanded={mapExpanded} onExpand={() => setMapExpanded(value => !value)} />}
+          {inventoryVisible && <InventoryPanel state={state} connected={connected} />}
+        </div>}
       </div>
 
       <CommandPrompt onCommand={handleCommand} disabled={!connected} />

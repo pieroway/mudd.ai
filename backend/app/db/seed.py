@@ -4,15 +4,22 @@ from app.models import ExitRecord, ItemRecord, RoomRecord
 from app.world import create_world
 from app.domain.npc import EDRIC_ID, EDRIC_ROOM
 from app.models.npc import NPCRecord
+from app.models.game import BuildingRecord
 
 
 async def seed_world(session: AsyncSession) -> None:
     """Insert the deterministic world without resetting persistent state."""
     world = create_world()
 
+    for building_id, name in [('inn', 'Inn'), ('blacksmith', 'Blacksmith')]:
+        if await session.get(BuildingRecord, building_id) is None:
+            session.add(BuildingRecord(id=building_id, name=name))
+    await session.flush()
+
     for room in world["rooms"].values():
         if await session.get(RoomRecord, room.id) is None:
-            session.add(RoomRecord(id=room.id, name=room.name, description=room.description))
+            session.add(RoomRecord(id=room.id, name=room.name, description=room.description,
+                                   building_id=room.id if room.id in {'inn', 'blacksmith'} else None))
     await session.flush()
 
     if await session.get(NPCRecord, EDRIC_ID) is None:

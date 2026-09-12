@@ -16,8 +16,8 @@ def parse_command(raw: str):
 
     if command == "/world":
         description_parts = text.split(maxsplit=2)
-        if len(description_parts) >= 2 and description_parts[1].casefold() == "describe":
-            return {"action": "world_admin", "arguments": ["describe", *description_parts[2:]]}
+        if len(description_parts) >= 2 and description_parts[1].casefold() in {"describe", "generate"}:
+            return {"action": "world_admin", "arguments": [description_parts[1].casefold(), *description_parts[2:]]}
         world_parts = text.split(maxsplit=3)
         arguments = [part.casefold() for part in world_parts[1:3]]
         if len(world_parts) == 4:

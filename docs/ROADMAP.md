@@ -39,6 +39,12 @@ Build early:
 - FakeAIProvider
 
 ## Early Gameplay
+
+The next M5 increment implements [reviewed neighborhoods](NEIGHBORHOODS.md):
+bounded connected rooms, buildings, shared doors, fixtures, and containers through
+`/world generate`, with full text review and atomic approval. It passed all required
+checks and was deployed locally September 11, 2026; results are recorded there.
+
 After core is stable:
 - natural-language commands
 - player item transfer
@@ -51,6 +57,14 @@ After core is stable:
 - one manually designed empowered artifact
 - basic optional UI panels
 - basic discovered-area map
+
+### Discovered-World Map
+
+The first [map increment](MAP.md) implements per-character room discovery,
+known connections, current position, zoom/pan, and expand/collapse controls.
+The required checks passed and it is deployed locally; validation is recorded
+in the map documentation. Nearby-player tracking
+remains separate, as selected by the owner September 9, 2026.
 
 ### Deferred Map Player Tracking
 

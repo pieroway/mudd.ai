@@ -37,6 +37,34 @@ class MockWebSocket {
 }
 
 describe('Terminal', () => {
+  it('handles map commands locally, saves visibility, and ignores narration map data', () => {
+    render(<Terminal username="Alan" />)
+    const socket = MockWebSocket.instances[0]
+    act(() => {
+      socket.open()
+      socket.receive({ type: 'system', state: {
+        room_id: 'town_square', room_name: 'Town Square', inventory: [],
+        map: { rooms: [{ id: 'town_square', name: 'Town Square' }], exits: [] },
+      } })
+      socket.receive({ type: 'narration', state: {
+        room_id: 'secret', room_name: 'Secret', inventory: [],
+        map: { rooms: [{ id: 'secret', name: 'Secret' }], exits: [] },
+      } })
+    })
+    expect(screen.getByTestId('map-panel')).not.toHaveTextContent('Secret')
+    const submit = (command: string) => {
+      fireEvent.change(screen.getByTestId('command-input'), { target: { value: command } })
+      fireEvent.submit(screen.getByTestId('command-input').closest('form')!)
+    }
+    submit('/map hide')
+    expect(screen.queryByTestId('map-panel')).not.toBeInTheDocument()
+    expect(localStorage.getItem('mudd-map-visible')).toBe('false')
+    submit('/map expand')
+    expect(screen.getByRole('button', { name: 'Collapse map' })).toBeInTheDocument()
+    submit('map collapse')
+    expect(screen.getByRole('button', { name: 'Expand map' })).toBeInTheDocument()
+    expect(socket.send).not.toHaveBeenCalled()
+  })
   it('renders narration as plain presentation and ignores its state fields', () => {
     render(<Terminal username="Alan" />)
     const socket = MockWebSocket.instances[0]
