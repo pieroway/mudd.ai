@@ -14,7 +14,8 @@ from app.ai.narration import NarrationRequest, NarrationResponse
 from app.ai.npc import NPCRequest, NPCResponse
 from app.ai.provider import AIProvider, AIProviderError, AIProviderFailure, AIFailureReason
 from app.ai.world import RoomProposalContent, WorldGenerationRequest
-from app.ai.neighborhood import NeighborhoodDraft, NeighborhoodRequest, validate_budget, draft_failure
+from app.ai.neighborhood import (NeighborhoodDraft, NeighborhoodRequest, validate_budget,
+                                 draft_failure, normalize_topology)
 from app.config import Settings
 
 INSTRUCTIONS = """Translate the user's text into exactly one proposed MUD command.
@@ -165,6 +166,12 @@ class OpenAIProvider(AIProvider):
             validate_budget(draft, request)
             return draft
         except ValueError as error:
+            try:
+                normalized = normalize_topology(json.loads(text), request)
+            except (TypeError, ValueError, json.JSONDecodeError):
+                normalized = None
+            if normalized is not None:
+                return normalized
             raise draft_failure(error) from None
 
     async def _request(

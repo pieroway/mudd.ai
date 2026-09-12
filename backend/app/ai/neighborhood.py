@@ -1,4 +1,5 @@
 """Strict, bounded neighborhood drafts. References are local labels, never world IDs."""
+import re
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -177,3 +178,108 @@ def draft_failure(error: ValueError):
     ]
     detail = next((message for message in messages if message in SAFE_DRAFT_DETAILS), None)
     return AIProviderFailure(AIFailureReason.INVALID_DRAFT, detail=detail)
+
+
+def _one_sentence(value: object) -> str | None:
+    """Keep the first plain-text sentence from model prose, if it is usable."""
+    if not isinstance(value, str):
+        return None
+    try:
+        value = plain_text(value).strip()
+    except ValueError:
+        return None
+    if not value:
+        return None
+    parts = [part.strip() for part in re.split(r'''[.!?…。！？]+["'”’»]*''', value) if part.strip()]
+    return parts[0] if parts else None
+
+
+def normalize_topology(payload: object, request: NeighborhoodRequest) -> NeighborhoodDraft | None:
+    """Build safe geography around usable provider prose."""
+    if (not isinstance(payload, dict) or set(payload) != {'buildings', 'rooms', 'connections', 'objects'}
+            or not isinstance(payload.get('rooms'), list)):
+        return None
+    rooms: list[dict[str, object]] = []
+    names: set[str] = set()
+    for raw in payload['rooms']:
+        if not isinstance(raw, dict) or len(rooms) >= request.max_rooms:
+            continue
+        name, description = raw.get('name'), _one_sentence(raw.get('description'))
+        if not isinstance(name, str) or description is None:
+            continue
+        try:
+            name = plain_text(name).strip()
+        except ValueError:
+            continue
+        if not name or name.casefold() in names:
+            continue
+        rooms.append({'key': f'room_{len(rooms) + 1}', 'name': name, 'description': description, 'building': None})
+        names.add(name.casefold())
+    if not rooms:
+        return None
+    buildings: list[dict[str, str]] = []
+    raw_buildings = payload.get('buildings')
+    if isinstance(raw_buildings, list):
+        for raw in raw_buildings:
+            if not isinstance(raw, dict) or len(buildings) >= min(request.max_buildings, len(rooms)):
+                continue
+            name = raw.get('name')
+            if not isinstance(name, str) or not name.strip():
+                continue
+            try:
+                name = plain_text(name).strip()
+            except ValueError:
+                continue
+            if any(name.casefold() == item['name'].casefold() for item in buildings):
+                continue
+            buildings.append({'key': f'building_{len(buildings) + 1}', 'name': name})
+    for offset, building in enumerate(buildings, start=1):
+        rooms[-offset]['building'] = building['key']
+    doors: list[dict[str, str]] = []
+    raw_connections = payload.get('connections')
+    if isinstance(raw_connections, list):
+        for raw in raw_connections:
+            if not isinstance(raw, dict) or not isinstance(raw.get('door'), dict):
+                continue
+            name, description = raw['door'].get('name'), _one_sentence(raw['door'].get('description'))
+            if not isinstance(name, str) or description is None:
+                continue
+            try:
+                name = plain_text(name).strip()
+            except ValueError:
+                continue
+            if name:
+                doors.append({'name': name, 'description': description})
+    connections: list[dict[str, object]] = []
+    previous, previous_building = 'anchor', None
+    for room in rooms:
+        room_key, building_key = room['key'], room['building']
+        assert isinstance(room_key, str) and (building_key is None or isinstance(building_key, str))
+        door = None
+        if previous_building != building_key:
+            door = doors.pop(0) if doors else {'name': 'sturdy door', 'description': 'A sturdy door marks the threshold'}
+        connections.append({'source': previous, 'direction': request.direction, 'destination': room_key, 'door': door})
+        previous, previous_building = room_key, building_key
+    objects: list[dict[str, object]] = []
+    per_room = {room['key']: 0 for room in rooms}
+    raw_objects = payload.get('objects')
+    if isinstance(raw_objects, list):
+        for raw in raw_objects:
+            if not isinstance(raw, dict) or len(objects) >= 24:
+                continue
+            name, kind, description = raw.get('name'), raw.get('kind'), _one_sentence(raw.get('description'))
+            if not isinstance(name, str) or kind not in {'fixture', 'portable', 'container'} or description is None:
+                continue
+            try:
+                name = plain_text(name).strip()
+            except ValueError:
+                continue
+            target = next((key for key, count in per_room.items() if count < 4), None)
+            if not name or target is None:
+                continue
+            objects.append({'key': f'object_{len(objects) + 1}', 'name': name, 'description': description, 'kind': kind, 'room': target, 'container': None})
+            per_room[target] += 1
+    try:
+        return NeighborhoodDraft.model_validate({'buildings': buildings, 'rooms': rooms, 'connections': connections, 'objects': objects})
+    except ValueError:
+        return None

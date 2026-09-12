@@ -126,9 +126,6 @@ async def test_response_byte_limit_is_distinct():
 
 
 @pytest.mark.parametrize('mutation,detail', [
-    ('door', 'Building entrances require doors'),
-    ('prose', 'Rooms allow at most three sentences'),
-    ('budget', 'Draft exceeds requested budget'),
     ('schema', None),
 ])
 async def test_validation_exposes_only_allowlisted_local_rules(mutation, detail, caplog):
