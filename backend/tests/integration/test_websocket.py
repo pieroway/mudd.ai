@@ -5,9 +5,29 @@ import pytest
 from starlette.websockets import WebSocketDisconnect
 
 from app.ai.fake import FakeAIProvider
+from app.ai.provider import AIProviderFailure, AIFailureReason
 from app.api import websocket as websocket_api
 from app.db import get_session_factory
 from app.services.ai_preferences import set_admin
+
+
+def test_neighborhood_diagnostic_reaches_authenticated_admin(game_client, monkeypatch):
+    class FailedProvider(FakeAIProvider):
+        async def generate_neighborhood(self, request, *, before_dispatch):
+            if await before_dispatch():
+                raise AIProviderFailure(AIFailureReason.API_REQUEST, http_status=400)
+    game_client.admin_usernames.add('diagnosticadmin')
+    monkeypatch.setattr(websocket_api.game_service.world_service, 'provider', FailedProvider())
+    with game_client.websocket_connect('/ws?username=DiagnosticAdmin') as socket:
+        original = socket.receive_json()['state']
+        socket.send_text('/world generate around')
+        reply = socket.receive_json()
+        assert not reply['success'] and 'HTTP 400' in reply['text']
+        assert '[api_request_rejected]' in reply['text']
+        assert reply['state'] == original
+        assert reply['ai_usage']['used'] == 1
+        socket.send_text('look')
+        assert socket.receive_json()['success']
 
 
 def test_admin_grants_refresh_only_recipient_and_support_self(game_client):

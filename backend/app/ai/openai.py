@@ -12,9 +12,9 @@ import httpx
 from app.ai.models import InterpretCommandRequest, InterpretCommandResponse
 from app.ai.narration import NarrationRequest, NarrationResponse
 from app.ai.npc import NPCRequest, NPCResponse
-from app.ai.provider import AIProvider, AIProviderError
+from app.ai.provider import AIProvider, AIProviderError, AIProviderFailure, AIFailureReason
 from app.ai.world import RoomProposalContent, WorldGenerationRequest
-from app.ai.neighborhood import NeighborhoodDraft, NeighborhoodRequest, validate_budget
+from app.ai.neighborhood import NeighborhoodDraft, NeighborhoodRequest, validate_budget, draft_failure
 from app.config import Settings
 
 INSTRUCTIONS = """Translate the user's text into exactly one proposed MUD command.
@@ -164,8 +164,8 @@ class OpenAIProvider(AIProvider):
             draft = NeighborhoodDraft.model_validate_json(text)
             validate_budget(draft, request)
             return draft
-        except ValueError:
-            raise AIProviderError("Neighborhood generation unavailable.") from None
+        except ValueError as error:
+            raise draft_failure(error) from None
 
     async def _request(
         self, input_text: str, instructions: str, schema: dict[str, Any], name: str, *,
@@ -174,12 +174,12 @@ class OpenAIProvider(AIProvider):
         timeout_seconds: float | None = None,
     ) -> str:
         settings = self._settings
-        if (
-            len(input_text.encode("utf-8")) > (max_input_bytes or settings.ai_command_max_input_bytes)
-            or self._requests >= settings.ai_command_max_requests
-            or self._active >= settings.ai_command_max_concurrent
-        ):
-            raise AIProviderError("Command interpretation limit reached.")
+        if len(input_text.encode("utf-8")) > (max_input_bytes or settings.ai_command_max_input_bytes):
+            raise AIProviderFailure(AIFailureReason.INPUT_LIMIT)
+        if self._requests >= settings.ai_command_max_requests:
+            raise AIProviderFailure(AIFailureReason.REQUEST_LIMIT)
+        if self._active >= settings.ai_command_max_concurrent:
+            raise AIProviderFailure(AIFailureReason.BUSY)
         # No await between checking and reserving capacity on the application's event loop.
         self._requests += 1
         self._active += 1
@@ -193,7 +193,7 @@ class OpenAIProvider(AIProvider):
                         raise
                     if not allowed:
                         self._requests -= 1
-                        raise AIProviderError("Daily AI allowance exhausted or session unavailable.")
+                        raise AIProviderFailure(AIFailureReason.SESSION)
                 async with httpx.AsyncClient(
                     transport=self._transport,
                     timeout=timeout_seconds or settings.ai_command_timeout_seconds,
@@ -226,11 +226,16 @@ class OpenAIProvider(AIProvider):
                         body = bytearray()
                         async for chunk in response.aiter_bytes():
                             if len(body) + len(chunk) > 65536:
-                                raise ValueError("Response too large")
+                                raise AIProviderFailure(AIFailureReason.RESPONSE_SIZE)
                             body.extend(chunk)
                 payload = json.loads(body)
                 if payload["status"] != "completed":
-                    raise ValueError("Incomplete response")
+                    reason = (payload.get('incomplete_details') or {}).get('reason')
+                    if reason == 'max_output_tokens':
+                        raise AIProviderFailure(AIFailureReason.OUTPUT_LIMIT)
+                    if reason == 'content_filter':
+                        raise AIProviderFailure(AIFailureReason.REFUSAL)
+                    raise AIProviderFailure(AIFailureReason.INCOMPLETE)
                 messages = [part for part in payload["output"] if part["type"] != "reasoning"]
                 if len(messages) != 1:
                     raise ValueError("Expected one message")
@@ -238,14 +243,25 @@ class OpenAIProvider(AIProvider):
                 if message["type"] != "message" or message["role"] != "assistant":
                     raise ValueError("Unexpected output")
                 content = message["content"]
+                if any(isinstance(part, dict) and part.get('type') == 'refusal' for part in content):
+                    raise AIProviderFailure(AIFailureReason.REFUSAL)
                 if len(content) != 1 or content[0]["type"] != "output_text":
                     raise ValueError("Refused or unexpected output")
                 text = content[0]["text"]
                 if not isinstance(text, str):
                     raise ValueError("Expected text")
                 return text
-        except (httpx.HTTPError, TimeoutError, ValueError, KeyError, TypeError, IndexError):
-            # Neither upstream error bodies nor validation errors (which include input) escape.
-            raise AIProviderError("Command interpretation unavailable.") from None
+        except (httpx.TimeoutException, TimeoutError):
+            raise AIProviderFailure(AIFailureReason.TIMEOUT) from None
+        except httpx.HTTPStatusError as error:
+            status = error.response.status_code
+            reason = (AIFailureReason.AUTH if status in {401, 403} else
+                      AIFailureReason.RATE_LIMIT if status == 429 else
+                      AIFailureReason.API_SERVER if status >= 500 else AIFailureReason.API_REQUEST)
+            raise AIProviderFailure(reason, http_status=status) from None
+        except httpx.HTTPError:
+            raise AIProviderFailure(AIFailureReason.NETWORK) from None
+        except (ValueError, KeyError, TypeError, IndexError, AttributeError):
+            raise AIProviderFailure(AIFailureReason.INVALID_RESPONSE) from None
         finally:
             self._active -= 1

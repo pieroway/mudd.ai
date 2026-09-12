@@ -86,6 +86,41 @@ budgets permit, it adds Cedar Workroom, a cedar door, and a wooden box containin
 clay cup. Its names are deterministic, so a second approval in the same world conflicts
 with the existing names. Use isolated test databases for repeated demonstrations.
 
+## Generation failures
+
+Generation failures show a fixed reason code in brackets and a specific explanation.
+For example: `The generated neighborhood failed validation. Building entrances
+require doors. No world changes were made. [invalid_draft]`.
+
+| Reason | Meaning and next step |
+| --- | --- |
+| `timeout` | Includes the configured timeout; try a smaller draft or review the timeout setting. |
+| `concurrency_limit` | Another AI call is active; wait for it to finish. |
+| `request_limit` | The backend's lifetime AI attempt limit was reached; an operator should review it before restarting or reconfiguring. |
+| `input_limit` | The serialized generation context exceeds the provider input bound. |
+| `account_allowance` | The account has exhausted daily units and bonus credits; daily units reset at 00:00 UTC. |
+| `api_auth` | API access was denied; check credentials and project permissions. |
+| `api_rate_or_quota_limit` | HTTP 429 from the provider; check provider usage and billing separately from the game's allowance. |
+| `api_request_rejected` | Includes HTTP status; check model and request/schema compatibility. |
+| `api_server_error` / `network_error` | The provider or connection failed; retry later. |
+| `output_token_limit` / `response_size_limit` | Output exceeded a limit; reduce scope or review the output-token setting. |
+| `invalid_draft` | The generated content failed schema, prose, layout, or budget validation; an allowlisted local rule is shown when available. |
+| `provider_refusal` / `incomplete_response` / `invalid_response` | The provider declined, did not finish, or returned an unreadable response. |
+| `session_unavailable` / `generation_disabled` | Authorization or generation availability changed before dispatch. |
+| `provider_unavailable` / `internal_error` | An unclassified provider failure or unexpected local error occurred. |
+
+The backend logs one warning with the fixed reason, numeric HTTP status when
+available, elapsed milliseconds, and allowlisted validation detail. It does not log
+exception text, stack traces, credentials, prompts, generated content, or player IDs.
+Use `docker compose logs backend --tail 100` to inspect these warnings. Raw API
+error bodies are intentionally excluded; a generic HTTP 429 does not establish
+whether the provider's rate limit or billing quota was reached. See the official
+[API error-code guide](https://developers.openai.com/api/docs/guides/error-codes).
+
+Limits, charging, and the no-retry policy are unchanged. A failed dispatched attempt
+still consumes an AI unit. These diagnostics cannot recover the reason for failures
+that occurred before they were installed.
+
 ## Migration and recovery
 
 Migration `0014` adds buildings, doors, item portability, and version-2 proposal
@@ -127,3 +162,24 @@ September 11, 2026 (local time):
   the 60-second timeout and 8,192-token limit. Normal development source mounts
   are restored. No live AI calls were made and no local neighborhoods were
   generated during validation.
+
+### Diagnostic update — September 11, 2026
+
+- Classified provider failures now reach `/world generate` replies with safe
+  reason codes, HTTP status where available, configured timeout, and allowlisted
+  local validation rules. Safe warning logs record the reason and elapsed time.
+- Backend lint and type checking passed, exit 0; all 417 unit/integration tests
+  passed, exit 0, with 93% coverage. This includes 49 additional tests for failure
+  categories, redaction, capacity release, allowance accounting, and WebSocket
+  delivery. Two existing dependency deprecation warnings remain. An initial lint
+  finding in the new status-type check was fixed before the complete run.
+- Frontend lint, type checking, 23 tests, and build passed, exit 0. All 13 browser
+  workflows passed, exit 0. Production-like configuration and application image
+  builds passed, exit 0.
+- The 10-user, 30-second load smoke passed, exit 0: zero failures in 265 measured
+  commands, p95 923.59 ms. State invariants passed, exit 0.
+- Deployed locally after the checks, exit 0; backend and frontend are healthy.
+  The backend ran from its previous validated image during source edits; normal
+  source mounts are restored. No schema or AI-limit changes and no live AI calls
+  were needed. The cause of the earlier unclassified failure cannot be recovered;
+  subsequent attempts will report the new diagnostic.

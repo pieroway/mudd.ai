@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
+from enum import StrEnum
 
 from app.ai.models import InterpretCommandRequest, InterpretCommandResponse
 from app.ai.narration import NarrationRequest, NarrationResponse
@@ -14,6 +15,54 @@ from app.ai.neighborhood import NeighborhoodDraft, NeighborhoodRequest
 
 class AIProviderError(RuntimeError):
     """Base error for an unavailable or invalid AI response."""
+
+
+class AIFailureReason(StrEnum):
+    TIMEOUT = 'timeout'
+    BUSY = 'concurrency_limit'
+    REQUEST_LIMIT = 'request_limit'
+    INPUT_LIMIT = 'input_limit'
+    ALLOWANCE = 'account_allowance'
+    SESSION = 'session_unavailable'
+    DISABLED = 'generation_disabled'
+    AUTH = 'api_auth'
+    RATE_LIMIT = 'api_rate_or_quota_limit'
+    API_REQUEST = 'api_request_rejected'
+    API_SERVER = 'api_server_error'
+    NETWORK = 'network_error'
+    OUTPUT_LIMIT = 'output_token_limit'
+    INCOMPLETE = 'incomplete_response'
+    REFUSAL = 'provider_refusal'
+    RESPONSE_SIZE = 'response_size_limit'
+    INVALID_RESPONSE = 'invalid_response'
+    INVALID_DRAFT = 'invalid_draft'
+    UNAVAILABLE = 'provider_unavailable'
+    INTERNAL = 'internal_error'
+
+
+class AIProviderFailure(AIProviderError):
+    """A fixed diagnostic category, never an upstream message or response body."""
+
+    def __init__(self, reason: AIFailureReason, *, http_status: int | None = None,
+                 detail: str | None = None):
+        self.reason = AIFailureReason(reason)
+        self.http_status = http_status if isinstance(http_status, int) and 100 <= http_status <= 599 else None
+        self.detail = detail if isinstance(detail, str) and detail in SAFE_DRAFT_DETAILS else None
+        super().__init__(f'AI provider unavailable ({self.reason.value}).')
+
+
+# Only exact, local validation messages may cross the provider boundary.
+SAFE_DRAFT_DETAILS = frozenset({
+    'Rooms allow at most three sentences', 'Objects allow one sentence', 'Doors allow one sentence',
+    'Duplicate or reserved labels', 'Room names must be distinct', 'Unknown building',
+    'Connections may only join draft rooms or the anchor', 'Conflicting exit directions',
+    'Building entrances require doors', 'Exactly one attachment to the existing world is required',
+    'Every room must be reachable from the anchor',
+    'Buildings require one to three internally connected rooms',
+    'Objects require exactly one location', 'Only portable objects may be placed in a room container',
+    'Unknown object room', 'At most four distinctly named objects per room',
+    'Draft exceeds requested budget', 'Draft attachment direction does not match',
+})
 
 
 class CommandNotInterpretedError(AIProviderError):

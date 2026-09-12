@@ -87,7 +87,7 @@ async def test_neighborhood_denied_allowance_and_invalid_response():
     with pytest.raises(AIProviderError):
         await adapter.generate_neighborhood(request, before_dispatch=denied)
     assert calls == [] and adapter._active == adapter._requests == 0
-    with pytest.raises(AIProviderError, match='Neighborhood generation unavailable'):
+    with pytest.raises(AIProviderError, match='invalid_draft'):
         await adapter.generate_neighborhood(request, before_dispatch=allowed)
     assert len(calls) == 1 and adapter._active == 0
 

@@ -1,6 +1,8 @@
 """Prepare and publish a bounded expansion without mutating the world during AI work."""
 import asyncio
+import logging
 import shlex
+from time import monotonic
 from collections.abc import Awaitable, Callable
 from typing import Any
 from typing import TYPE_CHECKING
@@ -9,8 +11,8 @@ from uuid import uuid4
 from pydantic import ValidationError
 from sqlalchemy import func, select
 
-from app.ai.neighborhood import NeighborhoodDraft, NeighborhoodRequest, validate_budget
-from app.ai.provider import AIProviderError
+from app.ai.neighborhood import NeighborhoodDraft, NeighborhoodRequest, validate_budget, draft_failure
+from app.ai.provider import AIProviderError, AIProviderFailure, AIFailureReason
 from app.domain.directions import HORIZONTAL, OPPOSITE, resolve_direction
 from app.models import ExitRecord, ItemRecord, RoomRecord, WorldProposalRecord
 from app.models.game import BuildingRecord, DoorRecord
@@ -21,6 +23,45 @@ if TYPE_CHECKING:
     from app.services.world_generation import WorldGenerationService
 
 GENERATE_HELP = '/world generate [around|direction] [--radius 0..2] [--rooms 1..12] [--buildings 0..4] [--theme "brief"]'
+logger = logging.getLogger(__name__)
+
+FAILURE_MESSAGES = {
+    AIFailureReason.TIMEOUT: 'Generation timed out. Try a smaller neighborhood or check the generation timeout.',
+    AIFailureReason.BUSY: 'The AI provider is busy with another request. Wait for it to finish, then try again.',
+    AIFailureReason.REQUEST_LIMIT: 'The backend has reached its AI request limit for this process. An operator must review the limit before restarting or reconfiguring it.',
+    AIFailureReason.INPUT_LIMIT: 'The generation context exceeds the allowed input size.',
+    AIFailureReason.ALLOWANCE: 'Your daily AI allowance and bonus credits are exhausted. The daily allowance resets at 00:00 UTC.',
+    AIFailureReason.SESSION: 'Your session is no longer available. Sign in again before generating.',
+    AIFailureReason.DISABLED: 'World generation was disabled before the request could be sent.',
+    AIFailureReason.AUTH: 'The AI API denied access. Check the API credentials and project permissions.',
+    AIFailureReason.RATE_LIMIT: 'The AI API reported a rate or quota limit. Check provider usage and billing; this is separate from your in-game allowance.',
+    AIFailureReason.API_REQUEST: 'The AI API rejected the request. Check the configured model and request/schema compatibility.',
+    AIFailureReason.API_SERVER: 'The AI API reported a server error. Try again later.',
+    AIFailureReason.NETWORK: 'The backend could not communicate with the AI API. Check connectivity and try again later.',
+    AIFailureReason.OUTPUT_LIMIT: 'The AI response hit its output-token limit before completing. Try fewer rooms/buildings or review the generation output limit.',
+    AIFailureReason.INCOMPLETE: 'The AI API returned an incomplete response. No draft could be validated.',
+    AIFailureReason.REFUSAL: 'The AI provider declined to generate this draft. Try a different brief.',
+    AIFailureReason.RESPONSE_SIZE: 'The AI response exceeded the allowed response size. Try a smaller neighborhood.',
+    AIFailureReason.INVALID_RESPONSE: 'The AI API returned an unreadable or unexpected response.',
+    AIFailureReason.INVALID_DRAFT: 'The generated neighborhood failed validation.',
+    AIFailureReason.UNAVAILABLE: 'The AI provider is unavailable and supplied no classified failure reason.',
+    AIFailureReason.INTERNAL: 'An unexpected internal error interrupted generation. Check the backend diagnostics.',
+}
+
+
+def generation_failure(error: AIProviderFailure, started: float, timeout: float) -> dict[str, Any]:
+    elapsed_ms = round((monotonic() - started) * 1000)
+    # Never log exception objects/tracebacks, provider bodies, prompts, or account IDs.
+    logger.warning('Neighborhood generation failed: reason=%s http_status=%s elapsed_ms=%d detail=%s',
+                   error.reason.value, error.http_status, elapsed_ms, error.detail)
+    message = FAILURE_MESSAGES[error.reason]
+    if error.reason == AIFailureReason.TIMEOUT:
+        message += f' Configured timeout: {timeout:g} seconds.'
+    if error.http_status is not None:
+        message += f' HTTP {error.http_status}.'
+    if error.detail:
+        message += f' {error.detail}.'
+    return {'success': False, 'output': f'{message} No world changes were made. [{error.reason.value}]'}
 
 
 def options(raw: str) -> dict[str, Any]:
@@ -104,16 +145,30 @@ async def generate(service: 'WorldGenerationService', player_id: str, account_id
                 max_rooms=settings['rooms'], max_buildings=settings['buildings'])
 
         async def before_dispatch():
-            return (await authorized() and service.provider is not None and
-                    await reserve_attempt(service.factory, account_id, service.daily_request_limit))
+            if not await authorized():
+                raise AIProviderFailure(AIFailureReason.SESSION)
+            if service.provider is None:
+                raise AIProviderFailure(AIFailureReason.DISABLED)
+            if not await reserve_attempt(service.factory, account_id, service.daily_request_limit):
+                raise AIProviderFailure(AIFailureReason.ALLOWANCE)
+            return True
 
+        started = monotonic()
         try:
             async with asyncio.timeout(service.neighborhood_timeout_seconds):
                 draft = await service.provider.generate_neighborhood(request, before_dispatch=before_dispatch)
+            draft = NeighborhoodDraft.model_validate(draft.model_dump() if isinstance(draft, NeighborhoodDraft) else draft)
+            validate_budget(draft, request)
+        except TimeoutError:
+            return generation_failure(AIProviderFailure(AIFailureReason.TIMEOUT), started, service.neighborhood_timeout_seconds)
+        except AIProviderFailure as error:
+            return generation_failure(error, started, service.neighborhood_timeout_seconds)
+        except ValueError as error:
+            return generation_failure(draft_failure(error), started, service.neighborhood_timeout_seconds)
+        except AIProviderError:
+            return generation_failure(AIProviderFailure(AIFailureReason.UNAVAILABLE), started, service.neighborhood_timeout_seconds)
         except Exception:
-            return response('Generation failed, timed out, or reached an AI limit. No world changes were made.')
-        draft = NeighborhoodDraft.model_validate(draft.model_dump() if isinstance(draft, NeighborhoodDraft) else draft)
-        validate_budget(draft, request)
+            return generation_failure(AIProviderFailure(AIFailureReason.INTERNAL), started, service.neighborhood_timeout_seconds)
         async with service.factory() as session, session.begin():
             repo = WorldProposalRepository(session)
             player = await repo.admin_player(account_id, player_id)

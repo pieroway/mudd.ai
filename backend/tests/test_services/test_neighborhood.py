@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 
 from app.ai.fake import FakeAIProvider
 from app.ai.neighborhood import NeighborhoodDraft
+from app.ai.provider import AIFailureReason, AIProviderFailure, AIProviderError
 from app.commands.parser import parse_command
 from app.models import ExitRecord, ItemRecord, RoomRecord, WorldProposalRecord
 from app.models.game import BuildingRecord, DoorRecord
@@ -239,3 +240,47 @@ def test_parser_preserves_generation_options():
 def test_schema_rejects_empty_and_extra_fields():
     with pytest.raises(ValidationError):
         NeighborhoodDraft.model_validate({'buildings': [], 'rooms': [], 'connections': [], 'objects': []})
+
+
+@pytest.mark.parametrize('reason', list(AIFailureReason))
+async def test_failure_reason_reaches_player_and_safe_logs(session_factory, caplog, reason):
+    class Failure(FakeAIProvider):
+        async def generate_neighborhood(self, request, *, before_dispatch):
+            raise AIProviderFailure(reason, http_status=400 if reason == AIFailureReason.API_REQUEST else None,
+                                    detail='PRIVATE-SECRET-NOT-ALLOWED')
+    game, _, identity = await connect(session_factory, Failure())
+    before = await canonical_counts(session_factory)
+    reply = await command(game, identity, '/world generate north --theme "PRIVATE-SECRET-NOT-ALLOWED"')
+    assert not reply['success']
+    assert f'[{reason.value}]' in reply['output']
+    assert 'No world changes were made.' in reply['output']
+    if reason == AIFailureReason.API_REQUEST:
+        assert 'HTTP 400' in reply['output']
+    if reason == AIFailureReason.TIMEOUT:
+        assert '60 seconds' in reply['output']
+    assert f'reason={reason.value}' in caplog.text and 'elapsed_ms=' in caplog.text
+    assert 'PRIVATE-SECRET-NOT-ALLOWED' not in reply['output'] + caplog.text
+    assert identity.account_id not in caplog.text and identity.player_id not in caplog.text
+    assert all(record.exc_info is None for record in caplog.records if record.name == 'app.services.neighborhood')
+    assert await canonical_counts(session_factory) == before
+
+
+@pytest.mark.parametrize('error,reason', [(RuntimeError('PRIVATE-EXCEPTION'), 'internal_error'),
+                                        (AIProviderError('PRIVATE-EXCEPTION'), 'provider_unavailable'),
+                                        (TimeoutError('PRIVATE-EXCEPTION'), 'timeout')])
+async def test_unclassified_exceptions_are_sanitized(session_factory, caplog, error, reason):
+    class Failure(FakeAIProvider):
+        async def generate_neighborhood(self, request, *, before_dispatch):
+            raise error
+    game, _, identity = await connect(session_factory, Failure())
+    reply = await command(game, identity, '/world generate north')
+    assert f'[{reason}]' in reply['output']
+    assert 'PRIVATE-EXCEPTION' not in reply['output'] + caplog.text
+
+
+async def test_exhausted_account_is_distinct_from_provider_limits(session_factory, caplog):
+    game, provider, identity = await connect(session_factory, ai_daily_request_limit=0)
+    reply = await command(game, identity, '/world generate north')
+    assert '[account_allowance]' in reply['output'] and '00:00 UTC' in reply['output']
+    assert not provider.neighborhood_requests
+    assert 'reason=account_allowance' in caplog.text

@@ -164,3 +164,16 @@ def validate_budget(draft: NeighborhoodDraft, request: NeighborhoodRequest) -> N
         raise ValueError('Draft exceeds requested budget')
     if next(edge.direction for edge in draft.connections if edge.source == 'anchor') != request.direction:
         raise ValueError('Draft attachment direction does not match')
+
+
+def draft_failure(error: ValueError):
+    """Classify validation without exposing input values, field names, or exception text."""
+    from pydantic import ValidationError
+    from app.ai.provider import AIFailureReason, AIProviderFailure, SAFE_DRAFT_DETAILS
+
+    messages = [str(error)] if not isinstance(error, ValidationError) else [
+        issue['msg'].removeprefix('Value error, ')
+        for issue in error.errors(include_input=False, include_context=False, include_url=False)
+    ]
+    detail = next((message for message in messages if message in SAFE_DRAFT_DETAILS), None)
+    return AIProviderFailure(AIFailureReason.INVALID_DRAFT, detail=detail)
