@@ -1,6 +1,7 @@
 """Admin-reviewed generation, with no transaction spanning provider work."""
 
 import asyncio
+import hashlib
 from collections.abc import Awaitable, Callable
 from typing import Any
 from uuid import UUID, uuid4
@@ -113,7 +114,7 @@ class WorldGenerationService:
                     branch = downstream_branch(player.current_room_id, direction, exits)
                     plan = WorldDeletionPlanRecord(id=str(uuid4()), creator_account_id=account_id,
                         source_room_id=player.current_room_id, direction=direction,
-                        fingerprint='|'.join(sorted(branch)), room_ids={'rooms': sorted(branch)})
+                        fingerprint=hashlib.sha256('|'.join(sorted(branch)).encode()).hexdigest(), room_ids={'rooms': sorted(branch)})
                     session.add(plan)
                     return result(f'Delete preview {plan.id}: {len(branch)} rooms and their objects will be removed. Confirm with /world confirm-delete {plan.id}', True)
                 if arguments[:1] == ['confirm-delete']:
@@ -128,7 +129,7 @@ class WorldGenerationService:
                     for edge in rows:
                         confirm_exits.setdefault(edge.room_id, {})[edge.direction] = edge.destination_room_id
                     branch = downstream_branch(deletion_plan.source_room_id, deletion_plan.direction, confirm_exits)
-                    if sorted(branch) != deletion_plan.room_ids.get('rooms') or '|'.join(sorted(branch)) != deletion_plan.fingerprint:
+                    if sorted(branch) != deletion_plan.room_ids.get('rooms') or hashlib.sha256('|'.join(sorted(branch)).encode()).hexdigest() != deletion_plan.fingerprint:
                         return result('The map changed. Request a new deletion preview.')
                     if player.current_room_id in branch:
                         return result('Move out of the branch before deleting it.')
