@@ -355,6 +355,9 @@ def execute_command(command, player, world):
         if surface is None:
             return {"success": False, "output": f"You do not see a {target} here."}
         verb = item.interaction_verb or ("wipe" if action == "wipe" else None)
+        if item.interaction_target_id != surface.id:
+            item = next((candidate for candidate in world["items"].values() if candidate.name.casefold() == str(tool).casefold() and candidate.owned_by == player.id and candidate.interaction_target_id == surface.id), item)
+            verb = item.interaction_verb or ("wipe" if action == "wipe" else None)
         if item.interaction_target_id != surface.id or verb is None or (action != "interact" and verb != action):
             return {"success": False, "output": f"The {item.name} cannot be used on the {surface.name}."}
         if surface.interaction_state == verb:
