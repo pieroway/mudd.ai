@@ -197,7 +197,7 @@ class WorldGenerationService:
                 if player.current_room_id != proposal.source_room_id:
                     return result("Return to the source room before approving.")
                 await repo.lock_world()
-                source, exits, fingerprint = await repo.source(proposal.source_room_id)
+                source, proposal_exits, fingerprint = await repo.source(proposal.source_room_id)
                 if not await authorization_check():
                     return result("Session expired. Please sign in again.")
                 if self.provider is None:
