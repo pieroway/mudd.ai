@@ -42,7 +42,7 @@ class ObjectDraft(NamedDraft):
     kind: Literal['fixture', 'portable', 'container']
     room: str | None
     container: str | None
-    interaction_target: str | None = None
+    interaction_target: str | None
 
     @field_validator('description')
     @classmethod
