@@ -119,16 +119,16 @@ class WorldGenerationService:
                 if arguments[:1] == ['confirm-delete']:
                     if len(arguments) != 2:
                         return result('Usage: /world confirm-delete <token>')
-                    plan = await session.get(WorldDeletionPlanRecord, arguments[1])
-                    if plan is None or plan.creator_account_id != account_id:
+                    deletion_plan = await session.get(WorldDeletionPlanRecord, arguments[1])
+                    if deletion_plan is None or deletion_plan.creator_account_id != account_id:
                         return result('Deletion plan not found.')
                     await repo.lock_world()
                     rows = (await session.scalars(select(ExitRecord))).all()
                     exits: dict[str, dict[str, str]] = {}
                     for edge in rows:
                         exits.setdefault(edge.room_id, {})[edge.direction] = edge.destination_room_id
-                    branch = downstream_branch(plan.source_room_id, plan.direction, exits)
-                    if sorted(branch) != plan.room_ids.get('rooms') or '|'.join(sorted(branch)) != plan.fingerprint:
+                    branch = downstream_branch(deletion_plan.source_room_id, deletion_plan.direction, exits)
+                    if sorted(branch) != deletion_plan.room_ids.get('rooms') or '|'.join(sorted(branch)) != deletion_plan.fingerprint:
                         return result('The map changed. Request a new deletion preview.')
                     if player.current_room_id in branch:
                         return result('Move out of the branch before deleting it.')
@@ -142,7 +142,7 @@ class WorldGenerationService:
                         await session.execute(delete(ItemRecord).where(ItemRecord.id.in_(item_ids)))
                     await session.execute(delete(ExitRecord).where((ExitRecord.room_id.in_(branch)) | (ExitRecord.destination_room_id.in_(branch))))
                     await session.execute(delete(RoomRecord).where(RoomRecord.id.in_(branch)))
-                    await session.delete(plan)
+                    await session.delete(deletion_plan)
                     return result(f'Deleted {len(branch)} downstream rooms and their objects.', True)
                 if arguments[:1] == ["describe"]:
                     if len(arguments) != 2:
@@ -202,7 +202,7 @@ class WorldGenerationService:
                     return result("Session expired. Please sign in again.")
                 if self.provider is None:
                     return result("World generation and approval are currently disabled.")
-                if (fingerprint != proposal.source_fingerprint or proposal.direction in exits
+                if (fingerprint != proposal.source_fingerprint or proposal.direction in proposal_exits
                         or await repo.duplicate_name(proposal.name)):
                     proposal.status = "stale"
                     proposal.decided_at = func.now()  # type: ignore[assignment]
