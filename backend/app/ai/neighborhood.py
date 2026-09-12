@@ -70,7 +70,7 @@ class DoorDraft(DraftModel):
 
 class ConnectionDraft(DraftModel):
     source: str
-    direction: Literal['north', 'south', 'east', 'west']
+    direction: Literal['north', 'south', 'east', 'west', 'up', 'down']
     destination: str
     door: DoorDraft | None
 
@@ -148,7 +148,7 @@ class NeighborhoodRequest(DraftModel):
     origin_name: str
     anchor_name: str
     anchor_description: str
-    direction: Literal['north', 'south', 'east', 'west']
+    direction: Literal['north', 'south', 'east', 'west', 'up', 'down']
     max_rooms: int = Field(ge=1, le=12)
     max_buildings: int = Field(ge=0, le=4)
 

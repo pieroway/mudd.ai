@@ -13,7 +13,7 @@ from sqlalchemy import func, select
 
 from app.ai.neighborhood import NeighborhoodDraft, NeighborhoodRequest, validate_budget, draft_failure
 from app.ai.provider import AIProviderError, AIProviderFailure, AIFailureReason
-from app.domain.directions import HORIZONTAL, OPPOSITE, resolve_direction
+from app.domain.directions import DIRECTIONS, OPPOSITE, resolve_direction
 from app.models import ExitRecord, ItemRecord, RoomRecord, WorldProposalRecord
 from app.models.game import BuildingRecord, DoorRecord
 from app.repositories.world_proposals import WorldProposalRepository
@@ -80,7 +80,7 @@ def options(raw: str) -> dict[str, Any]:
             used.add(key)
             value = tokens.pop(0)
             result['brief' if key == 'theme' else key] = value if key == 'theme' else int(value)
-        elif not brief and not direction_seen and token.casefold() in {'around', *HORIZONTAL, 'n', 'e', 's', 'w', 'left', 'right', 'forward', 'backward', 'backwards'}:
+        elif not brief and not direction_seen and token.casefold() in {'around', *DIRECTIONS}:
             result['direction'] = token.casefold()
             direction_seen = True
         else:

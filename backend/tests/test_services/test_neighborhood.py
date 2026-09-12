@@ -16,6 +16,7 @@ from app.services.ai_preferences import set_admin
 from app.services.ai_usage import usage_status
 from app.services.auth import register_account
 from app.services.game import GameService
+from app.services.neighborhood import options as generation_options
 from tests.test_services.test_world_generation import command, connect
 
 
@@ -284,3 +285,7 @@ async def test_exhausted_account_is_distinct_from_provider_limits(session_factor
     assert '[account_allowance]' in reply['output'] and '00:00 UTC' in reply['output']
     assert not provider.neighborhood_requests
     assert 'reason=account_allowance' in caplog.text
+
+def test_vertical_generation_directions_are_preserved():
+    assert generation_options('up --rooms 1 --buildings 0')['direction'] == 'up'
+    assert generation_options('down --rooms 1 --buildings 0')['direction'] == 'down'
