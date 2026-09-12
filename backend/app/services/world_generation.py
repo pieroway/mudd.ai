@@ -124,10 +124,10 @@ class WorldGenerationService:
                         return result('Deletion plan not found.')
                     await repo.lock_world()
                     rows = (await session.scalars(select(ExitRecord))).all()
-                    exits: dict[str, dict[str, str]] = {}
+                    confirm_exits: dict[str, dict[str, str]] = {}
                     for edge in rows:
-                        exits.setdefault(edge.room_id, {})[edge.direction] = edge.destination_room_id
-                    branch = downstream_branch(deletion_plan.source_room_id, deletion_plan.direction, exits)
+                        confirm_exits.setdefault(edge.room_id, {})[edge.direction] = edge.destination_room_id
+                    branch = downstream_branch(deletion_plan.source_room_id, deletion_plan.direction, confirm_exits)
                     if sorted(branch) != deletion_plan.room_ids.get('rooms') or '|'.join(sorted(branch)) != deletion_plan.fingerprint:
                         return result('The map changed. Request a new deletion preview.')
                     if player.current_room_id in branch:
