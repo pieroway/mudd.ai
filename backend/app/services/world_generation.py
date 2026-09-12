@@ -27,6 +27,32 @@ WORLD_HELP = (
 )
 
 
+
+def downstream_branch(source_id: str, direction: str, exits: dict[str, dict[str, str]]) -> set[str]:
+    """Return the component behind one exit after removing its source room.
+
+    A branch may be deleted only when its selected destination cannot reconnect to
+    the source through another route; otherwise deletion would remove a looped map.
+    """
+    destination = exits.get(source_id, {}).get(direction)
+    if destination is None:
+        raise ValueError('That exit does not exist.')
+    seen = {destination}
+    queue = [destination]
+    reconnects = False
+    for room_id in queue:
+        for neighbor in exits.get(room_id, {}).values():
+            if neighbor == source_id:
+                if room_id != destination:
+                    reconnects = True
+                continue
+            if neighbor not in seen:
+                seen.add(neighbor)
+                queue.append(neighbor)
+    if reconnects:
+        raise ValueError('That branch reconnects to the source through another exit.')
+    return seen
+
 class GenerationDenied(Exception):
     """Safe local feedback, never populated with upstream text."""
 
