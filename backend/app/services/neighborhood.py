@@ -293,7 +293,8 @@ async def approve(repo, proposal, player, authorized, enabled) -> dict[str, Any]
             if (obj.container is not None) == contained:
                 session.add(ItemRecord(id=objects[obj.key], name=obj.name, description=obj.description,
                     room_id=rooms.get(obj.room), container_id=objects.get(obj.container),
-                    portable=obj.kind == 'portable', can_open=obj.kind == 'container'))
+                    portable=obj.kind == 'portable', can_open=obj.kind == 'container',
+                    interaction_target_id=objects.get(obj.interaction_target)))
         await session.flush()
     proposal.status = 'approved'
     proposal.decided_at = func.now()

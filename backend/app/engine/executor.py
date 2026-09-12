@@ -346,6 +346,20 @@ def execute_command(command, player, world):
         item.is_open = action == "open"
         return {"success": True, "output": f"You {action} the {item.name}."}
 
+    if action == "wipe":
+        target, tool = command.get("target"), command.get("tool")
+        item = _find_item(world["items"], tool, player, owned_only=True)
+        surface = _find_item(world["items"], target, player, room_only=True)
+        if item is None or item.id not in player.inventory:
+            return {"success": False, "output": f"You need to be carrying the {tool} to wipe with it."}
+        if surface is None:
+            return {"success": False, "output": f"You do not see a {target} here."}
+        if item.interaction_target_id != surface.id:
+            return {"success": False, "output": f"The {item.name} cannot be used on the {surface.name}."}
+        if surface.is_clean:
+            return {"success": False, "output": f"The {surface.name} is already clean."}
+        surface.is_clean = True
+        return {"success": True, "output": f"You wipe the {surface.name} clean with the {item.name}."}
     if action == "use":
         target = command.get("target")
         if not target:

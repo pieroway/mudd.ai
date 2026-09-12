@@ -72,7 +72,7 @@ Rooms use one to three atmospheric sentences, objects and doors one sentence.
 At most four distinctly named objects per room including contained objects, and
 24 objects total. Each object has either a room or a container, with the other null.
 Only portable objects can go inside containers; containers must be directly in rooms.
-Fixtures and containers are immovable. Doors and containers begin closed.
+Fixtures and containers are immovable. A portable object may name one other draft object as interaction_target only when it can wipe that target clean. Doors and containers begin closed.
 Keep room names distinct. Do not invent characters, quests, currency, powers,
 hazards, or actions by players. Return only the supplied schema as plain text fields
 without control characters. The engine validates and publishes the reviewed draft."""

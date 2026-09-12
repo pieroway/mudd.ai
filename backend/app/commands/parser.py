@@ -125,6 +125,13 @@ def parse_command(raw: str):
             "raw": text,
         }
 
+    if command == "wipe" and "with" in parts[1:]:
+        split = parts.index("with", 1)
+        return {"action": "wipe", "target": " ".join(parts[1:split]) or None, "tool": " ".join(parts[split + 1:]) or None}
+    if command == "use" and "on" in parts[1:]:
+        split = parts.index("on", 1)
+        return {"action": "wipe", "target": " ".join(parts[split + 1:]) or None, "tool": " ".join(parts[1:split]) or None}
+
     if command in {"look", "l"}:
         return {"action": "look", "raw": text}
     if command in DIRECTIONS:

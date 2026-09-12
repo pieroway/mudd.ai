@@ -19,6 +19,8 @@ class Item:
     is_lit: bool = False
     fuel_remaining: int | None = None
     portable: bool = True
+    interaction_target_id: str | None = None
+    is_clean: bool = False
 
     def is_in_room(self, room_id: str) -> bool:
         return self.room_id == room_id and self.owned_by is None

@@ -42,6 +42,7 @@ class ObjectDraft(NamedDraft):
     kind: Literal['fixture', 'portable', 'container']
     room: str | None
     container: str | None
+    interaction_target: str | None = None
 
     @field_validator('description')
     @classmethod
@@ -127,6 +128,8 @@ class NeighborhoodDraft(DraftModel):
                 raise ValueError('Buildings require one to three internally connected rooms')
         per_room: dict[str, list[str]] = {key: [] for key in rooms}
         for obj in self.objects:
+            if obj.interaction_target is not None and (obj.kind != 'portable' or obj.interaction_target not in objects or obj.interaction_target == obj.key):
+                raise ValueError('Usable items require another draft object target')
             if (obj.room is None) == (obj.container is None):
                 raise ValueError('Objects require exactly one location')
             room_key = obj.room
@@ -277,7 +280,7 @@ def normalize_topology(payload: object, request: NeighborhoodRequest) -> Neighbo
             target = next((key for key, count in per_room.items() if count < 4), None)
             if not name or target is None:
                 continue
-            objects.append({'key': f'object_{len(objects) + 1}', 'name': name, 'description': description, 'kind': kind, 'room': target, 'container': None})
+            objects.append({'key': f'object_{len(objects) + 1}', 'name': name, 'description': description, 'kind': kind, 'room': target, 'container': None, 'interaction_target': None})
             per_room[target] += 1
     try:
         return NeighborhoodDraft.model_validate({'buildings': buildings, 'rooms': rooms, 'connections': connections, 'objects': objects})
