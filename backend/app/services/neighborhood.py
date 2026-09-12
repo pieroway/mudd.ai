@@ -94,6 +94,21 @@ def options(raw: str) -> dict[str, Any]:
     return result
 
 
+async def disambiguate_room_names(repo, draft: NeighborhoodDraft) -> NeighborhoodDraft:
+    """Keep a usable generated draft when only a room title collides with the world."""
+    reserved: set[str] = set()
+    rooms = []
+    for room in draft.rooms:
+        suffix = 1
+        candidate = room.name
+        while candidate.casefold() in reserved or await repo.duplicate_name(candidate):
+            suffix += 1
+            postfix = f' ({suffix})'
+            candidate = room.name[:100 - len(postfix)].rstrip() + postfix
+        reserved.add(candidate.casefold())
+        rooms.append(room.model_copy(update={'name': candidate}))
+    return draft.model_copy(update={'rooms': rooms})
+
 async def expansion_anchor(repo, player, settings):
     rooms = {room.id: room for room in (await repo.session.scalars(select(RoomRecord))).all()}
     exits: dict[str, dict[str, str]] = {key: {} for key in rooms}
@@ -182,8 +197,7 @@ async def generate(service: 'WorldGenerationService', player_id: str, account_id
                 return response('The surrounding world changed. Request a new proposal.')
             if await repo.pending_count(account_id) >= 10:
                 return response('Another request filled your pending proposal slots.')
-            if any([await repo.duplicate_name(room.name) for room in draft.rooms]):
-                return response('A proposed room name already exists. Generate another draft.')
+            draft = await disambiguate_room_names(repo, draft)
             proposal = WorldProposalRecord(id=str(uuid4()), creator_account_id=account_id,
                 source_room_id=source_id, source_fingerprint=fingerprint, direction=direction,
                 name=f'Expansion near {request.origin_name}'[:100], description=request.brief,
