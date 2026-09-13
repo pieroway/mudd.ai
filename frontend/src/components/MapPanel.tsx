@@ -65,10 +65,24 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
   const visibleMap = useMemo(() => {
     if (!map) return { rooms: [], exits: [] }
     const currentRoom = map.rooms.find(room => room.id === state?.room_id)
-    if (!currentRoom?.building_id) return { rooms: map.rooms.filter(room => !room.building_id), exits: map.exits.filter(edge => map.rooms.find(room => room.id === edge.room_id && !room.building_id) && map.rooms.find(room => room.id === edge.destination_room_id && !room.building_id)) }
-    const ids = new Set(map.rooms.filter(room => room.building_id === currentRoom.building_id).map(room => room.id))
-    for (const edge of map.exits) if (ids.has(edge.room_id) && !ids.has(edge.destination_room_id)) ids.add(edge.destination_room_id)
-    return { rooms: map.rooms.filter(room => ids.has(room.id)), exits: map.exits.filter(edge => ids.has(edge.room_id) && ids.has(edge.destination_room_id)) }
+    if (!currentRoom) return { rooms: [], exits: [] }
+    const horizontalExits = map.exits.filter(edge => edge.direction !== 'up' && edge.direction !== 'down')
+    const neighbors = new Map<string, string[]>()
+    for (const edge of horizontalExits) {
+      neighbors.set(edge.room_id, [...(neighbors.get(edge.room_id) ?? []), edge.destination_room_id])
+      neighbors.set(edge.destination_room_id, [...(neighbors.get(edge.destination_room_id) ?? []), edge.room_id])
+    }
+    // Follow only same-level connections, including known one-way connections.
+    const ids = new Set([currentRoom.id])
+    const queue = [currentRoom.id]
+    for (let index = 0; index < queue.length; index += 1) {
+      for (const id of neighbors.get(queue[index]) ?? []) {
+        if (ids.has(id)) continue
+        ids.add(id)
+        queue.push(id)
+      }
+    }
+    return { rooms: map.rooms.filter(room => ids.has(room.id)), exits: horizontalExits.filter(edge => ids.has(edge.room_id) && ids.has(edge.destination_room_id)) }
   }, [map, state?.room_id])
   const positions = useMemo(() => layoutMap(visibleMap), [visibleMap])
   const [zoom, setZoom] = useState(1)
@@ -91,9 +105,9 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
   const current = positions.get(state?.room_id ?? '') ?? { x: 0, y: 0 }
   const width = viewport.width / zoom
   const height = viewport.height / zoom
-  const selectedRoom = map?.rooms.find(room => room.id === selected)
-    ?? map?.rooms.find(room => room.id === state?.room_id)
-  const names = new Map(visibleMap.rooms.map(room => [room.id, room.name]))
+  const selectedRoom = visibleMap.rooms.find(room => room.id === selected)
+    ?? visibleMap.rooms.find(room => room.id === state?.room_id)
+  const names = new Map(map?.rooms.map(room => [room.id, room.name]))
   const drawn = new Set<string>()
   const edges = visibleMap.exits.filter(edge => {
     const key = JSON.stringify([edge.room_id, edge.destination_room_id].sort())
@@ -166,7 +180,7 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
             <ul>{map.exits.filter(edge => edge.room_id === selectedRoom.id).map(edge =>
               <li key={edge.direction}>{edge.direction} → {names.get(edge.destination_room_id)}</li>)}</ul>
           </details>}
-          <p className="map-note">{visibleMap.rooms.length} visible {map.rooms.length === 1 ? 'room' : 'rooms'}. Drag to pan; select rooms for exits.</p>
+          <p className="map-note">{visibleMap.rooms.length} visible {visibleMap.rooms.length === 1 ? 'room' : 'rooms'}. Drag to pan; select rooms for exits.</p>
         </>}
   </aside>
 }

@@ -10,6 +10,48 @@ const map: MapState = {
 const state = { room_id: 'town', room_name: 'Town Square', inventory: [], map }
 
 describe('Map', () => {
+  it('maps only the current horizontal neighborhood and switches views when changing levels', () => {
+    const neighborhood: MapState = {
+      rooms: [
+        { id: 'street', name: 'Street' },
+        { id: 'hall', name: 'Hall', building_id: 'house' },
+        { id: 'landing', name: 'Landing', building_id: 'house' },
+        { id: 'bedroom', name: 'Bedroom', building_id: 'house' },
+        { id: 'remote', name: 'Remote Street' },
+        { id: 'cellar', name: 'Cellar', building_id: 'house' },
+        { id: 'isolated', name: 'Isolated' },
+      ],
+      exits: [
+        { room_id: 'bedroom', direction: 'west', destination_room_id: 'landing' },
+        { room_id: 'bedroom', direction: 'down', destination_room_id: 'remote' },
+        { room_id: 'hall', direction: 'up', destination_room_id: 'landing' },
+        { room_id: 'landing', direction: 'down', destination_room_id: 'hall' },
+        { room_id: 'hall', direction: 'down', destination_room_id: 'cellar' },
+        { room_id: 'street', direction: 'east', destination_room_id: 'hall' },
+      ],
+    }
+    const renderRoom = (id: string) => <MapPanel state={{ ...state, room_id: id, map: neighborhood }} connected expanded={false} onExpand={() => {}} />
+    const view = render(renderRoom('street'))
+    const visibleIds = () => [...view.container.querySelectorAll('[data-room]')].map(room => room.getAttribute('data-room'))
+    expect(visibleIds()).toEqual(['street', 'hall'])
+    fireEvent.click(screen.getByRole('button', { name: 'Hall' }))
+    expect(screen.getByText('up → Landing')).toBeInTheDocument()
+
+    view.rerender(renderRoom('landing'))
+    expect(visibleIds()).toEqual(['landing', 'bedroom'])
+    expect(screen.getByText('Landing — known exits')).toBeInTheDocument()
+    expect(screen.queryByText('Hall — known exits')).not.toBeInTheDocument()
+    expect(view.container.querySelectorAll('.map-edge')).toHaveLength(1)
+
+    view.rerender(renderRoom('remote'))
+    expect(visibleIds()).toEqual(['remote'])
+    expect(screen.getByText(/1 visible room\./)).toBeInTheDocument()
+    view.rerender(renderRoom('cellar'))
+    expect(visibleIds()).toEqual(['cellar'])
+    view.rerender(renderRoom('street'))
+    expect(visibleIds()).toEqual(['street', 'hall'])
+  })
+
   it('shows current location, inspected connections, zoom/pan/reset, and clears disconnected data', () => {
     const expand = vi.fn()
     const view = render(<MapPanel state={state} connected expanded={false} onExpand={expand} />)
