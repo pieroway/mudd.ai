@@ -13,6 +13,7 @@ class MapRoom(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     id: str
     name: str
+    building_id: str | None
 
 
 class MapExit(BaseModel):
