@@ -1,5 +1,6 @@
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen, within } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { mapLevels } from '../../src/components/mapLevels'
 import MapPanel, { isMapState, layoutMap, MapState } from '../../src/components/MapPanel'
 
 const map: MapState = {
@@ -10,6 +11,7 @@ const map: MapState = {
 const state = { room_id: 'town', room_name: 'Town Square', inventory: [], map }
 
 describe('Map', () => {
+  beforeEach(() => window.localStorage.clear())
   it('maps only the current horizontal neighborhood and switches views when changing levels', () => {
     const neighborhood: MapState = {
       rooms: [
@@ -32,6 +34,7 @@ describe('Map', () => {
     }
     const renderRoom = (id: string) => <MapPanel state={{ ...state, room_id: id, map: neighborhood }} connected expanded={false} onExpand={() => {}} />
     const view = render(renderRoom('street'))
+    fireEvent.click(screen.getByRole('button', { name: 'Nearby levels' }))
     const visibleIds = () => [...view.container.querySelectorAll('[data-room]')].map(room => room.getAttribute('data-room'))
     expect(visibleIds()).toEqual(['street', 'hall'])
     fireEvent.click(screen.getByRole('button', { name: 'Hall' }))
@@ -78,9 +81,49 @@ describe('Map', () => {
     expect(isMapState(map)).toBe(true)
     expect(isMapState({ rooms: map.rooms, exits: [{ room_id: 'town', direction: 'east', destination_room_id: 'secret' }] })).toBe(false)
     expect(isMapState({ rooms: [null], exits: [] })).toBe(false)
+    expect(isMapState({ rooms: [{ id: 'a', name: 'A', has_up: 'yes' }], exits: [] })).toBe(false)
     expect(isMapState({ rooms: [map.rooms[0], map.rooms[0]], exits: [] })).toBe(false)
     render(<MapPanel state={{ ...state, map: { rooms: null } as unknown as MapState }} connected expanded={false} onExpand={() => {}} />)
     expect(screen.getByRole('status')).toHaveTextContent('Waiting for map')
+  })
+
+  it('limits ghost neighborhoods to two levels each way, without detours to remote level zero', () => {
+    const rooms = ['base', 'next', 'up1', 'up2', 'up3', 'down1', 'down2', 'down3', 'remote', 'isolated']
+    const floors: MapState = { rooms: rooms.map(id => ({ id, name: id })), exits: [
+      { room_id: 'base', direction: 'east', destination_room_id: 'next' },
+      { room_id: 'base', direction: 'up', destination_room_id: 'up1' },
+      { room_id: 'up1', direction: 'up', destination_room_id: 'up2' },
+      { room_id: 'up2', direction: 'up', destination_room_id: 'up3' },
+      { room_id: 'up1', direction: 'down', destination_room_id: 'remote' },
+      { room_id: 'base', direction: 'down', destination_room_id: 'down1' },
+      { room_id: 'down1', direction: 'down', destination_room_id: 'down2' },
+      { room_id: 'down2', direction: 'down', destination_room_id: 'down3' },
+    ] }
+    expect(mapLevels(floors, 'base').map(level => [level.depth, level.map.rooms.map(room => room.id)])).toEqual([
+      [0, ['base', 'next']], [1, ['up1']], [-1, ['down1']], [2, ['up2']], [-2, ['down2']],
+    ])
+    expect(mapLevels(floors, 'up1')[0].map.rooms.map(room => room.id)).toEqual(['up1'])
+    expect(mapLevels(floors, 'missing')).toEqual([])
+    const view = render(<MapPanel state={{ ...state, room_id: 'base', map: floors }} connected expanded={false} onExpand={() => {}} />)
+    expect(view.container.querySelectorAll('[data-level]')).toHaveLength(5)
+    expect(within(screen.getByRole('button', { name: 'base, you are here' })).getByRole('img', { name: 'Up and Down exits' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /up3/ })).not.toBeInTheDocument()
+    const currentLayout = view.container.querySelector('[data-room="base"]')!.getAttribute('transform')
+    fireEvent.click(screen.getByRole('button', { name: 'Nearby levels' }))
+    expect(view.container.querySelectorAll('[data-level]')).toHaveLength(1)
+    expect(view.container.querySelector('[data-room="base"]')).toHaveAttribute('transform', currentLayout)
+    expect(window.localStorage.getItem('mudd-map-nearby')).toBe('false')
+  })
+
+  it('keeps labels at screen size and exposes unknown vertical exits without destination names', () => {
+    const view = render(<MapPanel state={{ ...state, map: {
+      rooms: [{ id: 'town', name: 'Town Square', has_up: true, has_down: true }], exits: [],
+    } }} connected expanded={false} onExpand={() => {}} />)
+    expect(screen.getByRole('img', { name: 'Up and Down exits' })).toBeInTheDocument()
+    expect(view.container.querySelector('.map-label')).toHaveAttribute('transform', 'scale(1)')
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom out' }))
+    expect(view.container.querySelector('.map-label')).toHaveAttribute('transform', 'scale(1.25)')
+    expect(view.container.querySelectorAll('[data-room]')).toHaveLength(1)
   })
 
   it('keeps rooms distinct for loops, vertical connections, and disconnected components', () => {

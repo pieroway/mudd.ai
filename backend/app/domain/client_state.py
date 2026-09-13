@@ -14,6 +14,8 @@ class MapRoom(BaseModel):
     id: str
     name: str
     building_id: str | None
+    has_up: bool = False
+    has_down: bool = False
 
 
 class MapExit(BaseModel):

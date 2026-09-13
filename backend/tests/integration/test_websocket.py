@@ -386,7 +386,7 @@ def test_client_state_tracks_inventory_failures_movement_and_reconnect(game_clie
     with game_client.websocket_connect("/ws?username=PanelPlayer") as socket:
         state = socket.receive_json()["state"]
         assert state == {"room_id": "town_square", "room_name": "Town Square", "inventory": [],
-                         "map": {"rooms": [{"id": "town_square", "name": "Town Square", "building_id": None}], "exits": []}}
+                         "map": {"rooms": [{"id": "town_square", "name": "Town Square", "building_id": None, "has_up": False, "has_down": False}], "exits": []}}
         socket.send_text("take torch")
         held = socket.receive_json()["state"]
         assert held["inventory"] == [{"id": "torch", "name": "torch"}]

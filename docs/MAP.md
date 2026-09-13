@@ -13,6 +13,24 @@ The same controls work on narrow screens, where map and inventory have independe
 scroll areas below the transcript. The viewport adapts to its available size so
 room labels retain their size. Open a room's known-exits disclosure for directions.
 
+The current level shows the horizontal neighborhood connected to your current
+room. **Nearby levels** adds visited neighborhoods up to two floors above and
+below it, and saves that toggle in this browser. Adjacent floors use 80% room
+size and 30% opacity; floors two steps away use 65% size and 15% opacity.
+Ghost layers are placed above/below the main diagram and drawn behind it. They
+never resize or reposition the current neighborhood. Moving vertically makes
+the destination neighborhood the new current level. Floor relationships are
+inferred from up/down exits, since rooms do not store absolute floor numbers.
+Only consecutive upward or downward connections extend the preview; detours
+through another floor do not pull in disconnected neighborhoods on this floor.
+
+Room-corner **↑ / ↓** badges indicate available vertical exits, even before the
+destination is visited. They reveal no destination identity or geography.
+Rooms and their spacing are compact; labels retain their screen font size on
+zoom. At crowded zoom levels, secondary labels disappear before becoming tiny.
+Hover or focus a room for its full name, or select it to see the full name and
+known exits below the map. Ghost rooms can be inspected but not used to travel.
+
 Discovery belongs to each character and persists in PostgreSQL across reconnects
 and restarts. Connecting discovers the current room; movement records the new
 room in the same transaction as player location. Failed movement reveals nothing.
@@ -20,15 +38,17 @@ The migration seeds existing characters with only their current room because
 historical visits were not recorded. Revisit older locations to add them.
 
 The server sends visited room IDs/names and canonical exits whose two endpoints
-are both visited. Unvisited destinations and proposal drafts are excluded, even
+are both visited, plus `has_up`/`has_down` flags for each visited room.
+Unvisited destinations and proposal drafts are excluded, even
 for administrators. Normal `look` still shows available directions for exploration.
 Other players' discovery records are never used for your map. Narration cannot
 change map state, and the panel hides stale geography when disconnected.
 
 This is a schematic connection diagram, not a geographic scale map. Compass
 directions guide placement; overlapping nodes are shifted so rooms remain
-distinct. Vertical exits appear as diagonal connections with explicit up/down
-labels in the selected room's exit list. Separate floors, landmarks, secret-route
+distinct. Vertical exits use faint dashed connections between floor previews,
+corner badges, and explicit directions in the selected room's exit list.
+Landmarks, secret-route
 visibility rules, player tracking, and click-to-travel remain future work. The
 current world has no secret-exit model; a future one must filter server-side
 before adding exits to map snapshots.
