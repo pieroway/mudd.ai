@@ -47,15 +47,15 @@ class FakeAIProvider(AIProvider):
         buildings = []
         connections: list[dict[str, Any]] = [{"source": "anchor", "direction": request.direction, "destination": "lane", "door": None}]
         objects = [{"key": "bench", "name": "stone bench", "description": "Moss softens a heavy stone bench.",
-                    "kind": "fixture", "room": "lane", "container": None}]
+                    "kind": "fixture", "room": "lane", "container": None, "interaction_target": None}]
         if request.max_rooms >= 2 and request.max_buildings >= 1:
             buildings.append({"key": "workshop", "name": "Cedar Workshop"})
             rooms.append({"key": "workroom", "name": "Cedar Workroom", "description": "Wood shavings scent the quiet workshop.", "building": "workshop"})
             connections.append({"source": "lane", "direction": request.direction, "destination": "workroom",
                                 "door": {"name": "cedar door", "description": "A plain cedar door hangs on iron hinges."}})
             objects.extend([
-                {"key": "box", "name": "wooden box", "description": "A small wooden box rests on the floor.", "kind": "container", "room": "workroom", "container": None},
-                {"key": "cup", "name": "clay cup", "description": "A blue glaze covers the little cup.", "kind": "portable", "room": None, "container": "box"},
+                {"key": "box", "name": "wooden box", "description": "A small wooden box rests on the floor.", "kind": "container", "room": "workroom", "container": None, "interaction_target": None},
+                {"key": "cup", "name": "clay cup", "description": "A blue glaze covers the little cup.", "kind": "portable", "room": None, "container": "box", "interaction_target": None},
             ])
         return NeighborhoodDraft.model_validate({"buildings": buildings, "rooms": rooms,
                                                   "connections": connections, "objects": objects})

@@ -53,7 +53,7 @@ test('map discovers rooms, persists visits, and supports desktop and mobile cont
   await expect(page.getByText(/Online/)).toBeVisible()
   await expect(panel).toHaveCount(0)
   await page.getByRole('button', { name: 'Map', exact: true }).click()
-  await expect(panel).toContainText('2 discovered rooms')
+  await expect(panel).toContainText('2 visible rooms')
 })
 
 test('admin previews and approves a persistent room that another player can enter', async ({ page, browser }) => {
