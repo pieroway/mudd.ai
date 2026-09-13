@@ -134,11 +134,17 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
             onPointerUp={() => { drag.current = undefined }}
             onPointerCancel={() => { drag.current = undefined }}
             onLostPointerCapture={() => { drag.current = undefined }}>
-            {edges.map(edge => {
+            {edges.map((edge, edgeIndex) => {
               const from = positions.get(edge.room_id)!
               const to = positions.get(edge.destination_room_id)!
               if (from.x === to.x || from.y === to.y) return <line key={`${edge.room_id}:${edge.direction}`} x1={from.x} y1={from.y} x2={to.x} y2={to.y} className="map-edge" />
-              const elbowX = from.x + (to.x > from.x ? 96 : -96)
+              const diagonalIndex = edges.slice(0, edgeIndex).filter(candidate => {
+                const a = positions.get(candidate.room_id)!
+                const b = positions.get(candidate.destination_room_id)!
+                return a.x !== b.x && a.y !== b.y
+              }).length
+              const lane = 112 + diagonalIndex * 64
+              const elbowX = from.x + (to.x > from.x ? lane : -lane)
               return <g key={`${edge.room_id}:${edge.direction}`} className="map-route">
                 <line x1={from.x} y1={from.y} x2={elbowX} y2={from.y} className="map-edge" />
                 <line x1={elbowX} y1={from.y} x2={elbowX} y2={to.y} className="map-edge map-edge-riser" />
