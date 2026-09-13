@@ -47,6 +47,7 @@
 .map-viewport { width: 100%; flex: 1; min-height: 100px; border: 1px solid var(--border-color); background: var(--bg-dark); touch-action: none; cursor: grab; }
 .map-heading, .map-controls, .map-details, .map-note { flex-shrink: 0; }
 .map-edge { stroke: var(--text-muted); stroke-width: 2; }
+.map-edge-riser { stroke: #eab308; stroke-width: 3; }
 .map-room { cursor: pointer; }
 .map-room rect { fill: var(--bg-light); stroke: var(--text-muted); stroke-width: 2; }
 .map-room text { fill: var(--text-light); font-size: 12px; user-select: none; }

@@ -137,7 +137,13 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
             {edges.map(edge => {
               const from = positions.get(edge.room_id)!
               const to = positions.get(edge.destination_room_id)!
-              return <line key={`${edge.room_id}:${edge.direction}`} x1={from.x} y1={from.y} x2={to.x} y2={to.y} className="map-edge" />
+              if (from.x === to.x || from.y === to.y) return <line key={`${edge.room_id}:${edge.direction}`} x1={from.x} y1={from.y} x2={to.x} y2={to.y} className="map-edge" />
+              const elbowX = from.x + (to.x > from.x ? 96 : -96)
+              return <g key={`${edge.room_id}:${edge.direction}`} className="map-route">
+                <line x1={from.x} y1={from.y} x2={elbowX} y2={from.y} className="map-edge" />
+                <line x1={elbowX} y1={from.y} x2={elbowX} y2={to.y} className="map-edge map-edge-riser" />
+                <line x1={elbowX} y1={to.y} x2={to.x} y2={to.y} className="map-edge" />
+              </g>
             })}
             {visibleMap.rooms.map(room => {
               const point = positions.get(room.id)!
