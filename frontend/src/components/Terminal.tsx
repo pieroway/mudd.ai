@@ -15,6 +15,7 @@ interface GameMessage {
   room_name?: string
   room_description?: string
   success?: boolean
+  narration_pending?: boolean
   room_id?: string
   metadata?: {
     command_source?: 'classic' | 'ai'
@@ -69,6 +70,8 @@ export default function Terminal({ username }: TerminalProps) {
     const socketUrl = apiUrl('/ws')
     socketUrl.protocol = socketUrl.protocol === 'https:' ? 'wss:' : 'ws:'
     const websocket = new WebSocket(socketUrl.toString())
+    // The server completes narration before processing this socket's next command.
+    const pendingOutputs: string[] = []
 
     websocket.onopen = () => {
       setConnected(true)
@@ -93,15 +96,24 @@ export default function Terminal({ username }: TerminalProps) {
         }
       } else if (message.type === 'game_output') {
         output = message.text || ''
+        if (message.narration_pending === true) {
+          pendingOutputs.push(output)
+          output = ''
+        }
         const source = message.metadata?.command_source
         if (source === 'classic' || source === 'ai') {
           setCommandSource(source)
         }
       } else if (message.type === 'narration') {
+        const fallback = pendingOutputs.shift() ?? ''
         if (typeof message.text === 'string' && message.text.trim()) {
           output = `[AI narration] ${message.text}`
+        } else {
+          output = fallback
         }
       } else if (message.type === 'error') {
+        const fallbacks = pendingOutputs.splice(0)
+        if (fallbacks.length) setTranscript(prev => [...prev, ...fallbacks])
         output = `[ERROR] ${message.text || 'Unknown server error'}`
       }
 
@@ -131,7 +143,8 @@ export default function Terminal({ username }: TerminalProps) {
     websocket.onclose = () => {
       setConnected(false)
       setState(undefined)
-      setTranscript((prev) => [...prev, '[NOTICE] Disconnected from server'])
+      const fallbacks = pendingOutputs.splice(0)
+      setTranscript((prev) => [...prev, ...fallbacks, '[NOTICE] Disconnected from server'])
     }
 
     setWs(websocket)
@@ -239,7 +252,7 @@ export default function Terminal({ username }: TerminalProps) {
         <button type="button" aria-expanded={inventoryVisible} aria-controls="inventory-panel"
           onClick={() => setInventoryVisible(visible => !visible)}>Inventory</button>
       </nav>
-      <div className={`game-layout ${inventoryVisible || mapVisible ? 'with-panel' : ''} ${mapVisible && mapExpanded ? 'map-expanded' : ''}`}>
+      <div className={`game-layout ${inventoryVisible || mapVisible ? 'with-panel' : ''} ${mapVisible ? 'with-map' : ''} ${inventoryVisible ? 'with-inventory' : ''} ${mapVisible && mapExpanded ? 'map-expanded' : ''}`}>
         <Transcript lines={transcript} ref={transcriptEndRef} />
         {(inventoryVisible || mapVisible) && <div className="context-panels">
           {mapVisible && <MapPanel state={state} connected={connected} expanded={mapExpanded} onExpand={() => setMapExpanded(value => !value)} />}

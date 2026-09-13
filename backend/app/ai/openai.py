@@ -183,7 +183,7 @@ class OpenAIProvider(AIProvider):
         settings = self._settings
         if len(input_text.encode("utf-8")) > (max_input_bytes or settings.ai_command_max_input_bytes):
             raise AIProviderFailure(AIFailureReason.INPUT_LIMIT)
-        if self._requests >= settings.ai_command_max_requests:
+        if settings.ai_command_max_requests and self._requests >= settings.ai_command_max_requests:
             raise AIProviderFailure(AIFailureReason.REQUEST_LIMIT)
         if self._active >= settings.ai_command_max_concurrent:
             raise AIProviderFailure(AIFailureReason.BUSY)

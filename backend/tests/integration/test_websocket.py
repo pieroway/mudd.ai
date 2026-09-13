@@ -100,6 +100,7 @@ def test_narration_follows_authoritative_output_and_preserves_inventory(game_cli
         result = websocket.receive_json()
         assert result["type"] == "game_output"
         assert result["text"] == "You take the torch."
+        assert result["narration_pending"] is True
         assert result["state"]["inventory"] == [{"id": "torch", "name": "torch"}]
         narration = websocket.receive_json()
         assert narration["type"] == "narration"

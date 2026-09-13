@@ -4,6 +4,7 @@ import pytest
 
 from app.ai.fake import FakeAIProvider
 from app.ai.narration import NarrationRequest, NarrationResponse
+from app.ai.provider import AIProviderFailure, AIFailureReason
 from app.services.game import GameService
 from app.services.narration import NarrationService
 from app.services.auth import register_account
@@ -84,6 +85,22 @@ async def test_narration_failures_preserve_completed_action(session_factory, fai
     assert (await game.room_for_player(player.id)).id == "forest"
     assert result["success"] is True
     assert "private-provider-content" not in caplog.text
+    assert 'AI narration failed: action=move reason=' in caplog.text
+    assert 'elapsed_ms=' in caplog.text
+
+
+@pytest.mark.parametrize('reason,status', [(AIFailureReason.REQUEST_LIMIT, None),
+                                         (AIFailureReason.RATE_LIMIT, 429)])
+async def test_narration_logs_classified_failures_without_content(session_factory, caplog, reason, status):
+    class BrokenProvider(FakeAIProvider):
+        async def narrate_result(self, request):
+            raise AIProviderFailure(reason, http_status=status)
+
+    narrator = NarrationService(session_factory, BrokenProvider())
+    request = NarrationRequest(action='look', success=True, authoritative_text='private-room-content')
+    assert await narrator.narrate(request) is None
+    assert f'reason={reason.value} http_status={status}' in caplog.text
+    assert 'private-room-content' not in caplog.text
 
 
 async def test_disabled_narration_and_private_commands_have_no_context(session_factory):

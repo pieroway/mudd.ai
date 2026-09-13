@@ -276,6 +276,21 @@ async def test_input_and_lifetime_request_limits():
     assert len(calls) == 1
 
 
+async def test_zero_lifetime_limit_allows_requests_after_previous_cap():
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(200, json=envelope('{"text":"The square is quiet."}'))
+
+    adapter = provider(handler, ai_command_max_requests=0)
+    adapter._requests = 1000
+    request = NarrationRequest(action='look', success=True, authoritative_text='A quiet square.')
+    for _ in range(2):
+        assert (await adapter.narrate_result(request)).text == 'The square is quiet.'
+    assert len(calls) == 2
+
+
 async def test_timeout_and_concurrency_release_capacity():
     started = asyncio.Event()
 

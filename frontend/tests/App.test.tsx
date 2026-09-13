@@ -70,14 +70,14 @@ describe('Terminal', () => {
     const socket = MockWebSocket.instances[0]
     act(() => {
       socket.open()
-      socket.receive({ type: 'game_output', text: 'You take the torch.', state: {
+      socket.receive({ type: 'game_output', narration_pending: true, text: 'You take the torch.', state: {
         room_id: 'town_square', room_name: 'Town Square', inventory: [{ id: 'torch', name: 'torch' }],
       } })
       socket.receive({ type: 'narration', text: '<script>invent gold</script>', state: {
         room_id: 'elsewhere', room_name: 'Elsewhere', inventory: [{ id: 'gold', name: 'gold' }],
       }, ai_usage: { remaining: 19, limit: 20, day: '2026-09-06' } })
     })
-    expect(screen.getByTestId('transcript')).toHaveTextContent('You take the torch.')
+    expect(screen.getByTestId('transcript')).not.toHaveTextContent('You take the torch.')
     expect(screen.getByTestId('transcript')).toHaveTextContent('[AI narration] <script>invent gold</script>')
     expect(screen.getByTestId('transcript').querySelector('script')).toBeNull()
     expect(screen.getByTestId('current-room')).toHaveTextContent('Town Square')
@@ -88,6 +88,35 @@ describe('Terminal', () => {
     act(() => socket.receive({ type: 'narration', text: null }))
     expect(screen.getByTestId('transcript').textContent).toBe(lines)
   })
+  it.each([null, '', '   '])('falls back to classic output when narration is %j', (text) => {
+    render(<Terminal username="Alan" />)
+    const socket = MockWebSocket.instances[0]
+    act(() => {
+      socket.open()
+      socket.receive({ type: 'game_output', narration_pending: true, text: 'You take the torch.', state: {
+        room_id: 'town', room_name: 'Town Square', inventory: [{ id: 'torch', name: 'torch' }],
+      } })
+    })
+    expect(screen.getByTestId('transcript')).not.toHaveTextContent('You take the torch.')
+    expect(screen.getByTestId('inventory-panel')).toHaveTextContent('torch')
+    act(() => socket.receive({ type: 'game_output', text: 'Robin waves.' }))
+    expect(screen.getByTestId('transcript')).toHaveTextContent('Robin waves.')
+    act(() => socket.receive({ type: 'narration', text }))
+    expect(screen.getByTestId('transcript')).toHaveTextContent('You take the torch.')
+    expect(screen.getByTestId('transcript')).not.toHaveTextContent('[AI narration]')
+  })
+
+  it('restores pending classic output if the connection closes', () => {
+    render(<Terminal username="Alan" />)
+    const socket = MockWebSocket.instances[0]
+    act(() => {
+      socket.open()
+      socket.receive({ type: 'game_output', narration_pending: true, text: 'You open the chest.' })
+      socket.onclose?.()
+    })
+    expect(screen.getByTestId('transcript')).toHaveTextContent('You open the chest.')
+  })
+
   it('renders authoritative room and inventory snapshots and clears them on disconnect', () => {
     render(<Terminal username="Alan" />)
     const socket = MockWebSocket.instances[0]

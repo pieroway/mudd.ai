@@ -287,7 +287,12 @@ Defaults are a 5-second total deadline, 4,096 input bytes, 512 output tokens,
 two concurrent requests, and 100 attempted requests per backend process lifetime.
 Configure these with `AI_COMMAND_TIMEOUT_SECONDS`, `AI_COMMAND_MAX_INPUT_BYTES`,
 `AI_COMMAND_MAX_OUTPUT_TOKENS`, `AI_COMMAND_MAX_CONCURRENT`, and
-`AI_COMMAND_MAX_REQUESTS`. Failed attempts count; requests are never retried and
+`AI_COMMAND_MAX_REQUESTS`. Set the request cap to `0` to disable the shared
+process-lifetime cap while retaining daily account allowances and bonus-credit checks;
+the example environment uses this mode. Positive values still enforce a process cap.
+Narration failures log a fixed reason, HTTP status when available, and elapsed time,
+without prompts, response bodies, credentials, or account identifiers.
+Failed attempts count; requests are never retried and
 redirects are not followed. Responses exceeding 64 KiB, refusals, incomplete
 output, and invalid commands fail safely. Classic commands remain available when
 AI capacity is exhausted. Limits reset on restart and multiply across processes;

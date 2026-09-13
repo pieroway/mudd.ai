@@ -28,15 +28,17 @@
 
 .game-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(25vw, 1fr);
   flex: 1;
   min-height: 0;
 }
-.game-layout.with-panel { grid-template-columns: minmax(0, 1fr) minmax(280px, 360px); }
-.game-layout.map-expanded { grid-template-columns: minmax(220px, 1fr) minmax(0, 2fr); }
-.context-panels { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
-.context-panels > .context-panel { flex: 1; min-height: 0; }
-.context-panels > .map-panel { flex: 3; }
+.game-layout { --map-width: min(30%, 360px); --inventory-width: min(22%, 280px); }
+.game-layout.with-map { grid-template-columns: minmax(25vw, 1fr) var(--map-width); }
+.game-layout.with-inventory { grid-template-columns: minmax(25vw, 1fr) var(--inventory-width); }
+.game-layout.with-map.with-inventory { grid-template-columns: minmax(25vw, 1fr) var(--map-width) var(--inventory-width); }
+.game-layout.map-expanded { --map-width: 40%; }
+.context-panels { display: contents; }
+.context-panels > .context-panel { min-width: 0; min-height: 0; }
 .map-panel { display: flex; flex-direction: column; }
 .map-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.5rem; }
 .map-heading h3 { flex: 1; margin-bottom: 0.5rem; }
@@ -73,8 +75,11 @@
 @media (max-width: 640px) {
   .terminal-header { gap: 0.5rem; padding: 0.75rem; font-size: 0.8rem; }
   .terminal-header h2 { font-size: 1rem; }
-  .game-layout.with-panel { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 45%); }
-  .game-layout.map-expanded { grid-template-rows: minmax(0, 1fr) minmax(0, 65%); }
+  .game-layout.with-panel, .game-layout.with-map.with-inventory { grid-template-columns: minmax(25vw, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 45%); }
+  .game-layout.with-panel.map-expanded { grid-template-rows: minmax(0, 1fr) minmax(0, 40dvh); }
+  .context-panels { display: grid; grid-template-columns: minmax(0, 1fr); min-height: 0; overflow: hidden; }
+  .with-map.with-inventory .context-panels { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+  .with-map.with-inventory #inventory-panel { border-left: 1px solid var(--border-color); }
   .context-panel { border-left: 0; border-top: 1px solid var(--border-color); padding: 0.75rem; }
   .context-panel h3 { margin-bottom: 0.5rem; }
   .panel-hint { display: none; }

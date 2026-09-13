@@ -221,6 +221,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         "type": "game_output",
                         "success": result.get("success", False),
                         "text": result.get("output", ""),
+                        "narration_pending": narration_request is not None,
                         "room_id": result.get("room_id"),
                         "metadata": result.get("metadata", {}),
                         "state": (await game_service.client_state(session_id)).model_dump(),

@@ -39,9 +39,21 @@ test('map discovers rooms, persists visits, and supports desktop and mobile cont
   await expect(svg).not.toHaveAttribute('viewBox', original!)
   await send('/map expand')
   await expect(panel.getByRole('button', { name: 'Collapse map' })).toBeVisible()
+  const inventory = page.getByTestId('inventory-panel')
+  const assertInventoryColumn = async () => {
+    expect((await page.locator('.transcript').boundingBox())!.width).toBeGreaterThanOrEqual(page.viewportSize()!.width * 0.25)
+    const mapBounds = (await panel.boundingBox())!
+    const inventoryBounds = (await inventory.boundingBox())!
+    expect(inventoryBounds.x).toBeGreaterThanOrEqual(mapBounds.x + mapBounds.width - 1)
+    expect(Math.abs(inventoryBounds.y - mapBounds.y)).toBeLessThanOrEqual(1)
+  }
+  expect((await panel.boundingBox())!.width).toBeLessThanOrEqual(page.viewportSize()!.width * 0.4)
+  await assertInventoryColumn()
   await panel.getByRole('button', { name: 'Center on me' }).click()
   await page.screenshot({ path: 'test-results/map-desktop.png' })
   await page.setViewportSize({ width: 390, height: 844 })
+  expect((await panel.boundingBox())!.height).toBeLessThanOrEqual(844 * 0.4 + 1)
+  await assertInventoryColumn()
   await expect(page.getByTestId('command-input')).toBeVisible()
   await expect(panel.getByRole('button', { name: 'Zoom in' })).toBeVisible()
   await expect(panel.getByRole('button', { name: 'Forest, you are here' })).toBeInViewport({ ratio: 1 })

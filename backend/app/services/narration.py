@@ -1,14 +1,19 @@
 """Optional narration after command results and multiplayer events are delivered."""
 
 import asyncio
+import logging
+from time import monotonic
 from collections.abc import Awaitable, Callable
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.ai.narration import NarrationRequest, NarrationResponse
-from app.ai.provider import AIProvider
+from app.ai.provider import AIProvider, AIProviderFailure, AIFailureReason
+from pydantic import ValidationError
 from app.services.ai_usage import reserve_attempt
 from app.services.ai_preferences import narration_allowed
+
+logger = logging.getLogger(__name__)
 
 
 class NarrationService:
@@ -32,6 +37,7 @@ class NarrationService:
         account_id: str | None = None,
         authorization_check: Callable[[], Awaitable[bool]] | None = None,
     ) -> str | None:
+        started = monotonic()
         if self.provider is None:
             return None
         try:
@@ -55,7 +61,17 @@ class NarrationService:
             if authorization_check is not None and not await authorization_check():
                 return None
             return validated.text
-        except Exception:
+        except Exception as error:
             # Presentation failure must not turn a committed action into an error or
             # leak prompts, provider bodies, or credentials. Cancellation still propagates.
+            reason = (error.reason.value if isinstance(error, AIProviderFailure) else
+                      AIFailureReason.TIMEOUT.value if isinstance(error, TimeoutError) else
+                      AIFailureReason.INVALID_RESPONSE.value if isinstance(error, ValidationError) else
+                      AIFailureReason.INTERNAL.value)
+            logger.warning(
+                'AI narration failed: action=%s reason=%s http_status=%s elapsed_ms=%d',
+                request.action, reason,
+                error.http_status if isinstance(error, AIProviderFailure) else None,
+                round((monotonic() - started) * 1000),
+            )
             return None
