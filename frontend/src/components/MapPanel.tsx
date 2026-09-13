@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ClientState } from './InventoryPanel'
 
 export interface MapState {
-  rooms: { id: string; name: string }[]
+  rooms: { id: string; name: string; building_id?: string | null }[]
   exits: { room_id: string; direction: string; destination_room_id: string }[]
 }
 
@@ -10,7 +10,7 @@ export function isMapState(value: unknown): value is MapState {
   if (!value || typeof value !== 'object') return false
   const map = value as Partial<MapState>
   if (!Array.isArray(map.rooms) || !map.rooms.every(room => room
-    && typeof room.id === 'string' && typeof room.name === 'string')) return false
+    && typeof room.id === 'string' && typeof room.name === 'string' && (room.building_id === undefined || typeof room.building_id === 'string' || room.building_id === null))) return false
   const ids = new Set(map.rooms.map(room => room.id))
   return ids.size === map.rooms.length && Array.isArray(map.exits) && map.exits.every(edge => edge
     && typeof edge.direction === 'string' && ids.has(edge.room_id) && ids.has(edge.destination_room_id))
@@ -62,7 +62,15 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
   state?: ClientState; connected: boolean; expanded: boolean; onExpand: () => void
 }) {
   const map = isMapState(state?.map) ? state.map : undefined
-  const positions = useMemo(() => layoutMap(map ?? { rooms: [], exits: [] }), [map])
+  const visibleMap = useMemo(() => {
+    if (!map) return { rooms: [], exits: [] }
+    const currentRoom = map.rooms.find(room => room.id === state?.room_id)
+    if (!currentRoom?.building_id) return { rooms: map.rooms.filter(room => !room.building_id), exits: map.exits.filter(edge => map.rooms.find(room => room.id === edge.room_id && !room.building_id) && map.rooms.find(room => room.id === edge.destination_room_id && !room.building_id)) }
+    const ids = new Set(map.rooms.filter(room => room.building_id === currentRoom.building_id).map(room => room.id))
+    for (const edge of map.exits) if (ids.has(edge.room_id) && !ids.has(edge.destination_room_id)) ids.add(edge.destination_room_id)
+    return { rooms: map.rooms.filter(room => ids.has(room.id)), exits: map.exits.filter(edge => ids.has(edge.room_id) && ids.has(edge.destination_room_id)) }
+  }, [map, state?.room_id])
+  const positions = useMemo(() => layoutMap(visibleMap), [visibleMap])
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState<Point>({ x: 0, y: 0 })
   const [selected, setSelected] = useState<string>()
@@ -85,9 +93,9 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
   const height = viewport.height / zoom
   const selectedRoom = map?.rooms.find(room => room.id === selected)
     ?? map?.rooms.find(room => room.id === state?.room_id)
-  const names = new Map(map?.rooms.map(room => [room.id, room.name]))
+  const names = new Map(visibleMap.rooms.map(room => [room.id, room.name]))
   const drawn = new Set<string>()
-  const edges = map?.exits.filter(edge => {
+  const edges = visibleMap.exits.filter(edge => {
     const key = JSON.stringify([edge.room_id, edge.destination_room_id].sort())
     if (drawn.has(key)) return false
     drawn.add(key)
@@ -131,7 +139,7 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
               const to = positions.get(edge.destination_room_id)!
               return <line key={`${edge.room_id}:${edge.direction}`} x1={from.x} y1={from.y} x2={to.x} y2={to.y} className="map-edge" />
             })}
-            {map.rooms.map(room => {
+            {visibleMap.rooms.map(room => {
               const point = positions.get(room.id)!
               const here = room.id === state?.room_id
               return <g key={room.id} data-room={room.id} role="button" tabIndex={0}
@@ -152,7 +160,7 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
             <ul>{map.exits.filter(edge => edge.room_id === selectedRoom.id).map(edge =>
               <li key={edge.direction}>{edge.direction} → {names.get(edge.destination_room_id)}</li>)}</ul>
           </details>}
-          <p className="map-note">{map.rooms.length} discovered {map.rooms.length === 1 ? 'room' : 'rooms'}. Drag to pan; select rooms for exits.</p>
+          <p className="map-note">{visibleMap.rooms.length} visible {map.rooms.length === 1 ? 'room' : 'rooms'}. Drag to pan; select rooms for exits.</p>
         </>}
   </aside>
 }

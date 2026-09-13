@@ -35,7 +35,7 @@ class GameRepository:
             ExitRecord.room_id.in_(known), ExitRecord.destination_room_id.in_(known)
         ).order_by(ExitRecord.room_id, ExitRecord.direction))).all()
         return MapState(
-            rooms=[MapRoom(id=room.id, name=room.name) for room in rooms],
+            rooms=[MapRoom(id=room.id, name=room.name, building_id=room.building_id) for room in rooms],
             exits=[MapExit(room_id=edge.room_id, direction=edge.direction,
                            destination_room_id=edge.destination_room_id) for edge in exits],
         )
