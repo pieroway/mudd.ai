@@ -43,10 +43,10 @@
 .map-panel.context-panel { padding: 0.75rem; }
 .map-panel .map-heading h3 { font-size: 1rem; margin: 0 0 0.5rem; flex-basis: 10rem; }
 .map-legend { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.3rem; flex-shrink: 0; }
-.map-ghost-layer[data-level='1'], .map-ghost-layer[data-level='-1'] { opacity: 0.3; }
-.map-ghost-layer[data-level='2'], .map-ghost-layer[data-level='-2'] { opacity: 0.15; }
-.map-ghost-layer:focus-within { opacity: 0.65; }
-.map-stairs { stroke: var(--accent-color); stroke-width: 1; stroke-dasharray: 4 5; opacity: 0.22; fill: none; }
+.map-ghost-layer[data-level='1'], .map-ghost-layer[data-level='-1'] { opacity: 0.65; }
+.map-ghost-layer[data-level='2'], .map-ghost-layer[data-level='-2'] { opacity: 0.45; }
+.map-ghost-layer:focus-within, .map-ghost-layer:hover { opacity: 0.9; }
+.map-stairs { stroke: var(--accent-color); stroke-width: 1.5; stroke-dasharray: 5 4; opacity: 0.65; fill: none; }
 .map-level-caption { fill: var(--text-muted); pointer-events: none; }
 .map-panel .map-label-background { fill: var(--bg-light); stroke: none; }
 .map-panel .map-exit-badges rect { fill: var(--bg-dark); stroke: var(--text-muted); stroke-width: 1; }

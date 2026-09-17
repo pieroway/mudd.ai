@@ -126,6 +126,34 @@ describe('Map', () => {
     expect(view.container.querySelectorAll('[data-room]')).toHaveLength(1)
   })
 
+  it('fits every displayed floor and returns to manual controls without moving rooms', () => {
+    const floors: MapState = { rooms: ['town', 'upper', 'lower'].map(id => ({ id, name: id })), exits: [
+      { room_id: 'town', direction: 'up', destination_room_id: 'upper' },
+      { room_id: 'town', direction: 'down', destination_room_id: 'lower' },
+    ] }
+    const view = render(<MapPanel state={{ ...state, map: floors }} connected expanded onExpand={() => {}} />)
+    const svg = screen.getByRole('group', { name: 'Discovered rooms and connections' })
+    const initial = svg.getAttribute('viewBox')
+    const fit = screen.getByRole('button', { name: 'Fit map' })
+    fireEvent.click(fit)
+    expect(fit).toHaveAttribute('aria-pressed', 'true')
+    const [x, y, width, height] = svg.getAttribute('viewBox')!.split(' ').map(Number)
+    for (const room of view.container.querySelectorAll('[data-room]')) {
+      const [px, py] = room.getAttribute('transform')!.match(/-?\d+(?:\.\d+)?/g)!.map(Number)
+      expect(px - 88).toBeGreaterThanOrEqual(x)
+      expect(px + 88).toBeLessThanOrEqual(x + width)
+      expect(py - 40).toBeGreaterThanOrEqual(y)
+      expect(py + 40).toBeLessThanOrEqual(y + height)
+    }
+    const allFloors = svg.getAttribute('viewBox')
+    fireEvent.click(screen.getByRole('button', { name: 'Nearby levels' }))
+    expect(svg.getAttribute('viewBox')).not.toBe(allFloors)
+    fireEvent.click(screen.getByRole('button', { name: 'Pan east' }))
+    expect(fit).toHaveAttribute('aria-pressed', 'false')
+    fireEvent.click(screen.getByRole('button', { name: 'Center on me' }))
+    expect(svg.getAttribute('viewBox')).toBe(initial)
+  })
+
   it('keeps rooms distinct for loops, vertical connections, and disconnected components', () => {
     const complex: MapState = { rooms: ['a', 'b', 'c', 'd', 'e', 'isolated'].map(id => ({ id, name: id })), exits: [
       { room_id: 'a', direction: 'north', destination_room_id: 'b' },

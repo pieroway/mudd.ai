@@ -11,7 +11,7 @@ describe('Account login', () => {
     vi.stubGlobal('fetch', fetchMock)
     fetchMock.mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({ detail: 'Please sign in.' }) })
   })
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => { vi.unstubAllGlobals() })
 
   async function fillCredentials() {
     fireEvent.change(await screen.findByTestId('username-input'), { target: { value: 'Alice' } })
