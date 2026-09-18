@@ -15,7 +15,7 @@ test('map discovers rooms, persists visits, and supports desktop and mobile cont
   }
   await send('north')
   await expect(panel.getByRole('button', { name: 'Forest, you are here' })).toBeVisible()
-  await panel.getByRole('button', { name: 'Pan south' }).click()
+  await panel.locator('svg').press('ArrowDown')
   await panel.getByRole('button', { name: 'Town Square', exact: true }).click()
   await expect(panel).toContainText('north → Forest')
   await expect(panel).not.toContainText('Inn')
@@ -27,7 +27,7 @@ test('map discovers rooms, persists visits, and supports desktop and mobile cont
   await expect(svg).not.toHaveAttribute('viewBox', original!)
   await panel.getByRole('button', { name: 'Center on me' }).click()
   await expect(svg).toHaveAttribute('viewBox', original!)
-  await panel.getByRole('button', { name: 'Pan east' }).click()
+  await svg.press('ArrowRight')
   await expect(svg).not.toHaveAttribute('viewBox', original!)
   await panel.getByRole('button', { name: 'Center on me' }).click()
   const bounds = await svg.boundingBox()

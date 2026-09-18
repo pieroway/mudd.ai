@@ -5,9 +5,9 @@ The Map button opens a visual map beside the transcript. Use `/map show`,
 accepted locally. Visibility is saved in this browser. These commands do not
 move your character or use AI units.
 
-The map marks your current room with **You are here**. Select a room to read
+The map marks your current room with a cyan **YOU** badge and thin solid cyan border. Select a room to read
 its known outgoing directions and destinations. Use +/− to zoom, drag the
-background or use the arrow buttons to pan, and **Center on me** to reset the
+background to pan (or focus the map and use your keyboard arrow keys), and **Center on me** to reset the
 view. **Fit map** frames every displayed floor and continues
 to fit when the panel resizes or nearby levels are toggled. Zooming or panning
 returns to manual control. Expand provides more space while preserving the
@@ -27,12 +27,15 @@ stays on top. Ghost names occupy the exposed top or bottom strip of each box.
 Each horizontal component is anchored to its connecting stair room; conflicting
 components on the same floor shift sideways to keep their rooms distinct.
 Ghost layers never resize or reposition the current neighborhood. Moving vertically makes
-the destination neighborhood the new current level. Floor relationships are
+the destination neighborhood the new current level. Confirmed up/down movement
+slides rooms into their new positions and fades floor layers over 260 ms;
+reduced-motion preferences switch instantly. Failed or horizontal movement
+never starts a floor transition. Floor relationships are
 inferred from up/down exits, since rooms do not store absolute floor numbers.
 Only consecutive upward or downward connections extend the preview; detours
 through another floor do not pull in disconnected neighborhoods on this floor.
 
-Room-corner **↑ / ↓** badges indicate available vertical exits, even before the
+Unboxed room-corner **↑ / ↓** arrows indicate available vertical exits, even before the
 destination is visited. Up badges sit at the top-right and down badges at the
 bottom-right. They reveal no destination identity or geography.
 Taller room boxes allow two-line names; labels retain their screen font size on
@@ -73,6 +76,10 @@ React/SVG panel with no new dependencies. Browser layout state is local; discove
 and topology are server-owned. Snapshots currently include the whole discovered
 graph; larger worlds may require a bounded viewport API.
 
+The game uses the preview's Consolas font, with Courier New and monospace
+fallbacks. Map controls match preview 6: +, −, Center on me, Fit map, and a
+Nearby levels toggle with a status dot. Controls wrap on narrow panels.
+
 ## Validation
 
 September 17, 2026 — overlapping floor preview implementation:
@@ -92,7 +99,6 @@ September 17, 2026 — overlapping floor preview implementation:
   and passing authoritative-state invariants. Local `docker compose up -d --wait`
   passed, exit 0; all four services are healthy, backend health is `ok`, and the
   frontend returns HTTP 200. No database migration or real AI calls were needed.
-
 
 September 16, 2026 — map readability and mobile current-level view:
 

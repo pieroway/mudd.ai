@@ -49,7 +49,6 @@
 .map-ghost-layer .map-room-box { fill: #344054; stroke: #acb7c7; }
 .map-panel .map-ghost-layer .map-label-background { fill: #344054; }
 .map-panel .map-label-background { fill: var(--bg-light); stroke: none; }
-.map-panel .map-exit-badges rect { fill: var(--bg-dark); stroke: var(--text-muted); stroke-width: 1; }
 .map-panel .map-exit-badges text { font-size: 14px; fill: var(--accent-color); }
 .map-panel button[aria-pressed='true'] { border-color: var(--accent-color); }
 .map-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.5rem; }
@@ -63,11 +62,14 @@
 .map-edge { stroke: var(--text-muted); stroke-width: 2; }
 .map-edge-riser { stroke: #eab308; stroke-width: 3; }
 .map-room { cursor: pointer; }
-.map-room rect { fill: var(--bg-light); stroke: var(--text-muted); stroke-width: 2; }
+.map-room .map-room-box { fill: var(--bg-light); stroke: var(--text-muted); stroke-width: 2; }
 .map-room text { fill: var(--text-light); font-size: 12px; user-select: none; }
-.map-room .map-here { font-size: 10px; fill: var(--accent-color); }
-.map-current rect { stroke: var(--accent-color); stroke-width: 4; }
-.map-room:focus rect, .map-room[aria-pressed='true'] rect { stroke-dasharray: 5 3; }
+.map-room .map-here rect { fill: #29d4f3; stroke: none; }
+.map-room .map-here text { fill: #082133; font-size: 12px; font-weight: bold; }
+.map-current .map-label > text { fill: #65e7ff; }
+.map-current .map-room-box { stroke: #27d9fb; stroke-width: 2; filter: drop-shadow(0 0 3px #27d9fb66); }
+.map-room:focus-visible .map-room-box { stroke-dasharray: 5 3; }
+.map-current:focus-visible .map-room-box { stroke-dasharray: none; }
 .map-details { margin-top: 0.5rem; font-size: 0.85rem; }
 .map-details li { padding: 0.25rem 0; }
 .map-note { margin-top: 0.75rem; font-size: 0.75rem; color: var(--text-muted); }
@@ -98,4 +100,22 @@
   .map-panel .map-heading h3 { font-size: 0.875rem; }
   .map-panel .map-note { margin-top: 0.3rem; }
   .panel-hint { display: none; }
+}
+
+/* Preview 6 controls: five compact buttons, cyan active outline and level dot. */
+.map-controls { gap: 8px; }
+.map-controls button { height: 36px; padding: 0 14px; font-size: 16px; color: #d2deef;
+  background: #0b1123; border: 1px solid #3c526b; border-radius: 4px; white-space: nowrap; }
+.map-controls button[aria-label='Zoom in'], .map-controls button[aria-label='Zoom out'] { width: 38px; padding: 0; }
+.map-controls button[aria-pressed='true'] { border-color: #27cef0; }
+.map-controls button:nth-child(3) { min-width: 151px; }
+.map-controls button:nth-child(4) { min-width: 105px; }
+.map-controls button:nth-child(5) { min-width: 231px; }
+.map-toggle-dot { color: #27cef0; }
+.map-viewport:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 2px; }
+@media (max-width: 640px) {
+  .map-controls { gap: 5px; }
+  .map-controls button:nth-child(n) { min-width: 0; }
+  .map-controls button { height: 30px; font-size: 12px; padding: 0 7px; }
+  .map-controls button[aria-label='Zoom in'], .map-controls button[aria-label='Zoom out'] { width: 30px; }
 }

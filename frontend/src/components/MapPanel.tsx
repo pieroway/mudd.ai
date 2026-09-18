@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ClientState } from './InventoryPanel'
+import { useFloorTransition } from './useFloorTransition'
 import { buildMapScene } from './mapScene'
 export { layoutMap } from './mapScene'
 import { ROOM_HEIGHT, ROOM_WIDTH, roomNameLines, type Point } from './mapGeometry'
@@ -46,6 +47,7 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
   const viewportRef = useRef<SVGSVGElement>(null)
   const [viewport, setViewport] = useState({ width: 400, height: 280 })
   const ready = connected && !!map
+  useFloorTransition(viewportRef, ready ? state?.room_id : undefined, map)
   useEffect(() => {
     const svg = viewportRef.current
     if (!svg || typeof ResizeObserver === 'undefined') return
@@ -149,15 +151,17 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
             ? `translate(0, ${labelOffset(level.depth)}) scale(${1 / displayZoom})` : `scale(${1 / displayZoom})`}>
             <rect className="map-label-background" x={-labelWidth / 2} y={ghost ? -7 : -17} width={labelWidth} height={ghost ? 14 : 34} rx={3} />
             <text textAnchor="middle">{lines.map((line, index) =>
-              <tspan key={index} x={0} y={lines.length === 1 ? 5 : -3 + index * 15}>{line}</tspan>)}</text>
-            {here && displayZoom >= 0.9 && <text textAnchor="middle" y={29} className="map-here">You are here</text>}
+              <tspan key={index} x={0} y={(lines.length === 1 ? 5 : -3 + index * 15) - (here ? 7 : 0)}>{line}</tspan>)}</text>
+            {here && displayZoom >= 0.6 && <g className="map-here" transform={`translate(0, ${26 * Math.min(1, displayZoom)}) scale(${Math.min(1, displayZoom)})`}>
+              <rect x={-20} y={-9} width={40} height={19} rx={3} />
+              <text textAnchor="middle" y={5}>YOU</text>
+            </g>}
           </g>}
           {exits.length > 0 && displayZoom >= 0.3 && <g role="img" aria-label={`${exits.join(' and ')} exits`}>
             {([['up', up, '↑'], ['down', down, '↓']] as const).filter(([, enabled]) => enabled).map(([direction, , symbol]) =>
               <g key={direction} data-exit={direction} className="map-exit-badges"
                 transform={`translate(${ROOM_WIDTH / 2 - (badgeSize + 2) / displayZoom}, ${direction === 'up'
                   ? -ROOM_HEIGHT / 2 + 2 / displayZoom : ROOM_HEIGHT / 2 - (badgeSize + 2) / displayZoom}) scale(${badgeSize / 17 / displayZoom})`}>
-                <rect width={17} height={17} rx={2} />
                 <text x={8.5} y={13} textAnchor="middle">{symbol}</text>
               </g>)}
           </g>}
@@ -177,13 +181,18 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
             <button type="button" aria-label="Zoom out" disabled={displayZoom <= 0.1} onClick={() => { manualView(); setZoom(Math.max(0.1, displayZoom / 1.25)) }}>−</button>
             <button type="button" onClick={() => { setFitted(false); setPan({ x: 0, y: 0 }); setZoom(1); setSelected(undefined) }}>Center on me</button>
             <button type="button" aria-pressed={fitted} onClick={() => setFitted(true)}>Fit map</button>
-            {!mobile && <button type="button" aria-pressed={nearby} onClick={() => setNearby(value => !value)}>Nearby levels</button>}
-            <button type="button" aria-label="Pan north" onClick={() => { manualView(); setPan(p => ({ ...p, y: p.y - 80 / displayZoom })) }}>↑</button>
-            <button type="button" aria-label="Pan west" onClick={() => { manualView(); setPan(p => ({ ...p, x: p.x - 80 / displayZoom })) }}>←</button>
-            <button type="button" aria-label="Pan east" onClick={() => { manualView(); setPan(p => ({ ...p, x: p.x + 80 / displayZoom })) }}>→</button>
-            <button type="button" aria-label="Pan south" onClick={() => { manualView(); setPan(p => ({ ...p, y: p.y + 80 / displayZoom })) }}>↓</button>
+            {!mobile && <button type="button" aria-label="Nearby levels" aria-pressed={nearby} onClick={() => setNearby(value => !value)}>Nearby levels <span className="map-toggle-dot" aria-hidden="true">{nearby ? '●' : '○'}</span></button>}
           </div>
-          <svg ref={viewportRef} className="map-viewport" role="group" aria-label="Discovered rooms and connections"
+          <svg ref={viewportRef} className="map-viewport" role="group" tabIndex={0}
+            onKeyDown={event => {
+              if (event.target !== event.currentTarget) return
+              const delta: Record<string, Point> = { ArrowUp: { x: 0, y: -80 }, ArrowDown: { x: 0, y: 80 },
+                ArrowLeft: { x: -80, y: 0 }, ArrowRight: { x: 80, y: 0 } }
+              const move = delta[event.key]
+              if (!move) return
+              event.preventDefault(); manualView()
+              setPan(p => ({ x: p.x + move.x / displayZoom, y: p.y + move.y / displayZoom }))
+            }} aria-label="Discovered rooms and connections"
             viewBox={`${center.x - width / 2} ${center.y - height / 2} ${width} ${height}`}
             onPointerDown={event => {
               if (event.button !== 0 || (event.target as Element).closest('[data-room]')) return

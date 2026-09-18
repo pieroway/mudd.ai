@@ -38,7 +38,7 @@
 }
 
 body {
-  font-family: 'Courier New', monospace;
+  font-family: Consolas, 'Courier New', monospace;
   background-color: var(--bg-dark);
   color: var(--text-light);
   line-height: 1.5;
@@ -99,3 +99,5 @@ body {
   width: 100%;
   height: 100%;
 }
+
+button, input, select, textarea, code, pre { font-family: inherit; }

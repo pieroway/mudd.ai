@@ -2,6 +2,18 @@ import { expect, test } from '@playwright/test'
 
 test('visited floors stay ghosted, compact, and readable around the current neighborhood', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 })
+  await page.addInitScript(() => {
+    const original = Element.prototype.animate
+    Element.prototype.animate = function (frames, options) {
+      if (this.matches('[data-room], [data-level]')) {
+        const root = document.documentElement
+        root.dataset.floorAnimations = String(Number(root.dataset.floorAnimations ?? 0) + 1)
+        if (Array.isArray(frames) && frames[0].transform !== frames[1].transform) root.dataset.floorSlide = 'true'
+        root.dataset.floorDuration = String(typeof options === 'object' ? options.duration : options)
+      }
+      return original.call(this, frames, options)
+    }
+  })
   await page.goto('/')
   await page.getByTestId('username-input').fill('MapExplorer')
   await page.getByTestId('password-input').fill('A long test-only passphrase1!')
@@ -27,6 +39,13 @@ test('visited floors stay ghosted, compact, and readable around the current neig
     const start = new DOMPoint(box.x, box.y).matrixTransform(matrix)
     return { x: start.x, y: start.y, width: box.width * matrix.a, height: box.height * matrix.d }
   })
+  await expect(panel.locator('.map-controls button')).toHaveCount(5)
+  await expect(panel.getByRole('button', { name: /Pan / })).toHaveCount(0)
+  await expect(hall.locator('.map-here')).toHaveText('YOU')
+  await expect(hall.locator('.map-room-box')).toHaveCSS('stroke-width', '2px')
+  await expect(hall.locator('.map-room-box')).toHaveCSS('stroke-dasharray', 'none')
+  await expect(panel.locator('.map-exit-badges rect')).toHaveCount(0)
+  expect(await page.locator('body').evaluate(el => getComputedStyle(el).fontFamily)).toMatch(/^Consolas/)
   const currentBox = (await measure(hall))!
   const upperBox = (await measure(landing))!
   const lowerBox = (await measure(cellar))!
@@ -80,12 +99,16 @@ test('visited floors stay ghosted, compact, and readable around the current neig
   await expect(hall).toHaveAttribute('transform', layout!)
   await panel.getByRole('button', { name: 'Nearby levels' }).click()
   const command = page.getByTestId('command-input')
+  await expect(page.locator('html')).not.toHaveAttribute('data-floor-animations')
   await command.fill('up')
   await command.press('Enter')
   await expect(panel.locator('[data-level="0"] [data-room="map_landing"]')).toBeVisible()
   await expect(panel.locator('[data-level="-1"] [data-room="map_hall"]')).toBeVisible()
   await expect(panel.locator('[data-level="2"] [data-room="map_roof"]')).toBeAttached()
   await expect(panel.locator('[data-room="map_tunnel"]')).toHaveCount(0)
+  await expect(page.locator('html')).toHaveAttribute('data-floor-slide', 'true')
+  await expect(page.locator('html')).toHaveAttribute('data-floor-duration', '260')
+  await expect.poll(() => panel.locator('svg').evaluate(el => el.getAnimations({ subtree: true }).length)).toBe(0)
   await panel.getByRole('button', { name: 'Center on me' }).click()
   await page.setViewportSize({ width: 390, height: 844 })
   await expect(panel.locator('[data-level]')).toHaveCount(1)
@@ -101,4 +124,48 @@ test('visited floors stay ghosted, compact, and readable around the current neig
   await expect(panel.getByRole('button', { name: 'Nearby levels' })).toHaveAttribute('aria-pressed', 'true')
   await expect(panel.locator('[data-level]')).toHaveCount(5)
   await expectFitted()
+})
+
+
+test('floor transitions respect reduced motion and animate a mobile return trip', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  await page.getByTestId('username-input').fill('MotionExplorer')
+  await page.getByTestId('password-input').fill('A long test-only passphrase1!')
+  await page.getByTestId('login-button').click()
+  const panel = page.getByTestId('map-panel')
+  await expect(panel.locator('.map-current')).toHaveAttribute('data-room', 'map_landing')
+  const animations: { direction: string; count: number }[] = []
+  // Count WAAPI starts, including any animation that completes between assertions.
+  await page.evaluate(() => {
+    const original = Element.prototype.animate
+    Element.prototype.animate = function (frames, options) {
+      document.documentElement.dataset.motionCount = String(Number(document.documentElement.dataset.motionCount ?? 0) + 1)
+      return original.call(this, frames, options)
+    }
+  })
+  const move = async (direction: string, room: string) => {
+    await page.getByTestId('command-input').fill(direction)
+    await page.getByTestId('command-input').press('Enter')
+    await expect(panel.locator('.map-current')).toHaveAttribute('data-room', room)
+    animations.push({ direction, count: Number(await page.locator('html').getAttribute('data-motion-count') ?? 0) })
+  }
+  await move('down', 'map_hall')
+  expect(animations[0].count).toBe(0)
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await move('up', 'map_landing')
+  expect(animations[1].count).toBeGreaterThan(0)
+  await move('down', 'map_hall')
+  expect(animations[2].count).toBeGreaterThan(animations[1].count)
+  await expect.poll(() => panel.locator('svg').evaluate(el => el.getAnimations({ subtree: true }).length)).toBe(0)
+  await expect(panel.locator('[data-level]')).toHaveCount(1)
+  // A failed up command in Garden and a horizontal move start no floor effects.
+  await move('north', 'map_garden')
+  expect(animations[3].count).toBe(animations[2].count)
+  await page.getByTestId('command-input').fill('up')
+  await page.getByTestId('command-input').press('Enter')
+  await expect(page.locator('.transcript')).toContainText('You cannot go up from here.')
+  await expect(panel.locator('.map-current')).toHaveAttribute('data-room', 'map_garden')
+  expect(Number(await page.locator('html').getAttribute('data-motion-count'))).toBe(animations[3].count)
 })

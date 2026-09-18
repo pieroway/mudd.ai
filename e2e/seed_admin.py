@@ -11,6 +11,7 @@ from app.models.game import RoomRecord, ExitRecord, PlayerRecord, PlayerDiscover
 
 async def seed_map():
     identity = await register_account('MapExplorer', 'A long test-only passphrase1!')
+    motion_identity = await register_account('MotionExplorer', 'A long test-only passphrase1!')
     rooms = {
         'hall': 'Cedar Hall', 'library': 'Library', 'workshop': 'Workshop',
         'garden': 'Garden', 'courtyard': 'Courtyard',
@@ -32,10 +33,11 @@ async def seed_map():
         for source, direction, destination in connections:
             session.add(ExitRecord(room_id='map_' + source, direction=direction, destination_room_id='map_' + destination))
             session.add(ExitRecord(room_id='map_' + destination, direction=opposite[direction], destination_room_id='map_' + source))
-        player = await session.get(PlayerRecord, identity.player_id)
-        player.current_room_id = 'map_hall'
-        session.add_all([PlayerDiscoveryRecord(player_id=identity.player_id, room_id='map_' + key)
-                         for key in rooms if key != 'secret'])
+        for account, start in ((identity, 'map_hall'), (motion_identity, 'map_landing')):
+            player = await session.get(PlayerRecord, account.player_id)
+            player.current_room_id = start
+            session.add_all([PlayerDiscoveryRecord(player_id=account.player_id, room_id='map_' + key)
+                             for key in rooms if key != 'secret'])
 
 
 async def main():
