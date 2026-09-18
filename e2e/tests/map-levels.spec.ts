@@ -10,13 +10,48 @@ test('visited floors stay ghosted, compact, and readable around the current neig
   await expect(panel.getByRole('button', { name: 'Cedar Hall, you are here' })).toBeVisible()
   await panel.getByRole('button', { name: 'Expand map' }).click()
   await expect(panel.locator('[data-level]')).toHaveCount(5)
-  await expect(panel.locator('[data-level="1"]')).toHaveCSS('opacity', '0.65')
-  await expect(panel.locator('[data-level="2"]')).toHaveCSS('opacity', '0.45')
-  await expect(panel.locator('[data-level="-1"]')).toHaveCSS('opacity', '0.65')
-  await expect(panel.locator('[data-level="-2"]')).toHaveCSS('opacity', '0.45')
+  await expect(panel.locator('[data-level="1"]')).toHaveCSS('opacity', '0.38')
+  await expect(panel.locator('[data-level="2"]')).toHaveCSS('opacity', '0.24')
+  await expect(panel.locator('[data-level="-1"]')).toHaveCSS('opacity', '0.38')
+  await expect(panel.locator('[data-level="-2"]')).toHaveCSS('opacity', '0.24')
   await expect(panel.getByRole('button', { name: /Roof|Deep Cave|Unvisited Vault/ })).toHaveCount(0)
   await expect(panel.getByRole('button', { name: 'Library', exact: true }).getByRole('img', { name: 'Down exits' })).toBeVisible()
   const hall = panel.locator('[data-room="map_hall"]')
+  const landing = panel.locator('[data-room="map_landing"]')
+  const cellar = panel.locator('[data-room="map_cellar"]')
+  const measure = async (room: typeof hall) => room.locator('.map-room-box').evaluate(el => {
+    // Playwright boundingBox includes the thicker current-room highlight stroke.
+    const rect = el as SVGGraphicsElement
+    const box = rect.getBBox()
+    const matrix = rect.getScreenCTM()!
+    const start = new DOMPoint(box.x, box.y).matrixTransform(matrix)
+    return { x: start.x, y: start.y, width: box.width * matrix.a, height: box.height * matrix.d }
+  })
+  const currentBox = (await measure(hall))!
+  const upperBox = (await measure(landing))!
+  const lowerBox = (await measure(cellar))!
+  expect(upperBox.width).toBeCloseTo(currentBox.width, 1)
+  expect(upperBox.height).toBeCloseTo(currentBox.height, 1)
+  expect(upperBox.x - currentBox.x).toBeCloseTo(-currentBox.width / 8, 1)
+  expect(upperBox.y - currentBox.y).toBeCloseTo(-currentBox.height / 4, 1)
+  expect(lowerBox.x - currentBox.x).toBeCloseTo(currentBox.width / 8, 1)
+  expect(lowerBox.y - currentBox.y).toBeCloseTo(currentBox.height / 4, 1)
+  await expect(panel.locator('[data-level]').last()).toHaveAttribute('data-level', '0')
+  const upperLabel = (await landing.locator('.map-label text').boundingBox())!
+  const lowerLabel = (await cellar.locator('.map-label text').boundingBox())!
+  expect(upperLabel.y).toBeGreaterThan(upperBox.y)
+  expect(upperLabel.y + upperLabel.height).toBeLessThan(currentBox.y)
+  expect(lowerLabel.y).toBeGreaterThan(currentBox.y + currentBox.height)
+  expect(lowerLabel.y + lowerLabel.height).toBeLessThan(lowerBox.y + lowerBox.height)
+  const downBadge = (await hall.locator('[data-exit="down"]').boundingBox())!
+  expect(downBadge.x).toBeGreaterThan(currentBox.x + currentBox.width / 2)
+  expect(downBadge.y).toBeGreaterThan(currentBox.y + currentBox.height / 2)
+  expect(downBadge.y + downBadge.height).toBeLessThanOrEqual(currentBox.y + currentBox.height)
+  // The exposed label is an actual pointer target, not just hidden SVG text.
+  await page.mouse.click(upperLabel.x + upperLabel.width / 2, upperLabel.y + upperLabel.height / 2)
+  await expect(panel.locator('.map-details summary')).toHaveText('Landing — known exits')
+  await hall.click()
+  await page.mouse.move(0, 0)
   const layout = await hall.getAttribute('transform')
   const fontSize = () => hall.locator('.map-label text').first().evaluate(el => {
     const svgText = el as SVGGraphicsElement
@@ -26,7 +61,7 @@ test('visited floors stay ghosted, compact, and readable around the current neig
   const fit = panel.getByRole('button', { name: 'Fit map', exact: true })
   const expectFitted = async () => {
     const viewport = await panel.locator('svg').boundingBox()
-    for (const box of await panel.locator('.map-room-box, .map-stairs, .map-level-caption').all()) {
+    for (const box of await panel.locator('.map-room-box').all()) {
       const bounds = await box.boundingBox()
       expect(bounds!.x).toBeGreaterThanOrEqual(viewport!.x)
       expect(bounds!.y).toBeGreaterThanOrEqual(viewport!.y)

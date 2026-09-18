@@ -8,7 +8,7 @@ move your character or use AI units.
 The map marks your current room with **You are here**. Select a room to read
 its known outgoing directions and destinations. Use +/− to zoom, drag the
 background or use the arrow buttons to pan, and **Center on me** to reset the
-view. **Fit map** frames every displayed floor and stair connection and continues
+view. **Fit map** frames every displayed floor and continues
 to fit when the panel resizes or nearby levels are toggled. Zooming or panning
 returns to manual control. Expand provides more space while preserving the
 transcript and prompt.
@@ -18,18 +18,23 @@ room labels retain their size. Open a room's known-exits disclosure for directio
 
 The current level shows the horizontal neighborhood connected to your current
 room. **Nearby levels** adds visited neighborhoods up to two floors above and
-below it, and saves that toggle in this browser. Adjacent floors use 80% room
-size and 65% opacity; floors two steps away use 65% size and 45% opacity.
-Ghost layers align horizontally with their connecting stair rooms and sit in
-compact bands above/below the main diagram, drawn behind it. They
-never resize or reposition the current neighborhood. Moving vertically makes
+below it, and saves that toggle in this browser. All room boxes have the same
+size. Each floor above is offset to the top-left by 1/8 room width and 1/4 room
+height; each floor below is offset to the bottom-right by the same amounts.
+Adjacent floors use 38% opacity and floors two steps away use 24%. Distant
+floors are drawn first, adjacent floors next, and the current floor last so it
+stays on top. Ghost names occupy the exposed top or bottom strip of each box.
+Each horizontal component is anchored to its connecting stair room; conflicting
+components on the same floor shift sideways to keep their rooms distinct.
+Ghost layers never resize or reposition the current neighborhood. Moving vertically makes
 the destination neighborhood the new current level. Floor relationships are
 inferred from up/down exits, since rooms do not store absolute floor numbers.
 Only consecutive upward or downward connections extend the preview; detours
 through another floor do not pull in disconnected neighborhoods on this floor.
 
 Room-corner **↑ / ↓** badges indicate available vertical exits, even before the
-destination is visited. They reveal no destination identity or geography.
+destination is visited. Up badges sit at the top-right and down badges at the
+bottom-right. They reveal no destination identity or geography.
 Taller room boxes allow two-line names; labels retain their screen font size on
 zoom. At crowded zoom levels, secondary labels disappear before becoming tiny.
 Hover or focus a room for its full name, or select it to see the full name and
@@ -55,9 +60,8 @@ change map state, and the panel hides stale geography when disconnected.
 
 This is a schematic connection diagram, not a geographic scale map. Compass
 directions guide placement; overlapping nodes are shifted so rooms remain
-distinct. Vertical exits use dashed right-angle connections routed around room
-boxes between floor previews, corner badges, and explicit directions in the
-selected room's exit list.
+distinct. Vertical relationships use the overlapping floor previews, corner
+badges, and explicit directions in the selected room's exit list.
 Landmarks, secret-route
 visibility rules, player tracking, and click-to-travel remain future work. The
 current world has no secret-exit model; a future one must filter server-side
@@ -70,6 +74,25 @@ and topology are server-owned. Snapshots currently include the whole discovered
 graph; larger worlds may require a bounded viewport API.
 
 ## Validation
+
+September 17, 2026 — overlapping floor preview implementation:
+
+- Equal-size floor boxes use 1/8-width horizontal and 1/4-height vertical
+  offsets, with current-floor rooms painted on top and labels in ghost strips.
+- All 419 backend tests and 36 frontend tests passed; lint, type checks,
+  frontend build, production configuration validation, and image builds passed.
+- The initial deployment gate stopped at a browser assertion that included the
+  current-room highlight stroke in its size comparison. The test now measures
+  SVG rectangle geometry independently of stroke width. All 14 browser workflows
+  passed on rerun, including exposed-label clicks, floor ordering, offsets,
+  bottom-right down badges, and mobile current-level-only behavior.
+  Desktop and mobile screenshots were reviewed.
+- Remaining deployment stages were resumed sequentially after browser success:
+  smoke load passed with zero failures in 280 measured commands, p95 455.2 ms,
+  and passing authoritative-state invariants. Local `docker compose up -d --wait`
+  passed, exit 0; all four services are healthy, backend health is `ok`, and the
+  frontend returns HTTP 200. No database migration or real AI calls were needed.
+
 
 September 16, 2026 — map readability and mobile current-level view:
 

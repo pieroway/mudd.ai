@@ -127,8 +127,9 @@ describe('Map', () => {
   })
 
   it('fits every displayed floor and returns to manual controls without moving rooms', () => {
-    const floors: MapState = { rooms: ['town', 'upper', 'lower'].map(id => ({ id, name: id })), exits: [
+    const floors: MapState = { rooms: ['town', 'upper', 'lower', 'far'].map(id => ({ id, name: id })), exits: [
       { room_id: 'town', direction: 'up', destination_room_id: 'upper' },
+      { room_id: 'upper', direction: 'east', destination_room_id: 'far' },
       { room_id: 'town', direction: 'down', destination_room_id: 'lower' },
     ] }
     const view = render(<MapPanel state={{ ...state, map: floors }} connected expanded onExpand={() => {}} />)
@@ -152,6 +153,30 @@ describe('Map', () => {
     expect(fit).toHaveAttribute('aria-pressed', 'false')
     fireEvent.click(screen.getByRole('button', { name: 'Center on me' }))
     expect(svg.getAttribute('viewBox')).toBe(initial)
+  })
+
+  it('draws same-size ghost boxes behind the current floor with labels in exposed strips and split badges', () => {
+    const floors: MapState = { rooms: ['town', 'upper', 'lower', 'attic'].map(id => ({ id, name: id })), exits: [
+      { room_id: 'town', direction: 'up', destination_room_id: 'upper' },
+      { room_id: 'town', direction: 'down', destination_room_id: 'lower' },
+      { room_id: 'upper', direction: 'up', destination_room_id: 'attic' },
+    ] }
+    const view = render(<MapPanel state={{ ...state, map: floors }} connected expanded onExpand={() => {}} />)
+    const layers = [...view.container.querySelectorAll('[data-level]')]
+    expect(layers[layers.length - 1]).toHaveAttribute('data-level', '0')
+    const current = view.container.querySelector('[data-room="town"]')!
+    for (const box of view.container.querySelectorAll('.map-room-box')) {
+      expect(box).toHaveAttribute('width', '176')
+      expect(box).toHaveAttribute('height', '80')
+    }
+    expect(view.container.querySelector('[data-room="upper"] .map-label')).toHaveAttribute('transform', 'translate(0, -30) scale(1)')
+    expect(view.container.querySelector('[data-room="lower"] .map-label')).toHaveAttribute('transform', 'translate(0, 30) scale(1)')
+    const badgeY = (direction: string) => Number(current.querySelector(`[data-exit="${direction}"]`)!
+      .getAttribute('transform')!.match(/translate\([^,]+, ([^)]+)\)/)![1])
+    expect(badgeY('up')).toBeLessThan(0)
+    expect(badgeY('down')).toBeGreaterThan(0)
+    fireEvent.click(screen.getByRole('button', { name: 'upper, level +1' }))
+    expect(screen.getByText('upper — known exits')).toBeInTheDocument()
   })
 
   it('keeps rooms distinct for loops, vertical connections, and disconnected components', () => {
