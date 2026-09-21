@@ -21,7 +21,8 @@ room. **Nearby levels** adds visited neighborhoods up to two floors above and
 below it, and saves that toggle in this browser. All room boxes have the same
 size. Each floor above is offset to the top-left by 1/8 room width and 1/4 room
 height; each floor below is offset to the bottom-right by the same amounts.
-Adjacent floors use 38% opacity and floors two steps away use 24%. Distant
+Adjacent floors use 38% opacity and floors two steps away use 24%. Preview
+floors brighten to 85% opacity when hovered or keyboard-focused. Distant
 floors are drawn first, adjacent floors next, and the current floor last so it
 stays on top. Ghost names occupy the exposed top or bottom strip of each box.
 Each horizontal component is anchored to its connecting stair room; conflicting
@@ -81,6 +82,24 @@ fallbacks. Map controls match preview 6: +, −, Center on me, Fit map, and a
 Nearby levels toggle with a status dot. Controls wrap on narrow panels.
 
 ## Validation
+
+September 20, 2026 - floor-transition repair:
+
+- Serialize SVG matrices explicitly as CSS `matrix(...)` values. Legacy
+  `SVGMatrix.toString()` produced `[object SVGMatrix]`, which browsers ignored;
+  floor slides now use valid transforms on desktop and mobile.
+- Browser regression checks reject invalid transform keyframes and retain the
+  movement, reduced-motion, and failed-command checks. Nearby floors brighten
+  to 85% opacity on hover or keyboard focus for easier inspection.
+- Set `AUTH_ATTEMPT_LIMIT=200` only in the isolated E2E stack because browser
+  workers share one source IP. Application defaults and rate-limit tests remain
+  unchanged.
+- `cmd /c scripts\deploy.bat` passed, exit 0: 419 backend tests, 36 frontend tests,
+  lint, type checks, builds, production configuration validation, and all 15
+  browser workflows. Desktop and mobile screenshots were reviewed.
+- Load smoke passed with zero failures in 278 measured commands, p95 614.24 ms,
+  and passing authoritative-state invariants. Local startup completed with all
+  services healthy. No schema changes or real AI calls were needed.
 
 September 17, 2026 — overlapping floor preview implementation:
 

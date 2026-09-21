@@ -7,6 +7,9 @@ test('visited floors stay ghosted, compact, and readable around the current neig
     Element.prototype.animate = function (frames, options) {
       if (this.matches('[data-room], [data-level]')) {
         const root = document.documentElement
+        if (Array.isArray(frames) && frames.some(frame => frame.transform && !CSS.supports('transform', frame.transform))) {
+          root.dataset.invalidFloorTransform = 'true'
+        }
         root.dataset.floorAnimations = String(Number(root.dataset.floorAnimations ?? 0) + 1)
         if (Array.isArray(frames) && frames[0].transform !== frames[1].transform) root.dataset.floorSlide = 'true'
         root.dataset.floorDuration = String(typeof options === 'object' ? options.duration : options)
@@ -106,6 +109,7 @@ test('visited floors stay ghosted, compact, and readable around the current neig
   await expect(panel.locator('[data-level="-1"] [data-room="map_hall"]')).toBeVisible()
   await expect(panel.locator('[data-level="2"] [data-room="map_roof"]')).toBeAttached()
   await expect(panel.locator('[data-room="map_tunnel"]')).toHaveCount(0)
+  await expect(page.locator('html')).not.toHaveAttribute('data-invalid-floor-transform')
   await expect(page.locator('html')).toHaveAttribute('data-floor-slide', 'true')
   await expect(page.locator('html')).toHaveAttribute('data-floor-duration', '260')
   await expect.poll(() => panel.locator('svg').evaluate(el => el.getAnimations({ subtree: true }).length)).toBe(0)
@@ -141,6 +145,9 @@ test('floor transitions respect reduced motion and animate a mobile return trip'
   await page.evaluate(() => {
     const original = Element.prototype.animate
     Element.prototype.animate = function (frames, options) {
+      if (Array.isArray(frames) && frames.some(frame => frame.transform && !CSS.supports('transform', frame.transform))) {
+        document.documentElement.dataset.invalidFloorTransform = 'true'
+      }
       document.documentElement.dataset.motionCount = String(Number(document.documentElement.dataset.motionCount ?? 0) + 1)
       return original.call(this, frames, options)
     }
@@ -158,6 +165,7 @@ test('floor transitions respect reduced motion and animate a mobile return trip'
   expect(animations[1].count).toBeGreaterThan(0)
   await move('down', 'map_hall')
   expect(animations[2].count).toBeGreaterThan(animations[1].count)
+  await expect(page.locator('html')).not.toHaveAttribute('data-invalid-floor-transform')
   await expect.poll(() => panel.locator('svg').evaluate(el => el.getAnimations({ subtree: true }).length)).toBe(0)
   await expect(panel.locator('[data-level]')).toHaveCount(1)
   // A failed up command in Garden and a horizontal move start no floor effects.

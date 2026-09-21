@@ -35,6 +35,8 @@ services:
       AI_NARRATION_ENABLED: "true"
       AI_NPC_ENABLED: "true"
       AI_WORLD_GENERATION_ENABLED: "true"
+      # Browser workers share one source IP; keep the production limit unchanged.
+      AUTH_ATTEMPT_LIMIT: 200
       APP_ENV: test
       LOG_LEVEL: WARNING
       TRUSTED_ORIGINS: http://host.docker.internal:15173

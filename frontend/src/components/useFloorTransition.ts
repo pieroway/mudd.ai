@@ -3,6 +3,9 @@ import type { MapState } from './MapPanel'
 
 interface RoomFrame { screen: DOMMatrix; opacity: string }
 
+// Some browsers return legacy SVGMatrix objects, whose toString() is not CSS.
+const cssMatrix = ({ a, b, c, d, e, f }: DOMMatrix) => `matrix(${a}, ${b}, ${c}, ${d}, ${e}, ${f})`
+
 // Animate only authoritative, directly connected vertical moves. Screen-space
 // snapshots account for changes in diagram origin, fitted zoom, and viewport.
 export function useFloorTransition(ref: RefObject<SVGSVGElement>, roomId: string | undefined, map: MapState | undefined) {
@@ -53,7 +56,7 @@ export function useFloorTransition(ref: RefObject<SVGSVGElement>, roomId: string
           : target.translate(edge.direction === 'up' ? -22 : 22, edge.direction === 'up' ? -20 : 20)
         effects.push(() => {
           running.current.push(element.animate([
-            { transform: start.toString() }, { transform: target.toString() },
+            { transform: cssMatrix(start) }, { transform: cssMatrix(target) },
           ], { duration: 260, easing: 'ease-out' }))
         })
       }
