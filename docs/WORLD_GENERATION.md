@@ -143,3 +143,17 @@ Ruff, mypy (51 files), frontend lint/types/19 tests/build, production-like build
 The final browser stage was rerun after a test-only correction; application code
 was unchanged from its passing unit checks. Both pre-migration archives were restored
 successfully in isolated containers. The agent made no live-provider requests.
+
+
+## Renaming a room
+
+Admins can use `/world rename <new name>` to rename their current room, for example
+`/world rename The Old Cedar Grove`. Quotes are not required. Names preserve case,
+trim surrounding whitespace, and must contain 1-100 characters without control
+characters. The change is saved immediately without AI calls or credit usage,
+even when generation is disabled. The room ID, description, exits, and objects
+stay intact.
+
+Other players in the room receive a notice and refreshed room/map state. Players
+elsewhere see the updated name on their next state refresh. Existing proposals
+whose source/world fingerprint changed must be generated again before approval.

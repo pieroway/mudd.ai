@@ -316,3 +316,57 @@ async def test_relative_proposal_direction_is_pinned_to_compass(session_factory)
     approved = await command(game, identity, f"/world approve {proposed['proposal_id']}")
     assert approved['success']
     assert 'You move east.' in (await command(game, identity, 'right'))['output']
+
+
+async def test_room_rename_persists_refreshes_map_and_invalidates_draft(session_factory):
+    game, provider, identity = await connect(session_factory)
+    proposal_id = await propose(game, identity)
+    bob = await register_account("Bob", "Password1!")
+    await game.connect_player("bob", "Bob", player_id=bob.player_id)
+    await game.execute("bob", "north")
+    original = await game.room_for_player(identity.player_id)
+    before = await counts(session_factory)
+    game.world_service.provider = None
+    reply = await command(game, identity, "/WORLD RENAME The Old Cedar Grove")
+    assert reply["success"] and "Forest -> The Old Cedar Grove" in reply["output"]
+    assert reply["events"] == [{"session_id": "bob", "text": "This room is now named The Old Cedar Grove."}]
+    assert "_narration_request" not in reply and len(provider.world_requests) == 1
+    assert (await usage_status(session_factory, identity.account_id, 50))["used"] == 1
+    assert "The Old Cedar Grove" in (await game.execute("bob", "look"))["output"]
+    state = await game.client_state("bob")
+    assert state.room_name == "The Old Cedar Grove"
+    assert any(room.name == "The Old Cedar Grove" for room in state.map.rooms)
+    async with session_factory() as session, session.begin():
+        await seed_world(session)
+    renamed = await game.room_for_player(identity.player_id)
+    assert renamed.id == original.id and renamed.description == original.description
+    assert renamed.name == "The Old Cedar Grove"
+    assert await counts(session_factory) == before
+    game.world_service.provider = provider
+    assert "stale" in (await command(game, identity, f"/world approve {proposal_id}"))["output"]
+
+
+@pytest.mark.parametrize("name", ["", "   ", "x" * 101, "Hi\x1b there", "Hi\nthere"])
+async def test_invalid_room_rename_preserves_name(session_factory, name):
+    game, provider, identity = await connect(session_factory)
+    reply = await command(game, identity, "/world rename " + name)
+    assert not reply["success"]
+    assert (await game.room_for_player(identity.player_id)).name == "Forest"
+    assert not provider.world_requests
+
+
+async def test_room_rename_requires_admin_and_active_session(session_factory):
+    game, _, identity = await connect(session_factory)
+    assert not (await game.execute("admin", "/world rename Forbidden"))["success"]
+    assert not (await game.execute("admin", "/world rename Forbidden",
+        account_id=identity.account_id, authorization_check=lambda: asyncio.sleep(0, result=False)))["success"]
+    await set_admin(session_factory, "Builder", False)
+    assert not (await command(game, identity, "/world rename Forbidden"))["success"]
+    assert (await game.room_for_player(identity.player_id)).name == "Forest"
+
+
+async def test_room_rename_accepts_maximum_length_and_trims_spaces(session_factory):
+    game, _, identity = await connect(session_factory)
+    name = "A" * 100
+    assert (await command(game, identity, "/world rename   " + name + "  "))["success"]
+    assert (await game.room_for_player(identity.player_id)).name == name

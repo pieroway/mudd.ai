@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.ai.provider import AIProvider, AIProviderError
-from app.ai.world import RoomProposalContent, WorldGenerationRequest
+from app.ai.world import RoomProposalContent, WorldGenerationRequest, plain_text
 from app.domain.directions import DIRECTIONS, OPPOSITE, resolve_direction
 from app.models import ExitRecord, ItemRecord, RoomRecord
 from app.models.world_proposal import WorldDeletionPlanRecord, WorldProposalRecord
@@ -26,6 +26,7 @@ WORLD_HELP = (
     "/world propose <direction> <brief> (up to 400 characters)\n"
     "/world proposals\n/world preview <proposal-id>\n"
     "/world approve <proposal-id>\n/world reject <proposal-id>"
+    "\n/world rename <new name> (up to 100 characters)"
     "\n/world describe <description> (up to five sentences, 2000 characters)"
 )
 
@@ -161,6 +162,24 @@ class WorldGenerationService:
                     session.add(ItemRecord(id=target_id, name=target_name, description=f'A {target_name} awaits attention.', room_id=player.current_room_id, portable=False))
                     session.add(ItemRecord(id=tool_id, name=tool_name, description=f'A {tool_name} made for careful use.', room_id=player.current_room_id, portable=True, interaction_target_id=target_id, interaction_verb=verb))
                     return result(f'Created {tool_name} and {target_name}. Take the tool, then {verb} the target with it.', True)
+                if arguments[:1] == ["rename"]:
+                    if len(arguments) != 2:
+                        return result("Usage: /world rename <new name> (up to 100 characters).")
+                    try:
+                        name = plain_text(arguments[1]).strip()
+                    except ValueError:
+                        return result("Use a room name of 1 to 100 characters without control characters.")
+                    if not 1 <= len(name) <= 100:
+                        return result("Use a room name of 1 to 100 characters without control characters.")
+                    await repo.lock_world()
+                    source, _, _ = await repo.source(player.current_room_id)
+                    if not await authorization_check():
+                        return result("Session expired. Please sign in again.")
+                    old_name = source.name
+                    source.name = name
+                    return result(f"Room renamed: {old_name} -> {name}", True,
+                                  _world_source=source.id,
+                                  _world_notice=f"This room is now named {name}.")
                 if arguments[:1] == ["describe"]:
                     if len(arguments) != 2:
                         return result("Usage: /world describe <description> (up to five sentences, 2000 characters).")
