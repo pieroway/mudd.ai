@@ -226,6 +226,52 @@ describe('Terminal', () => {
     expect(screen.getByText('> north')).toBeInTheDocument()
   })
 
+  it('renders structured help as grouped command tables', () => {
+    render(<Terminal username="Alan" />)
+
+    act(() => {
+      MockWebSocket.instances[0].receive({
+        type: 'game_output',
+        text: 'Plain-text help fallback',
+        help_groups: [
+          {
+            title: 'MOVEMENT',
+            entries: [
+              { command: 'north / n', description: 'Move north.' },
+              { command: 'south / s', description: 'Move south.' },
+            ],
+          },
+          {
+            title: 'ITEMS',
+            entries: [
+              { command: 'take / get <item>', description: 'Pick up a portable item.' },
+            ],
+          },
+        ],
+      })
+    })
+
+    expect(screen.getByRole('heading', { name: 'Available Commands' })).toBeInTheDocument()
+    expect(screen.getByRole('table', { name: 'MOVEMENT' })).toHaveTextContent('north / n')
+    expect(screen.getByRole('table', { name: 'ITEMS' })).toHaveTextContent('Pick up a portable item.')
+    expect(screen.getByTestId('transcript')).not.toHaveTextContent('Plain-text help fallback')
+  })
+
+  it('preserves blank lines in plain-text output', () => {
+    render(<Terminal username="Alan" />)
+
+    act(() => {
+      MockWebSocket.instances[0].receive({
+        type: 'game_output',
+        text: 'Before blank line\n\nAfter blank line',
+      })
+    })
+
+    const firstLine = screen.getByText('Before blank line')
+    expect(firstLine.nextElementSibling?.textContent).toBe('\u00a0')
+    expect(firstLine.nextElementSibling?.nextElementSibling).toHaveTextContent('After blank line')
+  })
+
   it('exposes structured command-source metadata without adding transcript text', () => {
     render(<Terminal username="Alan" />)
 

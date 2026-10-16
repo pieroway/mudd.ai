@@ -1,5 +1,6 @@
 from __future__ import annotations
 from app.domain.directions import HORIZONTAL, resolve_direction
+from app.domain.help import format_help, player_help_groups
 
 
 def _find_item(items, target, player=None, *, room_only=False, owned_only=False, container_id=None):
@@ -415,21 +416,11 @@ def execute_command(command, player, world):
         return {"success": True, "output": f"You extinguish the {item.name}."}
 
     if action == "help":
+        help_groups = player_help_groups()
         return {
             "success": True,
-            "output": (
-                "Available commands:\n"
-                "look, north, south, east, west, up, down, inventory,\n"
-                "left, right, forward, backwards (relative to last horizontal move; look shows facing),\n"
-                "take, take <item> from <container>, drop, use, examine, open, close, extinguish,\n"
-                "put <item> in <container>, look in <container>, give <item> to <player>,\n"
-                "say <message>, say to <player> <message>, tell <player> <message>,\n"
-                "talk <npc> <message> (private NPC conversation),\n"
-                "who [page],  help\n\n"
-                "Slash commands:\n"
-                "/theme light|dark|techno\n"
-                "/debug on|off\n"
-            ),
+            "output": format_help(help_groups),
+            "help_groups": help_groups,
         }
 
     return {"success": False, "output": "Unknown command."}

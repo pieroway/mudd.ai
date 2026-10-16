@@ -33,14 +33,23 @@ async def test_new_accounts_default_to_non_admin_and_narration_off(session_facto
 
 async def test_help_includes_admin_commands_only_for_current_admins(session_factory):
     identity, _, game = await connect(session_factory)
-    assert "/ai" not in (await game.execute("Alan", "help", account_id=identity.account_id))["output"]
+    player_help = await game.execute("Alan", "help", account_id=identity.account_id)
+    assert "/ai" not in player_help["output"]
+    assert "AI ADMINISTRATION" not in {
+        group["title"] for group in player_help["help_groups"]
+    }
     await set_admin(session_factory, "Alan", True)
-    assert "Admin only:" in (
-        await game.execute("Alan", "help", account_id=identity.account_id)
-    )["output"]
-    assert "ai narration on|off" in (
-        await game.execute("Alan", "help", account_id=identity.account_id)
-    )["output"]
+    admin_help = await game.execute("Alan", "help", account_id=identity.account_id)
+    admin_groups = {
+        group["title"]: group["entries"] for group in admin_help["help_groups"]
+    }
+    assert "AI ADMINISTRATION" in admin_groups
+    assert "WORLD BUILDING" in admin_groups
+    assert "/ai narration on / off" in admin_help["output"]
+    assert any(
+        entry["command"] == "/world confirm-delete <token>"
+        for entry in admin_groups["WORLD BUILDING"]
+    )
     await set_admin(session_factory, "Alan", False)
     assert "/ai" not in (await game.execute("Alan", "help", account_id=identity.account_id))["output"]
 

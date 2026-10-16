@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import Transcript from './Transcript'
+import Transcript, { isHelpGroups, type TranscriptEntry } from './Transcript'
 import CommandPrompt from './CommandPrompt'
 import MapPanel from './MapPanel'
 import InventoryPanel, { ClientState, isClientState } from './InventoryPanel'
@@ -20,6 +20,7 @@ interface GameMessage {
   metadata?: {
     command_source?: 'classic' | 'ai'
   }
+  help_groups?: unknown
 }
 
 interface TerminalProps {
@@ -37,7 +38,7 @@ function getSavedTheme(): Theme {
 }
 
 export default function Terminal({ username }: TerminalProps) {
-  const [transcript, setTranscript] = useState<string[]>([])
+  const [transcript, setTranscript] = useState<TranscriptEntry[]>([])
   const [ws, setWs] = useState<WebSocket | null>(null)
   const [connected, setConnected] = useState(false)
   const [state, setState] = useState<ClientState>()
@@ -96,7 +97,11 @@ export default function Terminal({ username }: TerminalProps) {
         }
       } else if (message.type === 'game_output') {
         output = message.text || ''
-        if (message.narration_pending === true) {
+        const helpGroups = message.help_groups
+        if (isHelpGroups(helpGroups)) {
+          setTranscript(prev => [...prev, { type: 'help', groups: helpGroups }])
+          output = ''
+        } else if (message.narration_pending === true) {
           pendingOutputs.push(output)
           output = ''
         }

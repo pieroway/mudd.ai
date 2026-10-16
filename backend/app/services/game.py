@@ -17,6 +17,7 @@ from app.domain.player import Player
 from app.domain.client_state import ClientState
 from app.domain.room import Room
 from app.domain.directions import resolve_direction
+from app.domain.help import admin_help_groups, format_help
 from app.engine.executor import execute_command
 from app.repositories.game import GameRepository
 from app.services.ai_usage import reserve_attempt, usage_status
@@ -24,7 +25,7 @@ from app.services.ai_credits import grant_credits
 from app.services.ai_preferences import account_is_admin, configure_narration, narration_allowed
 from app.repositories.npc import NPCRepository
 from app.services.npc import NPCService
-from app.services.world_generation import WORLD_HELP, WorldGenerationService
+from app.services.world_generation import WorldGenerationService
 
 
 class UsernameInUseError(ValueError):
@@ -235,11 +236,9 @@ class GameService:
             result = await self._execute_locked(session_id, player_id, command, narrate=narrate)
         result["metadata"] = {"command_source": command_source}
         if command.get("action") == "help" and await account_is_admin(self.session_factory, account_id):
-            result["output"] += (
-                "Admin only: \n/ai narration on|off\n"
-                "/ai credits add <username> [units] (default 50; quote names with spaces)"
-                "\n" + WORLD_HELP
-            )
+            groups = [*result.get("help_groups", []), *admin_help_groups()]
+            result["help_groups"] = groups
+            result["output"] = format_help(groups)
         return result
 
     async def _execute_locked(

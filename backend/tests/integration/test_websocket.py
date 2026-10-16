@@ -55,6 +55,21 @@ def test_admin_grants_refresh_only_recipient_and_support_self(game_client):
         assert recipient.receive_json()["ai_usage"]["bonus_credits"] == 75
 
 
+def test_help_sends_grouped_command_tables(game_client):
+    with game_client.websocket_connect("/ws?username=HelpReader") as socket:
+        socket.receive_json()
+        socket.send_text("help")
+        reply = socket.receive_json()
+
+    assert reply["success"] is True
+    groups = {group["title"]: group["entries"] for group in reply["help_groups"]}
+    assert "MOVEMENT" in groups
+    assert "ITEMS" in groups
+    assert "INTERFACE" in groups
+    assert "AI ADMINISTRATION" not in groups
+    assert any(entry["command"] == "inventory / i" for entry in groups["LOOKING AND STATUS"])
+
+
 def test_npc_dialogue_is_private_and_memory_survives_reconnect(game_client, monkeypatch):
     provider = FakeAIProvider()
     monkeypatch.setattr(websocket_api.game_service.npc_service, "provider", provider)

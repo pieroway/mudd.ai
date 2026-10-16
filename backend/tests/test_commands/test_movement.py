@@ -47,10 +47,32 @@ def test_help_lists_gameplay_and_client_slash_commands():
     result = execute_command(parse_command("help"), player, world)
 
     assert result["success"] is True
-    assert "Available commands:\nlook" in result["output"]
-    assert "Slash commands:" in result["output"]
-    assert "/theme light|dark|techno" in result["output"]
-    assert "/debug on|off" in result["output"]
+    assert result["output"].startswith("Available commands\n\nMOVEMENT")
+    assert (
+        "Turn and move relative to your facing direction.\n\nLOOKING AND STATUS"
+        in result["output"]
+    )
+    groups = {group["title"]: group["entries"] for group in result["help_groups"]}
+    assert set(groups) == {
+        "MOVEMENT",
+        "LOOKING AND STATUS",
+        "ITEMS",
+        "OBJECT INTERACTIONS",
+        "COMMUNICATION",
+        "INTERFACE",
+    }
+    assert {
+        "command": "take / get <item>",
+        "description": "Pick up a portable item.",
+    } in groups["ITEMS"]
+    assert any(
+        entry["command"] == "/map show / hide"
+        for entry in groups["INTERFACE"]
+    )
+    assert any(
+        entry["command"] == "/debug on / off"
+        for entry in groups["INTERFACE"]
+    )
 
 
 def test_lit_carried_torch_reveals_adjacent_room_names():

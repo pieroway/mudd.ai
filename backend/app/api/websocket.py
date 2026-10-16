@@ -224,6 +224,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         "narration_pending": narration_request is not None,
                         "room_id": result.get("room_id"),
                         "metadata": result.get("metadata", {}),
+                        "help_groups": result.get("help_groups"),
                         "state": (await game_service.client_state(session_id)).model_dump(),
                         "ai_usage": await usage_status(
                             game_service.session_factory,
