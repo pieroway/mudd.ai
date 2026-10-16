@@ -1,11 +1,14 @@
 import asyncio
 
 import pytest
+from sqlalchemy import select
 
 from app.ai.fake import FakeAIProvider
 from app.ai.models import InterpretCommandRequest, InterpretCommandResponse
 from app.ai.provider import AIProvider
 from app.services.game import GameService, UsernameInUseError
+from app.models import ItemRecord, ItemTemplateRecord
+from app.repositories.game import GameRepository
 
 
 @pytest.mark.asyncio
@@ -22,6 +25,82 @@ async def test_reconnect_restores_player_location_and_inventory(session_factory)
     assert second_connection.id == first_connection.id
     assert second_connection.current_room_id == "forest"
     assert second_connection.inventory == ["torch"]
+
+
+@pytest.mark.asyncio
+async def test_template_metadata_and_instance_state_survive_repository_reload(session_factory):
+    service = GameService(session_factory)
+    player = await service.connect_player("connection-1", "Alan")
+
+    async with session_factory() as session:
+        async with session.begin():
+            session.add(
+                ItemTemplateRecord(
+                    id="weapon_sword_short",
+                    name="short sword",
+                    aliases=["sword", "blade"],
+                    categories=["weapon", "blade"],
+                    short_description="a short iron sword",
+                    examine_description="The blade is practical and unadorned.",
+                    material="iron",
+                    physical={"weight_kg": 1.4, "size": "medium", "portable": True},
+                    capabilities={
+                        "takeable": {},
+                        "wieldable": {"slots": ["left_hand", "right_hand"]},
+                        "breakable": {"maximum_durability": 100},
+                    },
+                    default_state={"wet": False, "durability": 100},
+                    value={"amount": 35, "currency": "copper"},
+                )
+            )
+            await session.flush()
+            session.add(
+                ItemRecord(
+                    id="sword_1",
+                    template_id="weapon_sword_short",
+                    name="notched short sword",
+                    description="The blade has seen hard use.",
+                    room_id="town_square",
+                    state_data={"wet": False},
+                    condition={
+                        "durability": 73,
+                        "maximum_durability": 100,
+                        "broken": False,
+                    },
+                    provenance={"source": "procedural"},
+                )
+            )
+
+    async with session_factory() as session:
+        async with session.begin():
+            repository = GameRepository(session)
+            player_record = await repository.load_player_for_update(player.id)
+            world, domain_player = await repository.load_world(player_record, lock_items=True)
+            sword = world["items"]["sword_1"]
+            assert sword.template_id == "weapon_sword_short"
+            assert sword.name == "notched short sword"
+            assert sword.aliases == ("sword", "blade")
+            assert sword.weight_kg == 1.4
+            assert sword.has_capability("wieldable")
+            assert sword.durability == 73
+
+            sword.state["wet"] = True
+            sword.durability = 61
+            sword.provenance["generation_reason"] = "migration test"
+            await repository.persist_world(
+                world, domain_player, player_record, persist_items=True
+            )
+
+    async with session_factory() as session:
+        record = (
+            await session.scalars(select(ItemRecord).where(ItemRecord.id == "sword_1"))
+        ).one()
+        assert record.state_data == {"wet": True}
+        assert record.condition["durability"] == 61
+        assert record.provenance == {
+            "source": "procedural",
+            "generation_reason": "migration test",
+        }
 
 
 @pytest.mark.asyncio

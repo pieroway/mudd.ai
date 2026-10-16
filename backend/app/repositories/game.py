@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from uuid import uuid4
 
 from sqlalchemy import select, text
@@ -7,13 +8,14 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.item import Item
+from app.domain.item_template import ItemTemplate
 from app.domain.client_state import ClientState, InventoryEntry, MapState, MapRoom, MapExit
 from app.models.game import PlayerDiscoveryRecord
 from app.models.game import DoorRecord
 from app.domain.door import Door
 from app.domain.player import Player
 from app.domain.room import Room
-from app.models import ExitRecord, ItemRecord, PlayerRecord, RoomRecord
+from app.models import ExitRecord, ItemRecord, ItemTemplateRecord, PlayerRecord, RoomRecord
 
 
 class GameRepository:
@@ -122,6 +124,31 @@ class GameRepository:
         if lock_items:
             item_statement = item_statement.with_for_update()
         item_records = (await self.session.scalars(item_statement)).all()
+        template_records = (await self.session.scalars(select(ItemTemplateRecord))).all()
+        templates = {
+            template_record.id: ItemTemplate.model_validate(
+                {
+                    "template_id": template_record.id,
+                    "name": template_record.name,
+                    "aliases": template_record.aliases,
+                    "categories": template_record.categories,
+                    "description": {
+                        "short": template_record.short_description,
+                        "examine": template_record.examine_description,
+                    },
+                    "material": template_record.material,
+                    "physical": template_record.physical,
+                    "capabilities": template_record.capabilities,
+                    "default_state": template_record.default_state,
+                    "value": template_record.value,
+                    "rarity": template_record.rarity,
+                    "equipment_slots": template_record.equipment_slots,
+                    "stackable": template_record.stackable,
+                    "attributes": template_record.attributes,
+                }
+            )
+            for template_record in template_records
+        }
 
         rooms = {
             record.id: Room(
@@ -136,28 +163,63 @@ class GameRepository:
             if record.door_id:
                 rooms[record.room_id].doors[record.direction] = doors[record.door_id]
 
-        items = {
-            record.id: Item(
-                id=record.id,
-                name=record.name,
-                description=record.description,
-                room_id=record.room_id,
-                owned_by=record.owner_id,
-                container_id=record.container_id,
-                can_open=record.can_open,
-                is_open=record.is_open,
-                can_use=record.can_use,
-                use_message=record.use_message,
-                is_light_source=record.is_light_source,
-                is_lit=record.is_lit,
-                fuel_remaining=record.fuel_remaining,
-                portable=record.portable,
-                interaction_target_id=record.interaction_target_id,
-                is_clean=record.is_clean,
-                interaction_verb=record.interaction_verb, interaction_state=record.interaction_state,
+        items: dict[str, Item] = {}
+        for item_record in item_records:
+            template = templates.get(item_record.template_id) if item_record.template_id else None
+            condition = deepcopy(item_record.condition)
+            durability_value = condition.get("durability")
+            maximum_durability_value = condition.get("maximum_durability")
+            durability = (
+                durability_value
+                if isinstance(durability_value, int) and not isinstance(durability_value, bool)
+                else None
             )
-            for record in item_records
-        }
+            maximum_durability = (
+                maximum_durability_value
+                if isinstance(maximum_durability_value, int)
+                and not isinstance(maximum_durability_value, bool)
+                else None
+            )
+            items[item_record.id] = Item(
+                id=item_record.id,
+                name=item_record.name,
+                description=item_record.description,
+                room_id=item_record.room_id,
+                owned_by=item_record.owner_id,
+                container_id=item_record.container_id,
+                can_open=item_record.can_open,
+                is_open=item_record.is_open,
+                can_use=item_record.can_use,
+                use_message=item_record.use_message,
+                is_light_source=item_record.is_light_source,
+                is_lit=item_record.is_lit,
+                fuel_remaining=item_record.fuel_remaining,
+                portable=item_record.portable,
+                interaction_target_id=item_record.interaction_target_id,
+                is_clean=item_record.is_clean,
+                interaction_verb=item_record.interaction_verb,
+                interaction_state=item_record.interaction_state,
+                template_id=item_record.template_id,
+                aliases=tuple(template.aliases) if template else (),
+                categories=tuple(template.categories) if template else (),
+                material=template.material if template else None,
+                weight_kg=template.physical.weight_kg if template else None,
+                size=template.physical.size if template else None,
+                dimensions_cm=(
+                    template.physical.dimensions_cm.model_dump() if template else {}
+                ),
+                capabilities=deepcopy(template.capabilities) if template else {},
+                state=deepcopy(item_record.state_data),
+                quantity=item_record.quantity,
+                durability=durability,
+                maximum_durability=maximum_durability,
+                condition=condition,
+                relationships=deepcopy(item_record.relationships),
+                discovery=deepcopy(item_record.discovery),
+                provenance=deepcopy(item_record.provenance),
+                created_at=item_record.created_at,
+                updated_at=item_record.updated_at,
+            )
         inventory = [record.id for record in item_records if record.owner_id == player_record.id]
         player = Player(
             id=player_record.id,
@@ -201,6 +263,17 @@ class GameRepository:
             record.fuel_remaining = domain_item.fuel_remaining
             record.is_clean = domain_item.is_clean
             record.interaction_state = domain_item.interaction_state
+            record.state_data = deepcopy(domain_item.state)
+            condition = deepcopy(domain_item.condition)
+            if domain_item.durability is not None:
+                condition["durability"] = domain_item.durability
+            if domain_item.maximum_durability is not None:
+                condition["maximum_durability"] = domain_item.maximum_durability
+            record.condition = condition
+            record.quantity = domain_item.quantity
+            record.relationships = deepcopy(domain_item.relationships)
+            record.discovery = deepcopy(domain_item.discovery)
+            record.provenance = deepcopy(domain_item.provenance)
 
     async def load_player(self, player_id: str) -> Player:
         player_record = await self.session.get(PlayerRecord, player_id)

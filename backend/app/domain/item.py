@@ -3,6 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from dataclasses import dataclass
 from dataclasses import field
+from datetime import datetime
 from typing import Any
 
 from app.domain.item_template import ItemTemplate
@@ -40,7 +41,14 @@ class Item:
     quantity: int = 1
     durability: int | None = None
     maximum_durability: int | None = None
+    condition: dict[str, Any] = field(default_factory=dict)
+    relationships: dict[str, Any] = field(default_factory=dict)
+    discovery: dict[str, Any] = field(
+        default_factory=lambda: {"hidden": False, "discovered_by": []}
+    )
     provenance: dict[str, Any] = field(default_factory=dict)
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
     @classmethod
     def from_template(
@@ -65,6 +73,11 @@ class Item:
         breakable = capabilities.get("breakable", {})
         maximum_durability = breakable.get("maximum_durability")
         durability = state.get("durability", maximum_durability)
+        condition = {
+            "durability": durability,
+            "maximum_durability": maximum_durability,
+            "broken": bool(state.get("broken", False)),
+        }
         dimensions = template.physical.dimensions_cm.model_dump()
 
         return cls(
@@ -93,6 +106,7 @@ class Item:
             quantity=quantity,
             durability=durability,
             maximum_durability=maximum_durability,
+            condition=condition,
             provenance=deepcopy(provenance or {"source": "authored"}),
         )
 
