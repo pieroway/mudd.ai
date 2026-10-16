@@ -1,20 +1,25 @@
 # AI-Enhanced MUD
 
-AI interpretation, optional narration, and NPC conversations share a [persistent daily account allowance](docs/AI_USAGE.md),
-configured with `AI_DAILY_REQUEST_LIMIT` (default 50 units). Admins can add persistent
-bonus credits using `/ai credits add <username> [units]`, including to themselves;
-the default grant is 50 units. Classic commands remain
-available after the allowance is exhausted.
+AI interpretation, optional narration, and NPC conversations share a
+[persistent daily account allowance](docs/AI_USAGE.md),
+configured with `AI_DAILY_REQUEST_LIMIT` (default 50 units). Admins can add
+persistent bonus credits using `/ai credits add <username> [units]`, including
+to themselves; the default grant is 50 units. Classic commands remain available
+after the allowance is exhausted.
 
-A persistent multiplayer text-based game (MUD) with a deterministic authoritative game engine and controlled AI layers.
+A persistent multiplayer text-based game (MUD) with a deterministic
+authoritative game engine and controlled AI layers.
 
-**Status:** Milestones One, Two, Three, and the first UI milestone complete; M4 NPC and the first M5 room-generation increment deployed locally — real AI remains development-only
+**Status:** Milestones One, Two, Three, and the first UI milestone complete; M4
+NPC and the first M5 room-generation increment deployed locally — real AI
+remains development-only
 
 The [discovered-world map](docs/MAP.md) is also deployed locally, with persistent
 visited rooms, known exits, current position, and zoom/pan controls.
 
-Admins can use `/world generate` for a bounded neighborhood with buildings, doors,
-and objects; see [review and publication commands](docs/NEIGHBORHOODS.md).
+Admins can use `/world generate` for a bounded neighborhood with buildings,
+doors, and objects; see
+[review and publication commands](docs/NEIGHBORHOODS.md).
 
 ## Development with Codex
 
@@ -30,6 +35,7 @@ reviewed, and the complete test gate must pass before deployment.
 ## Quick Start
 
 ### Prerequisites
+
 - Docker Desktop (includes Docker and Docker Compose)
 - Git
 
@@ -49,13 +55,15 @@ make dev
 
 ### Access the Game
 
-- **Frontend (MUD Client):** http://localhost:5173
-- **Backend (API):** http://localhost:8000
-- **Health Check:** http://localhost:8000/health
-- **Database (psql):** `psql -h localhost -U muduser -d muddb` (password: mudpass)
+- **Frontend (MUD Client):** <http://localhost:5173>
+- **Backend (API):** <http://localhost:8000>
+- **Health Check:** <http://localhost:8000/health>
+- **Database (psql):** `psql -h localhost -U muduser -d muddb` (password:
+  mudpass)
 
 PostgreSQL is exposed only on the host loopback interface for local development.
-Redis is available only to containers on the Compose network and has no host port.
+Redis is available only to containers on the Compose network and has no host
+port.
 
 ## Development Commands
 
@@ -106,7 +114,8 @@ development reload processes.
 ```bash
 cp .env.production.example .env.production
 # Replace every change-me value, then set PUBLIC_URL and CADDY_HOST for deployment.
-docker compose --env-file .env.production -f compose.production.yaml up -d --build --wait
+docker compose --env-file .env.production -f compose.production.yaml \
+  up -d --build --wait
 ```
 
 Caddy uses an internal certificate authority by default, which is suitable for
@@ -117,7 +126,7 @@ development stack.
 
 ## Project Structure
 
-```
+```text
 mudd.ai/
 ├── backend/              # Python FastAPI backend
 │   ├── app/             # Application code
@@ -160,11 +169,13 @@ The game consists of layers:
 6. **Database** — PostgreSQL (authoritative store)
 7. **AI** — Abstraction layer (FakeAIProvider for development)
 
-**Core Principle:** THE GAME ENGINE OWNS REALITY. AI may propose, interpret, or describe, but never directly decides authoritative game state.
+**Core Principle:** THE GAME ENGINE OWNS REALITY. AI may propose, interpret, or
+describe, but never directly decides authoritative game state.
 
 ## Database Setup
 
-For manual backups, nightly Windows scheduling, and safe restore into a new database,
+For manual backups, nightly Windows scheduling, and safe restore into a new
+database,
 see [database backup and recovery](docs/BACKUPS.md).
 
 PostgreSQL runs in Docker. No local installation needed.
@@ -183,9 +194,10 @@ make dev  # Rebuilds fresh
 
 Player location and inventory are stored in PostgreSQL. Usernames are normalized
 case-insensitively and must be unique. Players register an account with a password
-of 8–128 characters, including a number (0-9) and a special character, then sign in to their character. Each account owns one
-character initially. See [authentication](docs/AUTHENTICATION.md) for session
-behavior and how to secure existing characters after upgrading.
+of 8–128 characters, including a number (0-9) and a special character, then sign
+in to their character. Each account owns one character initially. See
+[authentication](docs/AUTHENTICATION.md) for session behavior and how to secure
+existing characters after upgrading.
 
 ## Testing
 
@@ -196,7 +208,8 @@ behavior and how to secure existing characters after upgrading.
 make test
 
 # Run specific test file
-docker compose -f compose.test.yaml run --rm backend_test pytest tests/test_parser.py -v
+docker compose -f compose.test.yaml run --rm backend_test \
+  pytest tests/test_parser.py -v
 
 # Run with coverage
 docker compose -f compose.test.yaml run --rm backend_test pytest --cov=app -v
@@ -229,7 +242,8 @@ DATABASE_URL=postgresql+...      # Database connection
 REDIS_URL=redis://...            # Redis connection
 
 AI_PROVIDER=fake                 # fake, anthropic, openai
-AI_COMMAND_INTERPRETATION_ENABLED=false  # Set true to enable the configured provider
+# Set true to enable the configured provider
+AI_COMMAND_INTERPRETATION_ENABLED=false
 AI_COMMAND_TIMEOUT_SECONDS=5     # Hard limit for one interpretation request
 AI_NARRATION_ENABLED=false       # Enable AI narration
 ```
@@ -256,7 +270,8 @@ players should not submit secrets or sensitive personal information.
 ### Local OpenAI command interpretation
 
 Optional AI narration is implemented separately; see the
-[M3 plan](MILESTONE_THREE_PLAN.md) for configuration, privacy, and fallback behavior.
+[M3 plan](MILESTONE_THREE_PLAN.md) for configuration, privacy, and fallback
+behavior.
 Set `AI_NARRATION_ENABLED=true` to make narration available on the server. Each
 account defaults to off; admins use `/ai narration on|off` to save their own
 preference. Help shows admin-only commands only to admins. See
@@ -270,34 +285,39 @@ Set `AI_PROVIDER=openai`, `AI_COMMAND_INTERPRETATION_ENABLED=true`,
 Choose a model available to your API project that supports the Responses API and
 Structured Outputs. No model or paid calls are selected automatically.
 After the required test gate passes, recreate the development backend with
-`docker compose up -d --no-deps backend`. Never put the key in frontend variables,
+`docker compose up -d --no-deps backend`. Never put the key in frontend
+variables,
 source control, screenshots, or shared `docker compose config` output.
 
 The adapter sends a fixed instruction, the command schema, and only the current
 unrecognized input. It sends no player identity, room state, inventory, history,
 or tools. It requests `store=false`; this is not a promise of zero retention by
-the provider. See [OpenAI data controls](https://platform.openai.com/docs/guides/your-data)
-and [Structured Outputs](https://platform.openai.com/docs/guides/structured-outputs).
+the provider. See the
+[OpenAI data controls](https://platform.openai.com/docs/guides/your-data) and
+[Structured Outputs](https://platform.openai.com/docs/guides/structured-outputs).
 The prompt instructs the model to abstain from destinations such as “walk to the
 docks” because it has no map context; try “please head north.” This is a prompt
 constraint, not a guarantee of correct interpretation. The engine still checks
 whether any proposed movement is legal.
 
 Defaults are a 5-second total deadline, 4,096 input bytes, 512 output tokens,
-two concurrent requests, and 100 attempted requests per backend process lifetime.
+two concurrent requests, and 100 attempted requests per backend process
+lifetime.
 Configure these with `AI_COMMAND_TIMEOUT_SECONDS`, `AI_COMMAND_MAX_INPUT_BYTES`,
 `AI_COMMAND_MAX_OUTPUT_TOKENS`, `AI_COMMAND_MAX_CONCURRENT`, and
 `AI_COMMAND_MAX_REQUESTS`. Set the request cap to `0` to disable the shared
-process-lifetime cap while retaining daily account allowances and bonus-credit checks;
-the example environment uses this mode. Positive values still enforce a process cap.
-Narration failures log a fixed reason, HTTP status when available, and elapsed time,
-without prompts, response bodies, credentials, or account identifiers.
+process-lifetime cap while retaining daily account allowances and bonus-credit
+checks; the example environment uses this mode. Positive values still enforce a
+process cap. Narration failures log a fixed reason, HTTP status when available,
+and elapsed time, without prompts, response bodies, credentials, or account
+identifiers.
 Failed attempts count; requests are never retried and
 redirects are not followed. Responses exceeding 64 KiB, refusals, incomplete
 output, and invalid commands fail safely. Classic commands remain available when
 AI capacity is exhausted. Limits reset on restart and multiply across processes;
 they are local safeguards, not persistent billing limits. Set appropriate project
-usage controls separately. The separate [daily account allowance](docs/AI_USAGE.md)
+usage controls separately. The separate
+[daily account allowance](docs/AI_USAGE.md)
 persists across restarts; shared monetary accounting remains future work.
 Real interpretation is blocked outside development.
 
@@ -308,8 +328,8 @@ The browser command `/debug on` appends safe structured WebSocket diagnostics to
 the transcript; `/debug off` disables them. Debug output includes message type,
 success, room identifier, and command source when available. It deliberately
 excludes raw payloads, command text, private messages, and AI prompts. The command
-is available to all authenticated users; restricting diagnostics to administrators
-is tracked as future work. The `/ai` command is already admin-only.
+is available to all authenticated users; restricting diagnostics to
+administrators is tracked as future work. The `/ai` command is already admin-only.
 
 ### Talk with Edric
 
@@ -318,13 +338,14 @@ M4 adds Edric, an innkeeper with private per-character memory. With
 `talk edric hello` or `talk edric what do you know about the inn?`.
 He remembers the latest successful exchange across reconnects and gradually
 recognizes returning visitors. Each attempted reply uses one shared AI request.
-See the [M4 plan](MILESTONE_FOUR_PLAN.md) for configuration, privacy, and limits.
+See the [M4 plan](MILESTONE_FOUR_PLAN.md) for configuration, privacy, and
+limits.
 
 ## Development Workflow
 
 1. **Make a small change** to backend or frontend
 2. **Run tests** — `make test`
-3. **Check the app** — visit http://localhost:5173
+3. **Check the app** — visit <http://localhost:5173>
 4. **Commit and push** when tests pass
 
 **Never deploy without passing tests.**
@@ -332,6 +353,7 @@ See the [M4 plan](MILESTONE_FOUR_PLAN.md) for configuration, privacy, and limits
 ## Troubleshooting
 
 ### Containers won't start
+
 ```bash
 docker compose down -v
 docker system prune -f
@@ -339,11 +361,13 @@ make dev
 ```
 
 ### Database connection error
+
 ```bash
 docker compose exec postgres psql -U muduser -d muddb -c "SELECT 1"
 ```
 
 ### Port already in use
+
 ```bash
 # Kill process on port 8000 (backend)
 lsof -ti:8000 | xargs kill -9
@@ -355,6 +379,7 @@ make dev
 ```
 
 ### Rebuild containers
+
 ```bash
 docker compose build --no-cache
 make dev
@@ -364,10 +389,16 @@ make dev
 
 - **M1** (Complete): Deterministic 5-room MUD with terminal client
 - **M2** (Complete): AI natural-language command interpretation
-- **UI** (Complete): Modern command-first client with live status and inventory panels; full deployment gate passed and local stack deployed September 6, 2026
-- **M3** (Complete): Optional AI narration with authoritative results preserved; full deployment gate passed September 6, 2026
-- **M4** (Deployed locally; owner confirmed working): Edric, an innkeeper with private conversations, bounded knowledge, and persistent memory
-- **M5** (First increment deployed locally): Admin-reviewed room generation, atmospheric descriptions, admin description editing, and persistent relative movement
+- **UI** (Complete): Modern command-first client with live status and
+  inventory panels; full deployment gate passed and local stack deployed
+  September 6, 2026
+- **M3** (Complete): Optional AI narration with authoritative results
+  preserved; full deployment gate passed September 6, 2026
+- **M4** (Deployed locally; owner confirmed working): Edric, an innkeeper with
+  private conversations, bounded knowledge, and persistent memory
+- **M5** (First increment deployed locally): Admin-reviewed room generation,
+  atmospheric descriptions, admin description editing, and persistent relative
+  movement
 
 See the [M5 implementation plan](MILESTONE_FIVE_PLAN.md) for admin-reviewed room
 generation with atmospheric descriptions of up to five sentences.
@@ -380,13 +411,19 @@ supports left/right/forward/backwards relative to the last horizontal move;
 ## Documentation
 
 - [Discovered-world map](docs/MAP.md) — discovery, map controls, and validation
-- [AI_MUD_CODEX_PROJECT_PROMPT.md](docs/AI_MUD_CODEX_PROJECT_PROMPT.md) — Complete specification
+- [AI_MUD_CODEX_PROJECT_PROMPT.md](docs/AI_MUD_CODEX_PROJECT_PROMPT.md) —
+  Complete specification
 - [MILESTONE_ONE_PLAN.md](MILESTONE_ONE_PLAN.md) — M1 roadmap
-- [MILESTONE_TWO_PLAN.md](MILESTONE_TWO_PLAN.md) — Completed M2 delivery plan and validation record
-- [MILESTONE_UI_PLAN.md](MILESTONE_UI_PLAN.md) — UI scope, delivery increments, and validation record
-- [MILESTONE_THREE_PLAN.md](MILESTONE_THREE_PLAN.md) — Optional narration, privacy, limits, and validation
-- [MILESTONE_FOUR_PLAN.md](MILESTONE_FOUR_PLAN.md) — Edric's conversations, memory, knowledge boundaries, and validation
-- [Security review](docs/SECURITY_REVIEW_2026-09-02.md) — Open risks and remediation status
+- [MILESTONE_TWO_PLAN.md](MILESTONE_TWO_PLAN.md) — Completed M2 delivery plan
+  and validation record
+- [MILESTONE_UI_PLAN.md](MILESTONE_UI_PLAN.md) — UI scope, delivery
+  increments, and validation record
+- [MILESTONE_THREE_PLAN.md](MILESTONE_THREE_PLAN.md) — Optional narration,
+  privacy, limits, and validation
+- [MILESTONE_FOUR_PLAN.md](MILESTONE_FOUR_PLAN.md) — Edric's conversations,
+  memory, knowledge boundaries, and validation
+- [Security review](docs/SECURITY_REVIEW_2026-09-02.md) — Open risks and
+  remediation status
 - [AGENTS.md](docs/AGENTS.md) — AI agent operating guide
 - [CODEX.md](docs/CODEX.md) — Codex project instructions
 

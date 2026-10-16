@@ -1,3 +1,5 @@
+# MUD Command System Design
+
 Review the current MUD codebase and propose a scalable command architecture for the game.
 
 The goal is NOT to create hundreds of unrelated command implementations.
