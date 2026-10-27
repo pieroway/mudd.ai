@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.item import Item
 from app.domain.item_template import ItemTemplate
+from app.domain.item_context import visible, describe, suggested_actions, state_words
 from app.domain.client_state import ClientState, InventoryEntry, MapState, MapRoom, MapExit
 from app.models.game import PlayerDiscoveryRecord
 from app.models.game import DoorRecord
@@ -49,22 +50,27 @@ class GameRepository:
         )
 
     async def client_state(self, player_id: str) -> ClientState:
-        # One query gives a consistent snapshot without loading hidden world data.
-        statement = (
-            select(RoomRecord.id, RoomRecord.name, ItemRecord.id, ItemRecord.name)
-            .select_from(PlayerRecord)
-            .join(RoomRecord, RoomRecord.id == PlayerRecord.current_room_id)
-            .outerjoin(ItemRecord, ItemRecord.owner_id == PlayerRecord.id)
-            .where(PlayerRecord.id == player_id)
-            .order_by(ItemRecord.id)
-        )
-        rows = (await self.session.execute(statement)).all()
-        if not rows:
+        record = await self.session.get(PlayerRecord, player_id)
+        if record is None:
             raise KeyError(f"Unknown player: {player_id}")
+        world, player = await self.load_world(record)
+        items: dict[str, Item] = world['items']  # type: ignore[assignment]
+
+        def entry(item: Item, depth: int = 0) -> InventoryEntry:
+            return InventoryEntry(id=item.id, name=item.name, description=describe(item, player, world, 'inventory'),
+                quantity=item.quantity, location=item.relationships.get('slot') or item.relationships.get('placement') or
+                ('inventory' if item.owned_by else 'room'), visible_state=state_words(item), actions=suggested_actions(item),
+                contents=[entry(child, depth + 1) for child in sorted(items.values(), key=lambda obj: obj.id)
+                          if depth < 8 and child.container_id == item.id and visible(child, player, world)])
+
+        rooms: dict[str, Room] = world['rooms']  # type: ignore[assignment]
         return ClientState(
-            room_id=rows[0][0],
-            room_name=rows[0][1],
-            inventory=[InventoryEntry(id=row[2], name=row[3]) for row in rows if row[2]],
+            room_id=player.current_room_id,
+            room_name=rooms[player.current_room_id].name,
+            inventory=[entry(item) for item in sorted(items.values(), key=lambda obj: obj.id)
+                       if item.owned_by == player_id and visible(item, player, world)],
+            visible_objects=[entry(item) for item in sorted(items.values(), key=lambda obj: obj.id)
+                             if item.room_id == player.current_room_id and visible(item, player, world)],
             map=await self.map_state(player_id),
         )
 
@@ -124,7 +130,9 @@ class GameRepository:
         if lock_items:
             item_statement = item_statement.with_for_update()
         item_records = (await self.session.scalars(item_statement)).all()
-        template_records = (await self.session.scalars(select(ItemTemplateRecord))).all()
+        referenced_templates = {record.template_id for record in item_records if record.template_id}
+        template_records = list((await self.session.scalars(select(ItemTemplateRecord).where(
+            ItemTemplateRecord.id.in_(referenced_templates)))).all()) if referenced_templates else []
         templates = {
             template_record.id: ItemTemplate.model_validate(
                 {
@@ -155,6 +163,7 @@ class GameRepository:
                 id=record.id,
                 name=record.name,
                 description=record.description,
+                conditions=deepcopy(record.conditions),
             )
             for record in room_records
         }
@@ -227,8 +236,11 @@ class GameRepository:
             current_room_id=player_record.current_room_id,
             inventory=inventory,
             facing_direction=player_record.facing_direction,
+            state=deepcopy(player_record.state_data),
         )
         world: dict[str, object] = {"rooms": rooms, "items": items, "players": {player.id: player}}
+        world['_player_rooms'] = {pid: location for pid, location in (await self.session.execute(
+            select(PlayerRecord.id, PlayerRecord.current_room_id))).all()}
         return world, player
 
     async def persist_world(
@@ -241,6 +253,7 @@ class GameRepository:
     ) -> None:
         player_record.current_room_id = player.current_room_id
         player_record.facing_direction = player.facing_direction
+        player_record.state_data = deepcopy(player.state)
         await self.discover_room(player.id, player.current_room_id)
         if not persist_items:
             return
@@ -252,8 +265,23 @@ class GameRepository:
             door_record.is_open = domain_doors[door_record.id].is_open
 
         domain_items: dict[str, Item] = world["items"]  # type: ignore[assignment]
-        item_records = (await self.session.scalars(select(ItemRecord).where(ItemRecord.id.in_(domain_items)))).all()
+        item_records = list((await self.session.scalars(select(ItemRecord))).all())
+        existing = {record.id for record in item_records}
+        # Flush removals before new instances; only rules under the item lock mutate this set.
         for record in item_records:
+            if record.id not in domain_items:
+                await self.session.delete(record)
+        for key, item in domain_items.items():
+            if key not in existing:
+                record = ItemRecord(id=item.id, name=item.name, description=item.description,
+                    room_id=item.room_id, owner_id=item.owned_by, container_id=item.container_id,
+                    template_id=item.template_id, can_open=item.can_open, can_use=item.can_use,
+                    is_light_source=item.is_light_source, portable=item.portable)
+                self.session.add(record)
+                item_records.append(record)
+        for record in item_records:
+            if record.id not in domain_items:
+                continue
             domain_item = domain_items[record.id]
             record.room_id = domain_item.room_id
             record.owner_id = domain_item.owned_by
@@ -263,6 +291,14 @@ class GameRepository:
             record.fuel_remaining = domain_item.fuel_remaining
             record.is_clean = domain_item.is_clean
             record.interaction_state = domain_item.interaction_state
+            if domain_item.template_id:
+                if domain_item.can_open:
+                    domain_item.state['open'] = domain_item.is_open
+                if domain_item.is_light_source:
+                    domain_item.state['lit'] = domain_item.is_lit
+                    domain_item.state['fuel_remaining'] = domain_item.fuel_remaining
+                if domain_item.durability is not None:
+                    domain_item.state['durability'] = domain_item.durability
             record.state_data = deepcopy(domain_item.state)
             condition = deepcopy(domain_item.condition)
             if domain_item.durability is not None:

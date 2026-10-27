@@ -142,6 +142,28 @@ describe('Terminal', () => {
     expect(screen.getByTestId('command-input')).toBeDisabled()
   })
 
+  it('renders contextual equipment and visible contents, rejecting malformed item details', () => {
+    render(<Terminal username="Alan" />)
+    const socket = MockWebSocket.instances[0]
+    act(() => {
+      socket.open()
+      socket.receive({ type: 'system', state: {
+        room_id: 'town_square', room_name: 'Town Square', inventory: [{
+          id: 'pack', name: 'backpack', description: 'You wear the backpack on your back.',
+          location: 'back', quantity: 1, visible_state: ['open'], actions: ['close'],
+          contents: [{ id: 'letter', name: 'letter', description: 'The letter rests inside the backpack.' }],
+        }],
+      } })
+    })
+    expect(screen.getByTestId('inventory-panel')).toHaveTextContent('You wear the backpack on your back.')
+    expect(screen.getByTestId('inventory-panel')).toHaveTextContent('The letter rests inside the backpack.')
+    act(() => socket.receive({ type: 'game_output', state: {
+      room_id: 'elsewhere', room_name: 'Elsewhere', inventory: [{ id: 'bad', name: 'bad', contents: 'invalid' }],
+    } }))
+    expect(screen.getByTestId('current-room')).toHaveTextContent('Town Square')
+    expect(screen.getByTestId('inventory-panel')).not.toHaveTextContent('bad')
+  })
+
   it('persists panel visibility and handles panel commands locally while preserving inventory commands', () => {
     const view = render(<Terminal username="Alan" />)
     const socket = MockWebSocket.instances[0]

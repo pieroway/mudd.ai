@@ -43,6 +43,27 @@ class ObjectDraft(NamedDraft):
     room: str | None
     container: str | None
     interaction_target: str | None
+    template_id: str | None = None
+    locked: bool = False
+    key_room: str | None = None
+    hiding_place: str | None = None
+
+    @model_validator(mode='after')
+    def registered_template(self):
+        from app.domain.catalogue import CATALOGUE
+        if self.template_id is not None:
+            if self.template_id not in CATALOGUE:
+                raise ValueError('Generated objects must use registered templates')
+            template = CATALOGUE[self.template_id]
+            if self.kind == 'portable' and not template.physical.portable:
+                raise ValueError('Large objects cannot be generated as portable items')
+            if self.kind == 'container' and 'container' not in template.capabilities:
+                raise ValueError('Container objects require container templates')
+            if self.locked and 'lockable' not in template.capabilities:
+                raise ValueError('Generated locks require lockable templates')
+        elif self.locked or self.key_room or self.hiding_place:
+            raise ValueError('Generated locks require registered templates')
+        return self
 
     @field_validator('description')
     @classmethod
@@ -78,8 +99,8 @@ class ConnectionDraft(DraftModel):
 
 class NeighborhoodDraft(DraftModel):
     buildings: list[BuildingDraft] = Field(max_length=4)
-    rooms: list[RoomDraft] = Field(min_length=1, max_length=12)
-    connections: list[ConnectionDraft] = Field(min_length=1, max_length=20)
+    rooms: list[RoomDraft] = Field(min_length=1, max_length=24)
+    connections: list[ConnectionDraft] = Field(min_length=1, max_length=48)
     objects: list[ObjectDraft] = Field(max_length=24)
 
     @model_validator(mode='after')
@@ -124,8 +145,8 @@ class NeighborhoodDraft(DraftModel):
             raise ValueError('Every room must be reachable from the anchor')
         for building in buildings:
             members = {room.key for room in self.rooms if room.building == building}
-            if not 1 <= len(members) <= 3 or reachable(min(members), members) != members:
-                raise ValueError('Buildings require one to three internally connected rooms')
+            if not members or reachable(min(members), members) != members:
+                raise ValueError('Buildings require internally connected rooms')
         per_room: dict[str, list[str]] = {key: [] for key in rooms}
         for obj in self.objects:
             if obj.interaction_target is not None and (obj.kind != 'portable' or obj.interaction_target not in objects or obj.interaction_target == obj.key):
@@ -143,21 +164,33 @@ class NeighborhoodDraft(DraftModel):
             per_room[room_key].append(obj.name.casefold())
         if any(len(names) > 4 or len(set(names)) != len(names) for names in per_room.values()):
             raise ValueError('At most four distinctly named objects per room')
+        if any(obj.template_id for obj in self.objects):
+            materialize_objects(self)
         return self
 
 
 class NeighborhoodRequest(DraftModel):
-    brief: str = Field(min_length=1, max_length=400)
+    brief: str = Field(min_length=1, max_length=2000)
     origin_name: str
     anchor_name: str
     anchor_description: str
     direction: Literal['north', 'south', 'east', 'west', 'up', 'down']
-    max_rooms: int = Field(ge=1, le=12)
+    max_rooms: int = Field(ge=1, le=24)
     max_buildings: int = Field(ge=0, le=4)
+    floors: int = Field(default=0, ge=0, le=5)
+    rooms_per_floor: int = Field(default=4, ge=1, le=8)
+    main_rooms: int = Field(default=0, ge=0, le=8)
+    basement_levels: int = Field(default=0, ge=0, le=3)
 
     @model_validator(mode='after')
     def bounded(self):
         plain_text(self.brief)
+        if self.floors:
+            total = self.floors * self.rooms_per_floor + self.main_rooms + self.basement_levels
+            if total != self.max_rooms or self.max_buildings != 1 or self.direction in {'up', 'down'}:
+                raise ValueError('Invalid building room budget or entrance')
+        elif self.max_rooms > 12 or self.main_rooms or self.basement_levels:
+            raise ValueError('Use building mode for larger drafts')
         if len(self.model_dump_json().encode('utf-8')) > 8192:
             raise ValueError('Context too large')
         return self
@@ -168,6 +201,55 @@ def validate_budget(draft: NeighborhoodDraft, request: NeighborhoodRequest) -> N
         raise ValueError('Draft exceeds requested budget')
     if next(edge.direction for edge in draft.connections if edge.source == 'anchor') != request.direction:
         raise ValueError('Draft attachment direction does not match')
+    if request.floors:
+        if len(draft.buildings) != 1 or any(room.building != draft.buildings[0].key for room in draft.rooms):
+            raise ValueError('Building mode requires exactly one building and no outdoor rooms')
+        levels = building_levels(draft)
+        expected = {floor: request.rooms_per_floor + (request.main_rooms if floor == 0 else 0)
+                    for floor in range(request.floors)}
+        expected.update({-level: 1 for level in range(1, request.basement_levels + 1)})
+        actual = {level: list(levels.values()).count(level) for level in set(levels.values())}
+        if actual != expected:
+            raise ValueError('Building floor counts do not match the request')
+        # Each floor must be connected without detouring through another floor.
+        for level in expected:
+            members = {key for key, value in levels.items() if value == level}
+            seen = {min(members)}
+            for _ in members:
+                for edge in draft.connections:
+                    if edge.source in members and edge.destination in members:
+                        if edge.source in seen or edge.destination in seen:
+                            seen.update((edge.source, edge.destination))
+            if seen != members:
+                raise ValueError('Each floor must be internally connected')
+    elif any(sum(room.building == building.key for room in draft.rooms) > 3 for building in draft.buildings):
+        raise ValueError('Buildings require one to three internally connected rooms')
+
+
+def building_levels(draft: NeighborhoodDraft) -> dict[str, int]:
+    """Derive floors from authoritative exit directions; reject contradictory stairs."""
+    entrance = next(edge.destination for edge in draft.connections if edge.source == 'anchor')
+    levels = {entrance: 0}
+    adjacency: dict[str, list[tuple[str, int]]] = {room.key: [] for room in draft.rooms}
+    for edge in draft.connections:
+        if edge.source == 'anchor':
+            continue
+        delta = 1 if edge.direction == 'up' else -1 if edge.direction == 'down' else 0
+        adjacency[edge.source].append((edge.destination, delta))
+        adjacency[edge.destination].append((edge.source, -delta))
+    queue = [entrance]
+    for key in queue:
+        for neighbor, delta in adjacency[key]:
+            level = levels[key] + delta
+            if neighbor in levels:
+                if levels[neighbor] != level:
+                    raise ValueError('Building stairs assign conflicting floors')
+            else:
+                levels[neighbor] = level
+                queue.append(neighbor)
+    if len(levels) != len(draft.rooms):
+        raise ValueError('Building rooms must connect internally')
+    return levels
 
 
 def draft_failure(error: ValueError):
@@ -199,6 +281,11 @@ def _one_sentence(value: object) -> str | None:
 
 def normalize_topology(payload: object, request: NeighborhoodRequest) -> NeighborhoodDraft | None:
     """Build safe geography around usable provider prose."""
+    if request.floors:
+        return None  # Never replace a requested multi-floor building with a flat chain.
+    raw_objects = payload.get('objects') if isinstance(payload, dict) else None
+    if isinstance(raw_objects, list) and any(isinstance(obj, dict) and (obj.get('template_id') or obj.get('locked')) for obj in raw_objects):
+        return None  # Never discard lock/key constraints while repairing prose.
     if (not isinstance(payload, dict) or set(payload) != {'buildings', 'rooms', 'connections', 'objects'}
             or not isinstance(payload.get('rooms'), list)):
         return None
@@ -286,3 +373,58 @@ def normalize_topology(payload: object, request: NeighborhoodRequest) -> Neighbo
         return NeighborhoodDraft.model_validate({'buildings': buildings, 'rooms': rooms, 'connections': connections, 'objects': objects})
     except ValueError:
         return None
+
+
+def materialize_objects(draft, room_ids=None, object_ids=None):
+    """Translate reviewed data into instances and prove all generated locks solvable."""
+    from app.domain.catalogue import CATALOGUE
+    from app.domain.item import Item
+    from app.domain.room import Room
+    from app.domain.item_context import root
+    from app.domain.item_dependencies import provision_lock, validate_dependencies
+
+    room_ids = room_ids or {key: key for key in ['anchor', *(room.key for room in draft.rooms)]}
+    object_ids = object_ids or {obj.key: obj.key for obj in draft.objects}
+    rooms = {room_ids[room.key]: Room(room_ids[room.key], room.name, room.description) for room in draft.rooms}
+    rooms[room_ids['anchor']] = Room(room_ids['anchor'], 'Existing entrance', 'The existing world is nearby.')
+    for edge in draft.connections:
+        source, destination = room_ids[edge.source], room_ids[edge.destination]
+        rooms[source].exits[edge.direction] = destination
+        rooms[destination].exits[OPPOSITE[edge.direction]] = source
+    items = {}
+    for obj in draft.objects:
+        locations = {'room_id': room_ids.get(obj.room), 'container_id': object_ids.get(obj.container)}
+        if obj.template_id:
+            item = Item.from_template(object_ids[obj.key], CATALOGUE[obj.template_id], **locations,
+                provenance={'source': 'ai_generated', 'generation_reason': 'reviewed_world_proposal'})
+            item.name, item.description = obj.name, obj.description
+        else:
+            item = Item(id=object_ids[obj.key], name=obj.name, description=obj.description,
+                portable=obj.kind == 'portable', can_open=obj.kind == 'container',
+                provenance={'source': 'ai_generated', 'generation_reason': 'reviewed_world_proposal'}, **locations)
+        item.interaction_target_id = object_ids.get(obj.interaction_target)
+        items[item.id] = item
+    for obj in draft.objects:
+        if obj.locked:
+            if obj.key_room is not None and obj.key_room not in room_ids:
+                raise ValueError('Generated key placement must reference a draft room')
+            if obj.hiding_place is not None and obj.hiding_place not in object_ids:
+                raise ValueError('Generated hiding place must reference a draft object')
+            item = items[object_ids[obj.key]]
+            origin = root(item, items)
+            if origin is None or origin.room_id is None:
+                raise ValueError('Generated lock must have a valid room')
+            provision_lock(item, items, rooms, origin.room_id,
+                key_room=room_ids.get(obj.key_room) if obj.key_room else None,
+                hiding_place=object_ids.get(obj.hiding_place), source='ai_generated')
+    if len(items) > 24:
+        raise ValueError('Generated keys exceed the object budget')
+    per_room = {}
+    for item in items.values():
+        origin = root(item, items)
+        if origin:
+            per_room.setdefault(origin.room_id, []).append(item.name.casefold())
+    if any(len(names) > 4 or len(names) != len(set(names)) for names in per_room.values()):
+        raise ValueError('Generated keys exceed per-room limits or duplicate object names')
+    validate_dependencies(items, rooms, room_ids['anchor'])
+    return items

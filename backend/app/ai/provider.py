@@ -53,6 +53,12 @@ class AIProviderFailure(AIProviderError):
 
 # Only exact, local validation messages may cross the provider boundary.
 SAFE_DRAFT_DETAILS = frozenset({
+    'Buildings require internally connected rooms',
+    'Building mode requires exactly one building and no outdoor rooms',
+    'Building floor counts do not match the request',
+    'Each floor must be internally connected',
+    'Building stairs assign conflicting floors',
+    'Building rooms must connect internally',
     'Rooms allow at most three sentences', 'Objects allow one sentence', 'Doors allow one sentence',
     'Duplicate or reserved labels', 'Room names must be distinct', 'Unknown building',
     'Connections may only join draft rooms or the anchor', 'Conflicting exit directions',

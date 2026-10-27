@@ -117,16 +117,26 @@ class Item:
         return self.room_id == room_id and self.owned_by is None
 
     def take_by(self, player_id: str) -> None:
+        self.discovery['hidden'] = False
+        self.relationships.pop('placement', None)
+        self.relationships.pop('slot', None)
+        self.relationships.pop('equipment', None)
         self.room_id = None
         self.container_id = None
         self.owned_by = player_id
 
     def drop_in(self, room_id: str) -> None:
+        self.discovery['hidden'] = False
+        self.relationships.pop('placement', None)
+        self.relationships.pop('slot', None)
+        self.relationships.pop('equipment', None)
         self.owned_by = None
         self.container_id = None
         self.room_id = room_id
 
     def put_in(self, container_id: str) -> None:
+        self.relationships.pop('slot', None)
+        self.relationships.pop('equipment', None)
         self.room_id = None
         self.owned_by = None
         self.container_id = container_id

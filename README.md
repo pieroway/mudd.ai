@@ -221,6 +221,17 @@ docker compose -f compose.test.yaml run --rm backend_test pytest --cov=app -v
 make e2e
 ```
 
+On Windows, run the same isolated test app with a visible Chromium browser:
+
+```powershell
+cmd /c scripts\e2e.bat --headed
+```
+
+This installs the pinned Playwright dependencies and Chromium locally, then runs
+one browser worker at a time. Node.js and npm must be installed on Windows; the
+application services still run in Docker. The default `scripts\e2e.bat` and the
+deployment gate continue to use headless tests in Docker.
+
 ## Configuration
 
 Edit `.env` to customize:
@@ -410,6 +421,8 @@ supports left/right/forward/backwards relative to the last horizontal move;
 
 ## Documentation
 
+- [Item system](docs/ITEM_SYSTEM.md): templates, interactions, discovery, and admin tools.
+- [Item implementation plan](docs/ITEM_SYSTEM_PLAN.md): assessment and regression audit.
 - [Discovered-world map](docs/MAP.md) — discovery, map controls, and validation
 - [AI_MUD_CODEX_PROJECT_PROMPT.md](docs/AI_MUD_CODEX_PROJECT_PROMPT.md) —
   Complete specification

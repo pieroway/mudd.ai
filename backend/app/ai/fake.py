@@ -23,6 +23,31 @@ DEFAULT_COMMAND_FIXTURES: dict[str, dict[str, object]] = {
 }
 
 
+def fake_building(request: NeighborhoodRequest) -> NeighborhoodDraft:
+    """A deterministic multi-floor fixture with closed entrance and basement hatch."""
+    rooms: list[dict[str, Any]] = []
+    connections: list[dict[str, Any]] = []
+    first: dict[int, str] = {}
+    horizontal = 'north' if request.direction == 'west' else 'east'
+    for level in range(-request.basement_levels, request.floors):
+        count = 1 if level < 0 else request.rooms_per_floor + (request.main_rooms if level == 0 else 0)
+        for index in range(count):
+            key = f'room_{len(rooms) + 1}'
+            name = f'Floor {level + 1} room {index + 1}' if level >= 0 else f'Basement {-level}'
+            rooms.append({'key': key, 'name': name, 'description': 'Old timber frames a quiet chamber.', 'building': 'lodge'})
+            if index == 0:
+                first[level] = key
+            else:
+                connections.append({'source': rooms[-2]['key'], 'direction': horizontal, 'destination': key, 'door': None})
+    connections.append({'source': 'anchor', 'direction': request.direction, 'destination': first[0],
+                        'door': {'name': 'lodge door', 'description': 'An oak door guards the lodge.'}})
+    for level in range(-request.basement_levels, request.floors - 1):
+        connections.append({'source': first[level], 'direction': 'up', 'destination': first[level + 1],
+                            'door': {'name': 'cellar hatch', 'description': 'A heavy hatch covers the stairs.'} if level < 0 else None})
+    return NeighborhoodDraft.model_validate({'buildings': [{'key': 'lodge', 'name': 'Old Lodge'}],
+                                              'rooms': rooms, 'connections': connections, 'objects': []})
+
+
 class FakeAIProvider(AIProvider):
     """Return validated responses from explicit, normalized phrase fixtures."""
 
@@ -43,6 +68,8 @@ class FakeAIProvider(AIProvider):
         if not await before_dispatch():
             raise AIProviderError("Daily AI allowance exhausted or session unavailable.")
         self.neighborhood_requests.append(request.model_copy(deep=True))
+        if request.floors:
+            return fake_building(request)
         rooms = [{"key": "lane", "name": "Cedar Lane", "description": "Cedar shade falls across worn cobbles.", "building": None}]
         buildings = []
         connections: list[dict[str, Any]] = [{"source": "anchor", "direction": request.direction, "destination": "lane", "door": None}]

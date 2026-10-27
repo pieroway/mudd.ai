@@ -23,7 +23,7 @@ test('visited floors stay ghosted, compact, and readable around the current neig
   await page.getByTestId('login-button').click()
   const panel = page.getByTestId('map-panel')
   await expect(panel.getByRole('button', { name: 'Cedar Hall, you are here' })).toBeVisible()
-  await panel.getByRole('button', { name: 'Expand map' }).click()
+  await expect(panel.getByRole('button', { name: 'Collapse map' })).toBeVisible()
   await expect(panel.locator('[data-level]')).toHaveCount(5)
   await expect(panel.locator('[data-level="1"]')).toHaveCSS('opacity', '0.38')
   await expect(panel.locator('[data-level="2"]')).toHaveCSS('opacity', '0.24')

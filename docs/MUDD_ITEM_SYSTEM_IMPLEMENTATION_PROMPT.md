@@ -364,55 +364,71 @@ default_state: {afloat: false, tied: false, boarded_by: [], durability: 150, lea
 Create data-driven catalogue entries for all templates below. Each needs a stable ID, aliases, categories, physical defaults, base descriptions, and applicable capability configuration. Do not create separate command logic per template.
 
 ### Weapons
+
 `weapon_dagger_iron`, `weapon_sword_short`, `weapon_sword_long`, `weapon_axe_hand`, `weapon_club_wooden`, `weapon_staff_oak`, `weapon_bow_hunting`, `weapon_arrow`, `weapon_crossbow`, `weapon_sling`.
 
 ### Armour, clothing, and jewellery
+
 `armour_helmet_leather`, `armour_helmet_iron`, `armour_tunic_leather`, `armour_mail_shirt`, `armour_shield_wooden`, `clothing_cloak_wool`, `clothing_boots_leather`, `clothing_gloves_leather`, `clothing_belt_leather`, `clothing_backpack`, `clothing_pouch`, `jewellery_ring_plain`, `jewellery_amulet`.
 
 ### Containers
+
 `container_chest_wooden`, `container_chest_iron`, `container_crate_wooden`, `container_barrel`, `container_sack_burlap`, `container_basket_wicker`, `container_bottle_glass`, `container_flask`, `container_bucket`, `container_lockbox`.
 
 ### Keys and access
+
 `key_iron_small`, `key_brass_ornate`, `key_rusted`, `key_skeleton`, `access_keycard`, `access_seal`, `tool_lockpick`. Store lock compatibility on instances/relationships rather than creating a template per lock.
 
 ### Food, drink, and consumables
+
 `food_bread_loaf`, `food_apple`, `food_dried_meat`, `drink_water`, `drink_ale`, `potion_healing_minor`, `potion_antidote`, `herb_medicinal`, `poison_vial`, `ration_travel`. Where practical, separate a reusable vessel from its contents.
 
 ### Tools
+
 `tool_rope_hemp`, `tool_hammer`, `tool_crowbar`, `tool_shovel`, `tool_pickaxe`, `tool_hatchet`, `tool_fishing_rod`, `tool_needle_thread`, `tool_flint_steel`, `tool_waterskin`, `tool_compass`, `tool_spyglass`.
 
 ### Light and fire
+
 `light_torch`, `light_lantern_oil`, `light_candle`, `light_brazier`, `fuel_lamp_oil`, `fuel_firewood`, `fixture_fireplace`.
 
 ### Readable objects
+
 `readable_book`, `readable_scroll`, `readable_letter`, `readable_ledger`, `readable_notice`, `readable_map`, `readable_inscription`, `readable_journal`, `readable_label`, `readable_sign`. Store unique text on instances or content records. Support addressable parts such as cover, front, back, pages, folds, margins, and seals.
 
 ### Currency and valuables
+
 `currency_coin_copper`, `currency_coin_silver`, `currency_coin_gold`, `valuable_gem_uncut`, `valuable_gem_cut`, `valuable_ring_gold`, `valuable_goblet_silver`, `valuable_statue_small`, `valuable_pearl`. Use quantities for interchangeable stacks rather than one row per coin; support split, combine, transfer, and spend.
 
 ### Crafting materials
+
 `material_wood_log`, `material_wood_plank`, `material_iron_ore`, `material_iron_ingot`, `material_leather`, `material_cloth`, `material_herb`, `material_bone`, `material_stone`, `material_clay`.
 
 ### Furniture and room objects
+
 `furniture_table_wooden`, `furniture_chair_wooden`, `furniture_bed`, `furniture_bookshelf`, `furniture_cabinet`, `furniture_desk`, `furniture_rug`, `furniture_mirror`, `furniture_bench`, `furniture_wardrobe`, `furniture_weapon_rack`, `furniture_painting`.
 
 Furniture remains interactable even when too large for inventory. Support applicable sitting, lying, surfaces, containment, opening, moving, searching, looking behind/under, breaking, repair, and concealment. A rug can conceal a hatch, floorboard, key, or other object.
 
 ### Fixtures and environmental objects
+
 `fixture_door_wooden`, `fixture_gate_iron`, `fixture_trapdoor`, `fixture_floorboard_loose`, `fixture_wall_cracked`, `fixture_window_glass`, `fixture_lever`, `fixture_button`, `fixture_chain`, `fixture_iron_ring`, `fixture_ladder`, `fixture_stairs`, `fixture_well`, `fixture_fountain`, `fixture_statue`, `fixture_altar`, `fixture_tree`, `fixture_rock`, `fixture_bush`, `fixture_hole`, `fixture_loose_soil`.
 
 Fixed objects still allow appropriate interaction. A loose floorboard can be examined, searched, lifted, pried, replaced, and reveal objects beneath it.
 
 ### Transportation
+
 `vehicle_rowboat`, `vehicle_fishing_skiff`, `vehicle_cart`, `vehicle_wagon`, `mount_saddle`, `vehicle_canoe`. Vehicles support applicable boarding, leaving, launching, beaching, piloting, pushing, pulling, tying, cargo, damage, and repair, not ordinary pocket inventory.
 
 ### Quest and special objects
+
 `quest_token`, `quest_relic`, `quest_package`, `quest_badge`, `quest_fragment`, `quest_evidence`, `quest_body_part`, `quest_sealed_letter`. Quest importance and restrictions should normally be instance relationships rather than duplicated physical templates.
 
 ### Remains and loot sources
+
 `remains_corpse_humanoid`, `remains_skeleton`, `remains_bones_pile`, `loot_coin_purse`, `loot_satchel`, `loot_cache_hidden`.
 
 ### Magical objects
+
 `magic_wand`, `magic_scroll`, `magic_ring`, `magic_orb`, `magic_stone`, `magic_portal_key`, `magic_potion`, `magic_weapon`. Use allowlisted effects, charges, activation requirements, cooldowns, targets, identification state, and validated passive/active effects; never arbitrary generated code.
 
 ## 11. Priority acceptance set

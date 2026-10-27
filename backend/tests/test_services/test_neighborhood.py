@@ -32,6 +32,78 @@ async def canonical_counts(factory):
                       for model in (RoomRecord, ExitRecord, BuildingRecord, DoorRecord, ItemRecord)])
 
 
+async def test_full_building_preview_publish_and_stairs(session_factory):
+    from app.ai.neighborhood import building_levels
+
+    game, provider, identity = await connect(session_factory)
+    before = await canonical_counts(session_factory)
+    proposal_id = await generate(game, identity,
+        'building north --floors 3 --rooms-per-floor 4 --main-rooms 2 --basement-levels 2 '
+        '--theme "Ashen Lantern Lodge with a great room, kitchen, cellar and chamber below."')
+    assert await canonical_counts(session_factory) == before
+    assert provider.neighborhood_requests[0].max_rooms == 16
+    reply = await command(game, identity, f'/world preview {proposal_id}')
+    for label in ['16 rooms, 1 buildings', 'Floor 3:', 'Floor 2:', 'Floor 1:', 'Basement level 1:', 'Basement level 2:']:
+        assert label in reply['output']
+    async with session_factory() as session:
+        proposal = await session.get(WorldProposalRecord, proposal_id)
+        levels = building_levels(NeighborhoodDraft.model_validate(proposal.payload['content']))
+        assert sorted(levels.values()) == [-2, -1] + [0] * 6 + [1] * 4 + [2] * 4
+    assert (await command(game, identity, f'/world approve {proposal_id}'))['success']
+    assert await canonical_counts(session_factory) == tuple(a + b for a, b in zip(before, (16, 32, 1, 3, 0)))
+    assert not (await command(game, identity, 'north'))['success']
+    assert (await command(game, identity, 'open north door'))['success']
+    assert (await command(game, identity, 'north'))['success']
+    assert (await command(game, identity, 'up'))['success']
+    assert (await command(game, identity, 'up'))['success']
+    assert not (await command(game, identity, 'up'))['success']
+    for _ in range(2):
+        assert (await command(game, identity, 'down'))['success']
+    for _ in range(2):
+        assert (await command(game, identity, 'open down door'))['success']
+        assert (await command(game, identity, 'down'))['success']
+
+
+async def test_building_rejects_wrong_counts_and_conflicting_levels(session_factory):
+    from app.ai.neighborhood import NeighborhoodRequest, validate_budget, normalize_topology
+
+    request = NeighborhoodRequest(brief='Lodge', origin_name='Outside', anchor_name='Outside',
+        anchor_description='A lane.', direction='north', max_rooms=16, max_buildings=1,
+        floors=3, rooms_per_floor=4, main_rooms=2, basement_levels=2)
+    provider = FakeAIProvider()
+
+    async def authorized():
+        return True
+
+    draft = await provider.generate_neighborhood(request, before_dispatch=authorized)
+    validate_budget(draft, request)
+    wrong_request = request.model_copy(update={'main_rooms': 1, 'max_rooms': 15})
+    with pytest.raises(ValueError):
+        validate_budget(draft, wrong_request)
+    content = draft.model_dump()
+    stair = next(edge for edge in content['connections'] if edge['direction'] == 'up')
+    stair['direction'] = 'north'
+    wrong_floor = NeighborhoodDraft.model_validate(content)
+    with pytest.raises(ValueError, match='floor counts'):
+        validate_budget(wrong_floor, request)
+    assert normalize_topology(content, request) is None
+    content = draft.model_dump()
+    # A second path assigns a contradictory height to the same floor.
+    content['connections'].append({'source': 'room_3', 'direction': 'north',
+                                   'destination': 'room_10', 'door': None})
+    contradictory = NeighborhoodDraft.model_validate(content)
+    with pytest.raises(ValueError, match='conflicting floors'):
+        validate_budget(contradictory, request)
+
+
+async def test_long_building_theme_is_preserved(session_factory):
+    game, provider, identity = await connect(session_factory)
+    theme = 'A lodge with cedar beams. ' * 30
+    await generate(game, identity,
+        f'building north --floors 1 --rooms-per-floor 1 --theme "{theme.strip()}"')
+    assert provider.neighborhood_requests[0].brief == theme.strip()
+
+
 async def test_publish_explore_doors_containers_and_restart(session_factory):
     game, provider, identity = await connect(session_factory)
     before = await canonical_counts(session_factory)
@@ -72,7 +144,12 @@ async def test_publish_explore_doors_containers_and_restart(session_factory):
 
 @pytest.mark.parametrize('options', ['--radius 3', '--rooms 0', '--buildings 5', '--rooms nope',
                                     '--unknown 2', '--theme "unterminated', '--rooms 2 --rooms 3',
-                                    'south', '--theme ' + 'x' * 401])
+                                    'south', '--theme ' + 'x' * 2001,
+                                    'building north --floors 3',
+                                    'building around --floors 3 --rooms-per-floor 4',
+                                    'building north --floors 5 --rooms-per-floor 8',
+                                    'building north --floors 3 --rooms-per-floor 4 --rooms 16',
+                                    'north --floors 3'])
 async def test_invalid_options_are_free(session_factory, options):
     game, provider, identity = await connect(session_factory)
     assert not (await command(game, identity, '/world generate ' + options))['success']

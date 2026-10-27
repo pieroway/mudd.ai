@@ -5,6 +5,8 @@ private until its creating admin explicitly approves it. Normal movement never
 invokes generation.
 
 For multiple rooms, buildings, doors, and objects, use `/world generate`;
+use `/world generate building <direction> --floors N --rooms-per-floor N` for a
+complete building with exact floor counts, optional main-floor additions, and basements;
 see [reviewed neighborhood generation](NEIGHBORHOODS.md). The single-room commands
 and limits below continue to work independently.
 

@@ -36,7 +36,7 @@ async def test_template_metadata_and_instance_state_survive_repository_reload(se
         async with session.begin():
             session.add(
                 ItemTemplateRecord(
-                    id="weapon_sword_short",
+                    id="test_weapon_sword_short",
                     name="short sword",
                     aliases=["sword", "blade"],
                     categories=["weapon", "blade"],
@@ -57,7 +57,7 @@ async def test_template_metadata_and_instance_state_survive_repository_reload(se
             session.add(
                 ItemRecord(
                     id="sword_1",
-                    template_id="weapon_sword_short",
+                    template_id="test_weapon_sword_short",
                     name="notched short sword",
                     description="The blade has seen hard use.",
                     room_id="town_square",
@@ -77,7 +77,7 @@ async def test_template_metadata_and_instance_state_survive_repository_reload(se
             player_record = await repository.load_player_for_update(player.id)
             world, domain_player = await repository.load_world(player_record, lock_items=True)
             sword = world["items"]["sword_1"]
-            assert sword.template_id == "weapon_sword_short"
+            assert sword.template_id == "test_weapon_sword_short"
             assert sword.name == "notched short sword"
             assert sword.aliases == ("sword", "blade")
             assert sword.weight_kg == 1.4
@@ -95,7 +95,7 @@ async def test_template_metadata_and_instance_state_survive_repository_reload(se
         record = (
             await session.scalars(select(ItemRecord).where(ItemRecord.id == "sword_1"))
         ).one()
-        assert record.state_data == {"wet": True}
+        assert record.state_data == {"wet": True, "durability": 61}
         assert record.condition["durability"] == 61
         assert record.provenance == {
             "source": "procedural",

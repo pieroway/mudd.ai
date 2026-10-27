@@ -21,6 +21,7 @@ class RoomRecord(Base):
     id: Mapped[str] = mapped_column(String(50), primary_key=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
+    conditions: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
     building_id: Mapped[str | None] = mapped_column(ForeignKey("buildings.id", ondelete="RESTRICT"), index=True)
 
 
@@ -56,6 +57,7 @@ class PlayerRecord(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     username: Mapped[str] = mapped_column(String(50), nullable=False)
     normalized_username: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
+    state_data: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
     facing_direction: Mapped[str] = mapped_column(String(5), nullable=False, default="north", server_default="north")
     current_room_id: Mapped[str] = mapped_column(
         ForeignKey("rooms.id", ondelete="RESTRICT"), nullable=False

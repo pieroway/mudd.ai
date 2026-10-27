@@ -116,7 +116,7 @@ def test_narration_follows_authoritative_output_and_preserves_inventory(game_cli
         assert result["type"] == "game_output"
         assert result["text"] == "You take the torch."
         assert result["narration_pending"] is True
-        assert result["state"]["inventory"] == [{"id": "torch", "name": "torch"}]
+        assert [{"id": item["id"], "name": item["name"]} for item in result["state"]["inventory"]] == [{"id": "torch", "name": "torch"}]
         narration = websocket.receive_json()
         assert narration["type"] == "narration"
         assert narration["text"] == "You gather up the torch."
@@ -400,11 +400,12 @@ def test_movement_output_lists_players_already_in_the_destination(game_client):
 def test_client_state_tracks_inventory_failures_movement_and_reconnect(game_client):
     with game_client.websocket_connect("/ws?username=PanelPlayer") as socket:
         state = socket.receive_json()["state"]
-        assert state == {"room_id": "town_square", "room_name": "Town Square", "inventory": [],
+        assert sorted(item["id"] for item in state["visible_objects"]) == ["chest", "torch"]
+        assert {key: value for key, value in state.items() if key != "visible_objects"} == {"room_id": "town_square", "room_name": "Town Square", "inventory": [],
                          "map": {"rooms": [{"id": "town_square", "name": "Town Square", "building_id": None, "has_up": False, "has_down": False}], "exits": []}}
         socket.send_text("take torch")
         held = socket.receive_json()["state"]
-        assert held["inventory"] == [{"id": "torch", "name": "torch"}]
+        assert [{"id": item["id"], "name": item["name"]} for item in held["inventory"]] == [{"id": "torch", "name": "torch"}]
         socket.send_text("take sword")
         failed = socket.receive_json()
         assert failed["success"] is False
@@ -438,7 +439,7 @@ def test_players_can_tell_and_atomically_give_items(game_client):
             assert sender["text"] == "You give the torch to Robin."
             assert sender["state"]["inventory"] == []
             assert recipient["text"] == "Alan gives you the torch."
-            assert recipient["state"]["inventory"] == [{"id": "torch", "name": "torch"}]
+            assert [{"id": item["id"], "name": item["name"]} for item in recipient["state"]["inventory"]] == [{"id": "torch", "name": "torch"}]
 
             robin.send_text("inventory")
             assert robin.receive_json()["text"] == "Inventory: torch"

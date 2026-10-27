@@ -13,6 +13,7 @@ class Room:
     exits: Dict[str, str] = field(default_factory=dict)
     items: list[str] = field(default_factory=list)
     doors: dict[str, Door] = field(default_factory=dict)
+    conditions: dict = field(default_factory=dict)
 
     def look(self, items_in_room: list[str] | None = None) -> str:
         """Return a human-readable description for the room, including items."""

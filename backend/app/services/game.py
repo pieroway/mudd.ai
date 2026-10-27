@@ -19,6 +19,7 @@ from app.domain.room import Room
 from app.domain.directions import resolve_direction
 from app.domain.help import admin_help_groups, format_help
 from app.engine.executor import execute_command
+from app.engine.item_rules import ITEM_MUTATIONS
 from app.repositories.game import GameRepository
 from app.services.ai_usage import reserve_attempt, usage_status
 from app.services.ai_credits import grant_credits
@@ -135,6 +136,15 @@ class GameService:
 
         command = parse_command(raw_command)
         command_source = "classic"
+        if command.get('action') == 'item_admin':
+            from app.services.items import execute as execute_items
+
+            async def may_edit_items():
+                return self._session_players.get(session_id) == player_id and (
+                    authorization_check is None or await authorization_check())
+
+            return await execute_items(self.session_factory, player_id, account_id,
+                                       command['arguments'], may_edit_items)
         if command.get("action") == "world_admin":
             async def may_build() -> bool:
                 return self._session_players.get(session_id) == player_id and (
@@ -222,7 +232,7 @@ class GameService:
                     ),
                     "metadata": {"command_source": command_source},
                 }
-            command = validated.command.model_dump()
+            command = validated.command.model_dump(exclude_none=True)
         async with self._command_lock:
             if authorization_check is not None and not await authorization_check():
                 return {
@@ -255,7 +265,7 @@ class GameService:
         if command.get("action") == "who":
             return await self._who_result(command, active_player_ids)
 
-        lock_items = command.get("action") in {
+        lock_items = command.get("action") in ITEM_MUTATIONS or command.get("action") in {
             "take",
             "take_from",
             "put",
@@ -291,8 +301,18 @@ class GameService:
                         current_room_id=record.current_room_id,
                         inventory=[],
                         facing_direction=record.facing_direction,
+                        state=dict(record.state_data),
                     )
                 result: dict[str, Any] = execute_command(command, player, world)
+                if result.get('success') and lock_items:
+                    from app.domain.item_dependencies import validate_world_dependencies
+                    try:
+                        known_holders: dict[str, str] = world.get('_player_rooms', {})  # type: ignore[assignment]
+                        holder_rooms = {**known_holders, player.id: player.current_room_id}
+                        validate_world_dependencies(world['items'], world['rooms'], holder_rooms)
+                    except ValueError:
+                        result = {'success': False, 'output': 'That would leave a required lock or key inaccessible. No changes were made.'}
+                        world, player = await repository.load_world(player_record)
                 door_rooms = result.pop('_door_rooms', None)
                 door_notice = result.pop('_door_notice', None)
                 if door_rooms:
@@ -348,11 +368,17 @@ class GameService:
                     )
                     if activity_events:
                         result.setdefault("events", []).extend(activity_events)
+                if lock_items:
+                    history = list(player.state.get('item_action_history', []))
+                    history.append({'event': 'on_' + str(command.get('action')),
+                                    'target': command.get('target'), 'accepted': bool(result.get('success')),
+                                    'reason': result.get('output', '')[:1000]})
+                    player.state['item_action_history'] = history[-10:]
                 await repository.persist_world(
                     world,
                     player,
                     player_record,
-                    persist_items=lock_items,
+                    persist_items=lock_items and result.get('success', False),
                 )
                 return result
 

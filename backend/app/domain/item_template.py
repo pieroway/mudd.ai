@@ -18,6 +18,7 @@ CAPABILITY_NAMES = frozenset(
         "container",
         "detachable",
         "diggable",
+        "droppable",
         "enterable",
         "examinable",
         "extinguishable",
@@ -56,7 +57,7 @@ CAPABILITY_NAMES = frozenset(
 
 
 class TemplateModel(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    model_config = ConfigDict(extra="forbid", frozen=True, allow_inf_nan=False)
 
 
 class ItemDescription(TemplateModel):
@@ -115,6 +116,23 @@ class ItemTemplate(TemplateModel):
             raise ValueError(f"unsupported capabilities: {', '.join(unknown)}")
         if self.stackable and "stackable" not in self.capabilities:
             raise ValueError("stackable templates must declare the stackable capability")
+        numeric = {'required_hands', 'capacity_litres', 'maximum_weight_kg', 'opening_width_cm',
+                   'strength_required', 'hardness', 'maximum_durability', 'maximum_load_kg',
+                   'maximum_range_m', 'difficulty', 'skill_bonus', 'power', 'amount',
+                   'maximum_quantity', 'maximum_occupants', 'charges'}
+        import math
+        for capability, config in self.capabilities.items():
+            for key, value in config.items():
+                if key in numeric and (not isinstance(value, (int, float)) or isinstance(value, bool)
+                                       or not math.isfinite(value) or value < 0):
+                    raise ValueError('Capability limits must be finite nonnegative numbers')
+            if 'required_hands' in config and config['required_hands'] not in {1, 2}:
+                raise ValueError('Objects may require one or two hands')
+            if 'slots' in config and (not isinstance(config['slots'], list)
+                                     or not all(isinstance(slot, str) and slot and len(slot) <= 32 for slot in config['slots'])):
+                raise ValueError('Equipment slots must be bounded names')
+            if capability == 'consumable' and config.get('effect') not in {'heal', 'nourish', 'antidote'}:
+                raise ValueError('Consumable effects must be registered')
         return self
 
 

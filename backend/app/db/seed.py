@@ -5,11 +5,24 @@ from app.world import create_world
 from app.domain.npc import EDRIC_ID, EDRIC_ROOM
 from app.models.npc import NPCRecord
 from app.models.game import BuildingRecord
+from app.models import ItemTemplateRecord
+from app.domain.catalogue import CATALOGUE
+from sqlalchemy.dialects.postgresql import insert
 
 
 async def seed_world(session: AsyncSession) -> None:
     """Insert the deterministic world without resetting persistent state."""
     world = create_world()
+    await session.execute(insert(ItemTemplateRecord).values([
+        {'id': template.template_id, 'name': template.name,
+         'aliases': list(template.aliases), 'categories': list(template.categories),
+         'short_description': template.description.short, 'examine_description': template.description.examine,
+         'material': template.material, 'physical': template.physical.model_dump(),
+         'capabilities': template.capabilities, 'default_state': template.default_state,
+         'value': template.value.model_dump(), 'rarity': template.rarity,
+         'equipment_slots': list(template.equipment_slots), 'stackable': template.stackable,
+         'attributes': template.attributes} for template in CATALOGUE.values()
+    ]).on_conflict_do_nothing(index_elements=['id']))
 
     for building_id, name in [('inn', 'Inn'), ('blacksmith', 'Blacksmith')]:
         if await session.get(BuildingRecord, building_id) is None:

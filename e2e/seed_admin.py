@@ -49,6 +49,13 @@ async def main():
             await register_account(username, "A long test-only passphrase1!")
             await set_admin(get_session_factory(), username, True)
         await seed_map()
+        identity = await register_account('ItemAdmin', 'A long test-only passphrase1!')
+        await set_admin(get_session_factory(), 'ItemAdmin', True)
+        async with get_session_factory()() as session, session.begin():
+            session.add(RoomRecord(id='item_lab', name='Item Workshop', description='A quiet workshop for item testing.'))
+            await session.flush()
+            player = await session.get(PlayerRecord, identity.player_id)
+            player.current_room_id = 'item_lab'
     finally:
         await engine.dispose()
 
