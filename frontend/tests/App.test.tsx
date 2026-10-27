@@ -151,12 +151,21 @@ describe('Terminal', () => {
         room_id: 'town_square', room_name: 'Town Square', inventory: [{
           id: 'pack', name: 'backpack', description: 'You wear the backpack on your back.',
           location: 'back', quantity: 1, visible_state: ['open'], actions: ['close'],
-          contents: [{ id: 'letter', name: 'letter', description: 'The letter rests inside the backpack.' }],
+          contents: [
+            { id: 'letter', name: 'letter', description: 'The letter rests inside the backpack.' },
+            { id: 'coins', name: 'copper coin', quantity: 3, location: 'contained_in' },
+          ],
         }],
       } })
     })
-    expect(screen.getByTestId('inventory-panel')).toHaveTextContent('You wear the backpack on your back.')
-    expect(screen.getByTestId('inventory-panel')).toHaveTextContent('The letter rests inside the backpack.')
+    const inventory = screen.getByTestId('inventory-panel')
+    expect(inventory).toHaveTextContent('You are carrying the following items...')
+    expect(inventory.textContent?.match(/You are carrying/g)).toHaveLength(1)
+    expect(inventory).toHaveTextContent('backpack (back, open)')
+    expect(inventory).toHaveTextContent('letter')
+    expect(inventory).toHaveTextContent('3 × copper coin')
+    expect(inventory).not.toHaveTextContent('You wear')
+    expect(inventory).not.toHaveTextContent('The letter rests')
     act(() => socket.receive({ type: 'game_output', state: {
       room_id: 'elsewhere', room_name: 'Elsewhere', inventory: [{ id: 'bad', name: 'bad', contents: 'invalid' }],
     } }))

@@ -84,6 +84,7 @@
 .context-panel ul { list-style: none; }
 .context-panel li { padding: 0.65rem 0; border-bottom: 1px solid var(--border-color); }
 #inventory-panel li { padding: 0; line-height: normal; }
+#inventory-panel ul ul { padding-left: 1rem; }
 .panel-hint { margin-top: 1.5rem; font-size: 0.8rem; }
 .command-prompt { flex-shrink: 0; }
 

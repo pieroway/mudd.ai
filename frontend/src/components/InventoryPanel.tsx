@@ -44,9 +44,18 @@ export function isClientState(value: unknown): value is ClientState {
 
 function ItemList({ items }: { items: ItemView[] }) {
   return <ul>{items.map(item => <li key={item.id} title={item.actions?.join(', ')}>
-    {item.description || item.name}
+    {item.quantity && item.quantity > 1 ? `${item.quantity} × ` : ''}{item.name}
+    {inventoryDetails(item)}
     {Boolean(item.contents?.length) && <ItemList items={item.contents!} />}
   </li>)}</ul>
+}
+
+function inventoryDetails(item: ItemView): string {
+  const location = item.location && ![
+    'inventory', 'room', 'contained_in', 'resting_on', 'hidden_under', 'attached_to',
+  ].includes(item.location) ? item.location.replace(/_/g, ' ') : undefined
+  const details = [location, ...(item.visible_state ?? [])].filter(Boolean)
+  return details.length ? ` (${details.join(', ')})` : ''
 }
 
 export default function InventoryPanel({ state, connected }: {
@@ -59,7 +68,7 @@ export default function InventoryPanel({ state, connected }: {
       {!connected ? <p role="status">Disconnected. Reconnect to refresh your inventory.</p>
         : !state ? <p role="status">Waiting for inventory…</p>
         : state.inventory.length === 0 ? <p>Your inventory is empty.</p>
-        : <ItemList items={state.inventory} />}
+        : <><p>You are carrying the following items...</p><ItemList items={state.inventory} /></>}
       <p className="panel-hint">Use take, drop, or give in the command prompt.</p>
     </aside>
   )

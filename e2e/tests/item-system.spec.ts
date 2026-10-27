@@ -30,7 +30,7 @@ test('equipment and discovered keys persist without exposing closed contents', a
   await expect(inventory).not.toContainText('letter')
   await page.reload()
   await expect(page.getByText(/Online/)).toBeVisible()
-  await expect(inventory).toContainText('You wear the leather backpack on your back.')
+  await expect(inventory).toContainText('leather backpack (back, closed)')
   await expect(inventory).not.toContainText('letter')
   await send('open backpack', 'You open')
   await expect(inventory).toContainText('folded letter')

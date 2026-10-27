@@ -17,10 +17,13 @@ floor; `--basement-levels` adds 0–3 underground levels with one room each. Bot
 default to zero. The complete building may contain at most 24 rooms. Do not combine
 building mode with `--rooms` or `--buildings`; the exact total is calculated.
 
-The theme may contain up to 2,000 characters. Counts and floor connections are
-validated by the engine; names and room purposes are reviewed in the preview.
-Preview groups rooms by floor. Invalid building layouts are rejected rather than
-flattened into a single corridor. Publication uses the same atomic approval and
+The theme may contain up to 2,000 characters. The engine assigns fixed room slots
+to each floor, connects rooms on each floor with compass exits, and joins adjacent
+levels with stairs. The entrance and basement hatches begin closed. These routes
+use the requested room count; no extra hallway rooms are added.
+AI supplies names, descriptions, and furnishings for those slots, without generating
+connections. Room keys, object references, locks, and floor counts remain strictly
+validated. Preview groups rooms by floor for review. Publication uses the same atomic approval and
 stale-world checks as neighborhoods. No database migration is needed.
 
 A closed trapdoor works as a normal door. Calling a room hidden does not add

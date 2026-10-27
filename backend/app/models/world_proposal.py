@@ -17,7 +17,7 @@ class WorldProposalRecord(Base):
         CheckConstraint("direction IN ('north','south','east','west','up','down')", name="ck_world_direction"),
         CheckConstraint("(status = 'approved') = (result_room_id IS NOT NULL)", name="ck_world_result"),
         CheckConstraint("(status = 'pending') = (decided_at IS NULL)", name="ck_world_decision"),
-        CheckConstraint("schema_version IN (1,2)", name="ck_world_schema"),
+        CheckConstraint("schema_version IN (1,2,3)", name="ck_world_schema"),
     )
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     creator_account_id: Mapped[str | None] = mapped_column(

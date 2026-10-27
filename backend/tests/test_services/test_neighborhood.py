@@ -64,6 +64,29 @@ async def test_full_building_preview_publish_and_stairs(session_factory):
         assert (await command(game, identity, 'down'))['success']
 
 
+async def test_full_building_approves_content_only_openai_response(session_factory):
+    import json
+    import httpx
+
+    from app.ai.fake import fake_building
+    from tests.test_ai.test_building_layout import building_request
+    from tests.test_ai.test_openai_provider import envelope, provider
+
+    request = building_request(direction='east')
+    content = fake_building(request).model_dump()
+    del content['connections']
+    adapter = provider(lambda _: httpx.Response(200, json=envelope(json.dumps(content))))
+    game, _, identity = await connect(session_factory, provider=adapter)
+    before = await canonical_counts(session_factory)
+    proposal_id = await generate(game, identity,
+        'building east --floors 3 --rooms-per-floor 4 --main-rooms 2 --basement-levels 2 '
+        '--theme "The Lantern House with a great room, kitchen, cellar and lower chamber."')
+    assert await canonical_counts(session_factory) == before
+    reply = await command(game, identity, f'/world approve {proposal_id}')
+    assert reply['success'], reply
+    assert await canonical_counts(session_factory) == tuple(a + b for a, b in zip(before, (16, 32, 1, 3, 0)))
+
+
 async def test_building_rejects_wrong_counts_and_conflicting_levels(session_factory):
     from app.ai.neighborhood import NeighborhoodRequest, validate_budget, normalize_topology
 
