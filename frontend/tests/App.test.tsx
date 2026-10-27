@@ -51,6 +51,8 @@ describe('Terminal', () => {
         map: { rooms: [{ id: 'secret', name: 'Secret' }], exits: [] },
       } })
     })
+    expect(screen.getByRole('button', { name: 'Collapse map' })).toBeInTheDocument()
+    expect(screen.getByTestId('map-panel').closest('.game-layout')).toHaveClass('map-expanded')
     expect(screen.getByTestId('map-panel')).not.toHaveTextContent('Secret')
     const submit = (command: string) => {
       fireEvent.change(screen.getByTestId('command-input'), { target: { value: command } })
