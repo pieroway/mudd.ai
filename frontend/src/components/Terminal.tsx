@@ -112,7 +112,7 @@ export default function Terminal({ username }: TerminalProps) {
       } else if (message.type === 'narration') {
         const fallback = pendingOutputs.shift() ?? ''
         if (typeof message.text === 'string' && message.text.trim()) {
-          output = `[AI narration] ${message.text}`
+          output = message.text
         } else {
           output = fallback
         }
