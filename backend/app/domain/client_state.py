@@ -1,12 +1,18 @@
 """Explicit, player-visible data for optional client panels."""
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class InventoryEntry(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     id: str
     name: str
+    description: str = ''
+    quantity: int = 1
+    location: str = 'inventory'
+    visible_state: list[str] = Field(default_factory=list)
+    actions: list[str] = Field(default_factory=list)
+    contents: list['InventoryEntry'] = Field(default_factory=list)
 
 
 class MapRoom(BaseModel):
@@ -36,4 +42,5 @@ class ClientState(BaseModel):
     room_id: str
     room_name: str
     inventory: list[InventoryEntry]
+    visible_objects: list[InventoryEntry] = Field(default_factory=list)
     map: MapState

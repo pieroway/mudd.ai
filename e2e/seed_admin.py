@@ -49,6 +49,34 @@ async def main():
             await register_account(username, "A long test-only passphrase1!")
             await set_admin(get_session_factory(), username, True)
         await seed_map()
+        builder = await register_account('BuildingAdmin', 'A long test-only passphrase1!')
+        await set_admin(get_session_factory(), 'BuildingAdmin', True)
+        async with get_session_factory()() as session, session.begin():
+            session.add(RoomRecord(id='building_lot', name='Building Lot', description='A quiet lane awaits new buildings.'))
+            await session.flush()
+            player = await session.get(PlayerRecord, builder.player_id)
+            player.current_room_id = 'building_lot'
+        insertion = await register_account('InsertionAdmin', 'A long test-only passphrase1!')
+        await set_admin(get_session_factory(), 'InsertionAdmin', True)
+        async with get_session_factory()() as session, session.begin():
+            session.add_all([
+                RoomRecord(id='insert_square', name='Expansion Square', description='An open town square.'),
+                RoomRecord(id='insert_forest', name='Expansion Forest', description='Tall trees line the road.'),
+            ])
+            await session.flush()
+            session.add_all([
+                ExitRecord(room_id='insert_square', direction='north', destination_room_id='insert_forest'),
+                ExitRecord(room_id='insert_forest', direction='south', destination_room_id='insert_square'),
+            ])
+            player = await session.get(PlayerRecord, insertion.player_id)
+            player.current_room_id = 'insert_square'
+        identity = await register_account('ItemAdmin', 'A long test-only passphrase1!')
+        await set_admin(get_session_factory(), 'ItemAdmin', True)
+        async with get_session_factory()() as session, session.begin():
+            session.add(RoomRecord(id='item_lab', name='Item Workshop', description='A quiet workshop for item testing.'))
+            await session.flush()
+            player = await session.get(PlayerRecord, identity.player_id)
+            player.current_room_id = 'item_lab'
     finally:
         await engine.dispose()
 

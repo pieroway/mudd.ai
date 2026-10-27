@@ -10,6 +10,7 @@ class Player:
     current_room_id: str
     inventory: list[str] = field(default_factory=list)
     facing_direction: str = "north"
+    state: dict = field(default_factory=dict)
 
     def move(self, room_id: str) -> None:
         self.current_room_id = room_id

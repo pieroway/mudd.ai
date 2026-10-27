@@ -51,6 +51,8 @@ describe('Terminal', () => {
         map: { rooms: [{ id: 'secret', name: 'Secret' }], exits: [] },
       } })
     })
+    expect(screen.getByRole('button', { name: 'Collapse map' })).toBeInTheDocument()
+    expect(screen.getByTestId('map-panel').closest('.game-layout')).toHaveClass('map-expanded')
     expect(screen.getByTestId('map-panel')).not.toHaveTextContent('Secret')
     const submit = (command: string) => {
       fireEvent.change(screen.getByTestId('command-input'), { target: { value: command } })
@@ -78,7 +80,8 @@ describe('Terminal', () => {
       }, ai_usage: { remaining: 19, limit: 20, day: '2026-09-06' } })
     })
     expect(screen.getByTestId('transcript')).not.toHaveTextContent('You take the torch.')
-    expect(screen.getByTestId('transcript')).toHaveTextContent('[AI narration] <script>invent gold</script>')
+    expect(screen.getByTestId('transcript')).toHaveTextContent('<script>invent gold</script>')
+    expect(screen.getByTestId('transcript')).not.toHaveTextContent('[AI narration]')
     expect(screen.getByTestId('transcript').querySelector('script')).toBeNull()
     expect(screen.getByTestId('current-room')).toHaveTextContent('Town Square')
     expect(screen.getByTestId('inventory-panel')).toHaveTextContent('torch')
@@ -137,6 +140,37 @@ describe('Terminal', () => {
     expect(screen.getByTestId('inventory-panel')).toHaveTextContent('Disconnected')
     expect(screen.getByTestId('inventory-panel')).not.toHaveTextContent('Torch')
     expect(screen.getByTestId('command-input')).toBeDisabled()
+  })
+
+  it('renders contextual equipment and visible contents, rejecting malformed item details', () => {
+    render(<Terminal username="Alan" />)
+    const socket = MockWebSocket.instances[0]
+    act(() => {
+      socket.open()
+      socket.receive({ type: 'system', state: {
+        room_id: 'town_square', room_name: 'Town Square', inventory: [{
+          id: 'pack', name: 'backpack', description: 'You wear the backpack on your back.',
+          location: 'back', quantity: 1, visible_state: ['open'], actions: ['close'],
+          contents: [
+            { id: 'letter', name: 'letter', description: 'The letter rests inside the backpack.' },
+            { id: 'coins', name: 'copper coin', quantity: 3, location: 'contained_in' },
+          ],
+        }],
+      } })
+    })
+    const inventory = screen.getByTestId('inventory-panel')
+    expect(inventory).toHaveTextContent('You are carrying the following items...')
+    expect(inventory.textContent?.match(/You are carrying/g)).toHaveLength(1)
+    expect(inventory).toHaveTextContent('backpack (back, open)')
+    expect(inventory).toHaveTextContent('letter')
+    expect(inventory).toHaveTextContent('3 × copper coin')
+    expect(inventory).not.toHaveTextContent('You wear')
+    expect(inventory).not.toHaveTextContent('The letter rests')
+    act(() => socket.receive({ type: 'game_output', state: {
+      room_id: 'elsewhere', room_name: 'Elsewhere', inventory: [{ id: 'bad', name: 'bad', contents: 'invalid' }],
+    } }))
+    expect(screen.getByTestId('current-room')).toHaveTextContent('Town Square')
+    expect(screen.getByTestId('inventory-panel')).not.toHaveTextContent('bad')
   })
 
   it('persists panel visibility and handles panel commands locally while preserving inventory commands', () => {

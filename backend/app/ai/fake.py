@@ -11,6 +11,7 @@ from app.ai.npc import NPCRequest, NPCResponse
 from app.ai.provider import AIProvider, AIProviderError, CommandNotInterpretedError
 from app.ai.world import RoomProposalContent, WorldGenerationRequest
 from app.ai.neighborhood import NeighborhoodDraft, NeighborhoodRequest
+from app.ai.building import BuildingContent, assemble_building, building_layout
 
 
 DEFAULT_COMMAND_FIXTURES: dict[str, dict[str, object]] = {
@@ -21,6 +22,20 @@ DEFAULT_COMMAND_FIXTURES: dict[str, dict[str, object]] = {
         "command": {"action": "examine", "target": "torch"},
     },
 }
+
+
+def fake_building(request: NeighborhoodRequest) -> NeighborhoodDraft:
+    """A deterministic multi-floor fixture with closed entrance and basement hatch."""
+    rooms = []
+    indices: dict[int, int] = {}
+    for slot in building_layout(request):
+        level = slot['level']
+        indices[level] = indices.get(level, 0) + 1
+        name = f'Floor {level + 1} room {indices[level]}' if level >= 0 else f'Basement {-level}'
+        rooms.append({'key': slot['key'], 'name': name,
+                      'description': 'Old timber frames a quiet chamber.', 'building': 'lodge'})
+    return assemble_building(BuildingContent.model_validate({
+        'buildings': [{'key': 'lodge', 'name': 'Old Lodge'}], 'rooms': rooms, 'objects': []}), request)
 
 
 class FakeAIProvider(AIProvider):
@@ -43,6 +58,8 @@ class FakeAIProvider(AIProvider):
         if not await before_dispatch():
             raise AIProviderError("Daily AI allowance exhausted or session unavailable.")
         self.neighborhood_requests.append(request.model_copy(deep=True))
+        if request.floors:
+            return fake_building(request)
         rooms = [{"key": "lane", "name": "Cedar Lane", "description": "Cedar shade falls across worn cobbles.", "building": None}]
         buildings = []
         connections: list[dict[str, Any]] = [{"source": "anchor", "direction": request.direction, "destination": "lane", "door": None}]

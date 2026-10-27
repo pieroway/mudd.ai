@@ -19,11 +19,12 @@ from app.models import ExitRecord, ItemRecord, RoomRecord
 from app.models.world_proposal import WorldDeletionPlanRecord, WorldProposalRecord
 from app.repositories.world_proposals import WorldProposalRepository
 from app.services.ai_usage import reserve_attempt
-from app.services import neighborhood
+from app.services import neighborhood, world_insertion
 
 WORLD_HELP = (
     neighborhood.GENERATE_HELP + "\n"
     "/world propose <direction> <brief> (up to 400 characters)\n"
+    '/world insert <direction> --theme "brief" (up to 400 characters)\n'
     "/world proposals\n/world preview <proposal-id>\n"
     "/world approve <proposal-id>\n/world reject <proposal-id>"
     "\n/world rename <new name> (up to 100 characters)"
@@ -66,6 +67,8 @@ def result(text: str, success: bool = False, **extra: Any) -> dict[str, Any]:
 
 
 def preview(proposal: WorldProposalRecord, source_name: str) -> str:
+    if proposal.schema_version == 3:
+        return world_insertion.preview(proposal, source_name)
     if proposal.schema_version == 2:
         return neighborhood.preview(proposal, source_name)
     return (
@@ -94,6 +97,9 @@ class WorldGenerationService:
         if account_id is None or not await authorization_check():
             return result("The /world command requires an active admin session.")
         try:
+            if arguments[:1] == ["insert"]:
+                return await world_insertion.generate(self, player_id, account_id,
+                    arguments[1] if len(arguments) == 2 else "", authorization_check)
             if arguments[:1] == ["generate"]:
                 return await neighborhood.generate(self, player_id, account_id,
                     arguments[1] if len(arguments) == 2 else "", authorization_check)
@@ -230,6 +236,9 @@ class WorldGenerationService:
                 if proposal.schema_version == 2:
                     return await neighborhood.approve(repo, proposal, player, authorization_check,
                                                        lambda: self.provider is not None)
+                if proposal.schema_version == 3:
+                    return await world_insertion.approve(repo, proposal, player,
+                        authorization_check, lambda: self.provider is not None)
                 if player.current_room_id != proposal.source_room_id:
                     return result("Return to the source room before approving.")
                 await repo.lock_world()

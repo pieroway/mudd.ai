@@ -16,6 +16,7 @@ from app.models import (  # noqa: E402
     AuthSessionRecord,
     ExitRecord,
     ItemRecord,
+    ItemTemplateRecord,
     PlayerRecord,
     RoomRecord,
     WorldProposalRecord,
@@ -35,6 +36,7 @@ async def reset_persistent_database():
             await session.execute(delete(AuthSessionRecord))
             await session.execute(delete(AccountRecord))
             await session.execute(delete(ItemRecord))
+            await session.execute(delete(ItemTemplateRecord))
             await session.execute(delete(PlayerRecord))
             await session.execute(delete(ExitRecord))
             await session.execute(delete(DoorRecord))

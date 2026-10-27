@@ -22,7 +22,9 @@ from app.services.ai_usage import reserve_attempt
 if TYPE_CHECKING:
     from app.services.world_generation import WorldGenerationService
 
-GENERATE_HELP = '/world generate [around|direction] [--radius 0..2] [--rooms 1..12] [--buildings 0..4] [--theme "brief"]'
+GENERATE_HELP = ('/world generate [around|direction] [--radius 0..2] [--rooms 1..12] [--buildings 0..4] [--theme "brief"]'
+                 '\n/world generate building <compass direction> --floors 1..5 --rooms-per-floor 1..8 '
+                 '[--main-rooms 0..8] [--basement-levels 0..3] [--theme "brief"] (maximum 24 rooms)')
 logger = logging.getLogger(__name__)
 
 FAILURE_MESSAGES = {
@@ -66,6 +68,9 @@ def generation_failure(error: AIProviderFailure, started: float, timeout: float)
 
 def options(raw: str) -> dict[str, Any]:
     tokens = shlex.split(raw)
+    building_mode = bool(tokens and tokens[0].casefold() == 'building')
+    if building_mode:
+        tokens.pop(0)
     result: dict[str, Any] = {'direction': 'around', 'radius': 2, 'rooms': 8, 'buildings': 2,
                               'brief': 'A small, coherent expansion appropriate to the surroundings.'}
     brief: list[str] = []
@@ -75,11 +80,14 @@ def options(raw: str) -> dict[str, Any]:
         token = tokens.pop(0)
         if token.startswith('--'):
             key = token[2:].casefold()
-            if key not in {'radius', 'rooms', 'buildings', 'theme'} or key in used or not tokens:
+            allowed = {'radius', 'rooms', 'buildings', 'theme'}
+            if building_mode:
+                allowed |= {'floors', 'rooms-per-floor', 'main-rooms', 'basement-levels'}
+            if key not in allowed or key in used or not tokens:
                 raise ValueError(GENERATE_HELP)
             used.add(key)
             value = tokens.pop(0)
-            result['brief' if key == 'theme' else key] = value if key == 'theme' else int(value)
+            result['brief' if key == 'theme' else key.replace('-', '_')] = value if key == 'theme' else int(value)
         elif not brief and not direction_seen and token.casefold() in {'around', *DIRECTIONS}:
             result['direction'] = token.casefold()
             direction_seen = True
@@ -89,7 +97,20 @@ def options(raw: str) -> dict[str, Any]:
         if 'theme' in used:
             raise ValueError(GENERATE_HELP)
         result['brief'] = ' '.join(brief)
-    if not (0 <= result['radius'] <= 2 and 1 <= result['rooms'] <= 12 and 0 <= result['buildings'] <= 4):
+    if building_mode:
+        if not {'floors', 'rooms-per-floor'} <= used or used & {'rooms', 'buildings'}:
+            raise ValueError(GENERATE_HELP)
+        if not direction_seen or result['direction'] in {'around', 'up', 'down'}:
+            raise ValueError('Building mode requires an unused compass entrance. ' + GENERATE_HELP)
+        result.setdefault('main_rooms', 0)
+        result.setdefault('basement_levels', 0)
+        if not (1 <= result['floors'] <= 5 and 1 <= result['rooms_per_floor'] <= 8
+                and 0 <= result['main_rooms'] <= 8 and 0 <= result['basement_levels'] <= 3):
+            raise ValueError(GENERATE_HELP)
+        result['rooms'] = result['floors'] * result['rooms_per_floor'] + result['main_rooms'] + result['basement_levels']
+        result['buildings'] = 1
+    if not (0 <= result['radius'] <= 2 and 1 <= result['rooms'] <= (24 if building_mode else 12)
+            and 0 <= result['buildings'] <= 4):
         raise ValueError(GENERATE_HELP)
     return result
 
@@ -157,7 +178,9 @@ async def generate(service: 'WorldGenerationService', player_id: str, account_id
             origin_id = origin.id
             request = NeighborhoodRequest(brief=settings['brief'], origin_name=origin.name,
                 anchor_name=source.name, anchor_description=source.description, direction=direction,
-                max_rooms=settings['rooms'], max_buildings=settings['buildings'])
+                max_rooms=settings['rooms'], max_buildings=settings['buildings'],
+                **{key: settings[key] for key in ('floors', 'rooms_per_floor', 'main_rooms', 'basement_levels')
+                   if key in settings})
 
         async def before_dispatch():
             if not await authorized():
@@ -225,25 +248,51 @@ def stored_draft(proposal):
 
 def preview(proposal, source_name: str) -> str:
     _, draft, request = stored_draft(proposal)
+    from app.ai.neighborhood import materialize_objects
+    from app.domain.item_context import state_words
+    preview_items = materialize_objects(draft)
     buildings = {b.key: b.name for b in draft.buildings}
     names = {r.key: r.name for r in draft.rooms}
     names['anchor'] = source_name
-    object_names = {obj.key: obj.name for obj in draft.objects}
+    object_names = {obj.id: obj.name for obj in preview_items.values()}
     lines = [f'Neighborhood proposal {proposal.id} [{proposal.status}]',
              f'Origin: {request.origin_name}. Attachment: {source_name}, {request.direction}.',
              f'Brief: {request.brief}',
              f'{len(draft.rooms)} rooms, {len(draft.buildings)} buildings, '
-             f'{sum(edge.door is not None for edge in draft.connections)} doors, {len(draft.objects)} objects.']
-    for room in draft.rooms:
-        lines.extend([f'{room.name} ({buildings.get(room.building, "outdoors")}): {room.description}'])
+             f'{sum(edge.door is not None for edge in draft.connections)} doors, {len(preview_items)} objects.']
+    if request.floors:
+        from app.ai.neighborhood import building_levels
+        levels = building_levels(draft)
+        for level in sorted(set(levels.values()), reverse=True):
+            label = f'Floor {level + 1}' if level >= 0 else f'Basement level {-level}'
+            lines.append(f'{label}:')
+            lines.extend(f'{room.name}: {room.description}' for room in draft.rooms if levels[room.key] == level)
+    else:
+        for room in draft.rooms:
+            lines.extend([f'{room.name} ({buildings.get(room.building, "outdoors")}): {room.description}'])
     for edge in draft.connections:
         lines.append(f'{names[edge.source]} -> {edge.direction} -> {names[edge.destination]} (return: {OPPOSITE[edge.direction]})')
         if edge.door:
             lines.append(f'  Door: {edge.door.name} (closed). {edge.door.description}')
-    for obj in draft.objects:
-        location = f'in {object_names[obj.container]}' if obj.container else f'at {names[obj.room]}'
-        kind = 'container, fixed, closed' if obj.kind == 'container' else obj.kind
-        lines.append(f'  {obj.name} ({kind}, {location}): {obj.description}')
+    for obj in preview_items.values():
+        placement = obj.relationships.get('placement', 'contained_in')
+        location = f'{placement} {object_names[obj.container_id]}' if obj.container_id else f'at {names[obj.room_id]}'
+        details = []
+        if obj.has_capability('container') or obj.can_open and not obj.template_id:
+            details.append('container')
+        details.append('portable' if obj.portable else 'fixed')
+        details.extend(state_words(obj))
+        if obj.template_id:
+            details.append(f'template={obj.template_id}')
+        if obj.discovery.get('hidden'):
+            details.append('hidden, discoverable')
+        lines.append(f'  {obj.name} ({", ".join(details)}, {location}): {obj.description}')
+        if obj.discovery.get('clue'):
+            lines.append(f'    Clue: {obj.discovery["clue"]}')
+        opens = [target.name for target in preview_items.values()
+                 if target.relationships.get('lock_id') in obj.relationships.get('opens', [])]
+        if opens:
+            lines.append(f'    Matching key for: {", ".join(opens)}.')
     lines.extend(['Draft only. Review every room, connection, and object before publishing.',
                   f'/world approve {proposal.id}', f'/world reject {proposal.id}'])
     return '\n'.join(lines)
@@ -288,13 +337,23 @@ async def approve(repo, proposal, player, authorized, enabled) -> dict[str, Any]
                        destination_room_id=rooms[edge.destination], door_id=door_id),
             ExitRecord(room_id=rooms[edge.destination], direction=OPPOSITE[edge.direction],
                        destination_room_id=rooms[edge.source], door_id=door_id)])
-    for contained in [False, True]:
-        for obj in draft.objects:
-            if (obj.container is not None) == contained:
-                session.add(ItemRecord(id=objects[obj.key], name=obj.name, description=obj.description,
-                    room_id=rooms.get(obj.room), container_id=objects.get(obj.container),
-                    portable=obj.kind == 'portable', can_open=obj.kind == 'container',
-                    interaction_target_id=objects.get(obj.interaction_target)))
+    from app.ai.neighborhood import materialize_objects
+    pending = materialize_objects(draft, rooms, objects)
+    published = set()
+    while pending:
+        ready = [item for item in pending.values() if item.container_id is None or item.container_id in published]
+        if not ready:
+            raise ValueError('Generated item containment cycle')
+        for item in ready:
+            session.add(ItemRecord(id=item.id, name=item.name, description=item.description,
+                room_id=item.room_id, container_id=item.container_id, portable=item.portable,
+                template_id=item.template_id, can_open=item.can_open, can_use=item.can_use,
+                is_open=item.is_open, is_light_source=item.is_light_source, is_lit=item.is_lit,
+                fuel_remaining=item.fuel_remaining, state_data=item.state, condition=item.condition,
+                relationships=item.relationships, discovery=item.discovery, provenance=item.provenance,
+                interaction_target_id=item.interaction_target_id))
+            published.add(item.id)
+            del pending[item.id]
         await session.flush()
     proposal.status = 'approved'
     proposal.decided_at = func.now()

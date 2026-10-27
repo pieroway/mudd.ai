@@ -43,7 +43,7 @@ export default function Terminal({ username }: TerminalProps) {
   const [connected, setConnected] = useState(false)
   const [state, setState] = useState<ClientState>()
   const [mapVisible, setMapVisible] = useState(() => window.localStorage.getItem('mudd-map-visible') !== 'false')
-  const [mapExpanded, setMapExpanded] = useState(false)
+  const [mapExpanded, setMapExpanded] = useState(true)
   const [inventoryVisible, setInventoryVisible] = useState(() =>
     window.localStorage.getItem('mudd-inventory-visible') !== 'false')
   const [aiUsage, setAIUsage] = useState<GameMessage['ai_usage']>()
@@ -112,7 +112,7 @@ export default function Terminal({ username }: TerminalProps) {
       } else if (message.type === 'narration') {
         const fallback = pendingOutputs.shift() ?? ''
         if (typeof message.text === 'string' && message.text.trim()) {
-          output = `[AI narration] ${message.text}`
+          output = message.text
         } else {
           output = fallback
         }

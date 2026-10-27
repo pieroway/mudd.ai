@@ -1,5 +1,37 @@
 # Reviewed neighborhood generation
 
+## Complete buildings
+
+Use building mode from an outdoor room with an unused compass exit:
+
+```text
+/world generate building north --floors 3 --rooms-per-floor 4 --main-rooms 2 --basement-levels 2 --theme "Ashen Lantern Lodge, an old adventurers' guildhall with timber beams and faded banners. Main floor: entrance hall, cloakroom, steward office and sitting room, plus a great room and kitchen. Second floor: four guest bedrooms. Third floor: library, map room, meeting chamber and guildmaster study. Below the kitchen: cellar, with a chamber beneath it behind a closed trapdoor. Connect floors with stairs."
+/world preview <proposal-id>
+/world approve <proposal-id>
+```
+
+This requests exactly 16 rooms in one building: six on the main floor, four on
+each upper floor, and one on each of two basement levels. `--floors` (1–5) and
+`--rooms-per-floor` (1–8) are required. `--main-rooms` adds 0–8 rooms to the main
+floor; `--basement-levels` adds 0–3 underground levels with one room each. Both
+default to zero. The complete building may contain at most 24 rooms. Do not combine
+building mode with `--rooms` or `--buildings`; the exact total is calculated.
+
+The theme may contain up to 2,000 characters. The engine assigns fixed room slots
+to each floor, connects rooms on each floor with compass exits, and joins adjacent
+levels with stairs. The entrance and basement hatches begin closed. These routes
+use the requested room count; no extra hallway rooms are added.
+AI supplies names, descriptions, and furnishings for those slots, without generating
+connections. Room keys, object references, locks, and floor counts remain strictly
+validated. Preview groups rooms by floor for review. Publication uses the same atomic approval and
+stale-world checks as neighborhoods. No database migration is needed.
+
+A closed trapdoor works as a normal door. Calling a room hidden does not add
+concealment or discovery mechanics. Generation can fail if the provider exhausts
+its configured output budget; review the output limit or request a smaller build.
+
+## Neighborhoods
+
 An admin can generate a small connected neighborhood, review it in the transcript,
 then publish it atomically. Use an unused outdoor direction, or let `around` find
 a nearby outdoor frontier:
@@ -31,7 +63,8 @@ connection, doors, and objects with their locations. Rooms have 1–3 sentences
 (up to 1,000 characters); doors and objects have one sentence (up to 240 characters).
 There are at most 24 objects, with at most four distinctly named objects per room,
 including contained objects. The existing single-room `/world propose` and
-`/world describe` commands retain their five-sentence limits.
+`/world describe` commands retain their five-sentence limits. Neighborhood themes
+also accept up to 2,000 characters; single-room proposal briefs remain limited to 400.
 
 Doors begin closed and share one persistent state from both sides. Use
 `open north door`, `close south door`, or `examine cedar door`. When multiple doors

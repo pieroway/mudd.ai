@@ -24,6 +24,18 @@ are retained; no volume deletion is required.
 
 ## Deployment gate
 
+### Recovering from failures
+
+After a failure, reproduce the bug with a focused test where practical, then fix it.
+Rerun the exact failing tests first. Once they pass, rerun the complete failed stage
+with its original configuration and concurrency (for example, all parallel
+Playwright tests or the standalone smoke load test). Only restart the full gate
+after that whole stage passes. Do not repeat every already-passing stage merely
+because one narrow regression test is green.
+
+Keep the complete gate as the final deployment check. Do not relax assertions,
+thresholds, retries, or production limits to turn a failure into a pass.
+
 At minimum, unit tests must pass before Docker Desktop deployment.
 
 Suggested order:

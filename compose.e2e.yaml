@@ -39,7 +39,7 @@ services:
       AUTH_ATTEMPT_LIMIT: 200
       APP_ENV: test
       LOG_LEVEL: WARNING
-      TRUSTED_ORIGINS: http://host.docker.internal:15173
+      TRUSTED_ORIGINS: http://host.docker.internal:15173,http://localhost:15173
     depends_on:
       postgres_e2e:
         condition: service_healthy

@@ -233,7 +233,7 @@ test('admin can enable narration, retain it on reload, and disable it', async ({
     await input.press('Enter')
   }
   await send('help')
-  await expect(transcript).toContainText('Admin only: /ai narration on|off')
+  await expect(transcript.getByRole('rowheader', { name: '/ai narration on / off', exact: true })).toBeVisible()
   await send('look')
   await expect(transcript).toContainText('Town Square')
   await send('inventory')
@@ -243,21 +243,21 @@ test('admin can enable narration, retain it on reload, and disable it', async ({
   await send('/ai narration on')
   await expect(transcript).toContainText('AI narration is on for your account.')
   await send('look')
-  await expect(transcript).toContainText('[AI narration]')
+  await expect(transcript).not.toContainText('[AI narration]')
   await expect(page.getByTestId('ai-allowance')).toContainText('49/50 remaining')
   await page.reload()
   await expect(page.getByText(/Online/)).toBeVisible()
   await send('look')
-  await expect(transcript).toContainText('[AI narration]')
+  await expect(transcript).not.toContainText('[AI narration]')
   await expect(page.getByTestId('ai-allowance')).toContainText('48/50 remaining')
-  const narrated = transcript.locator('.transcript-line').filter({ hasText: '[AI narration]' })
-  await expect(narrated).toHaveCount(1)
+  const roomOutputs = transcript.locator('.transcript-line').filter({ hasText: 'Exits:' })
+  await expect(roomOutputs).toHaveCount(1)
   await send('/ai narration off')
   await expect(transcript).toContainText('AI narration is off for your account.')
   await send('look')
   await send('inventory')
   await expect(transcript).toContainText('Inventory: empty')
-  await expect(narrated).toHaveCount(1)
+  await expect(roomOutputs).toHaveCount(2)
   await expect(page.getByTestId('ai-allowance')).toContainText('48/50 remaining')
 })
 
@@ -270,8 +270,9 @@ test('regular users cannot enable narration or spend allowance through /ai', asy
   await expect(page.getByText(/Online/)).toBeVisible()
   await page.getByTestId('command-input').fill('help')
   await page.getByTestId('command-input').press('Enter')
-  await expect(page.getByTestId('transcript')).toContainText('Slash commands:')
-  await expect(page.getByTestId('transcript')).not.toContainText('Admin only:')
+  await expect(page.getByRole('heading', { name: 'Available Commands' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'AI Administration' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'World Building' })).toHaveCount(0)
   await page.getByTestId('command-input').fill('/ai narration on')
   await page.getByTestId('command-input').press('Enter')
   await expect(page.getByTestId('transcript')).toContainText('The /ai command is available to admin users only.')
@@ -389,24 +390,33 @@ test('player can toggle safe debug diagnostics in the transcript', async ({ page
 })
 
 test('a connected username cannot be used by another player', async ({ browser }) => {
+  const initialContexts = browser.contexts().length
   const firstPage = await browser.newPage()
   const secondPage = await browser.newPage()
 
-  await firstPage.goto('/')
-  await firstPage.getByTestId('username-input').fill('UniquePlaywright')
-  await firstPage.getByTestId('register-toggle').click()
-  await firstPage.getByTestId('password-input').fill('A long test-only passphrase1!')
-  await firstPage.getByTestId('login-button').click()
-  await expect(firstPage.getByText(/Online/)).toBeVisible()
+  try {
+    await firstPage.goto('/')
+    await firstPage.getByTestId('username-input').fill('UniquePlaywright')
+    await firstPage.getByTestId('register-toggle').click()
+    await firstPage.getByTestId('password-input').fill('A long test-only passphrase1!')
+    const registration = firstPage.waitForResponse(response =>
+      response.request().method() === 'POST' && response.url().endsWith('/auth/register'))
+    await firstPage.getByTestId('login-button').click()
+    expect((await registration).ok()).toBeTruthy()
+    await expect(firstPage.getByText(/Online/)).toBeVisible()
 
-  await secondPage.goto('/')
-  await secondPage.getByTestId('username-input').fill(' uniqueplaywright ')
-  await secondPage.getByTestId('password-input').fill('A long test-only passphrase1!')
-  await secondPage.getByTestId('login-button').click()
+    await secondPage.goto('/')
+    await secondPage.getByTestId('username-input').fill(' uniqueplaywright ')
+    await secondPage.getByTestId('password-input').fill('A long test-only passphrase1!')
+    await secondPage.getByTestId('login-button').click()
 
-  await expect(secondPage.getByTestId('transcript')).toContainText(
-    '[ERROR] That username is already connected.',
-  )
+    await expect(secondPage.getByTestId('transcript')).toContainText(
+      '[ERROR] That username is already connected.',
+    )
+  } finally {
+    await Promise.all([firstPage.context().close(), secondPage.context().close()])
+  }
+  expect(browser.contexts()).toHaveLength(initialContexts)
 })
 
 test('player can open and close a persistent item', async ({ page }) => {
@@ -436,7 +446,7 @@ test('player can open and close a persistent item', async ({ page }) => {
   await send('close chest', /The chest is already closed|You close the chest/)
   await send('open chest', 'You open the chest.')
   await send('take torch', 'You take the torch.')
-  await expect(page.getByTestId('inventory-panel').getByRole('listitem')).toHaveText('torch')
+  await expect(page.getByTestId('inventory-panel').getByRole('listitem')).toHaveText('torch (unlit)')
   await page.screenshot({ path: 'test-results/ui-desktop.png' })
   await page.getByRole('button', { name: 'Inventory', exact: true }).focus()
   await page.keyboard.press('Enter')
@@ -450,7 +460,7 @@ test('player can open and close a persistent item', async ({ page }) => {
   await expect(page.getByTestId('inventory-panel')).toHaveCount(0)
   await commandInput.fill('/panel inventory show')
   await commandInput.press('Enter')
-  await expect(page.getByTestId('inventory-panel').getByRole('listitem')).toHaveText('torch')
+  await expect(page.getByTestId('inventory-panel').getByRole('listitem')).toHaveText('torch (unlit)')
   await page.setViewportSize({ width: 390, height: 844 })
   await expect(commandInput).toBeInViewport()
   await expect(page.getByTestId('inventory-panel')).toBeInViewport()
@@ -466,4 +476,38 @@ test('player can open and close a persistent item', async ({ page }) => {
   await send('put out torch', 'You extinguish the torch.')
   await send('use torch', 'The torch casts a steady pool of light.')
   await send('drop torch', 'You drop the torch. It goes out.')
+})
+
+test('reviewed insertion preserves both directions and survives reload', async ({ page }) => {
+  test.setTimeout(60000)
+  await page.goto('/')
+  await page.getByTestId('username-input').fill('InsertionAdmin')
+  await page.getByTestId('password-input').fill('A long test-only passphrase1!')
+  await page.getByTestId('login-button').click()
+  const room = page.getByTestId('current-room')
+  await expect(room).toHaveText('Expansion Square')
+  const transcript = page.getByTestId('transcript')
+  const input = page.getByTestId('command-input')
+  const send = async (command: string, expected: string | RegExp) => {
+    const count = await transcript.locator('.transcript-line').count()
+    await input.pressSequentially(command, { delay: 15 })
+    await input.press('Enter')
+    const reply = transcript.locator('.transcript-line').nth(count + 1)
+    await expect(reply).toContainText(expected)
+    return (await reply.textContent())!
+  }
+  const draft = await send('/world insert north --theme "North Street"', 'Before:')
+  expect(draft).toContain('After:')
+  await expect(room).toHaveText('Expansion Square')
+  const id = draft.match(/[a-f0-9-]{36}/)![0]
+  await send(`/world approve ${id}`, 'Inserted')
+  await send('north', 'Mossy Clearing')
+  await expect(room).toHaveText('Mossy Clearing')
+  await send('north', 'Expansion Forest')
+  await expect(room).toHaveText('Expansion Forest')
+  await page.reload()
+  await expect(room).toHaveText('Expansion Forest')
+  await send('south', 'Mossy Clearing')
+  await send('south', 'Expansion Square')
+  await expect(room).toHaveText('Expansion Square')
 })

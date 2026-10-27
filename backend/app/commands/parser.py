@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import shlex
 from app.domain.directions import DIRECTIONS
+from app.commands.items import parse_item_command
 
 
 def parse_command(raw: str):
@@ -13,10 +14,18 @@ def parse_command(raw: str):
     parts = text.lower().split()
     command = parts[0]
     target = " ".join(parts[1:]) if len(parts) > 1 else None
+    if command == '/item':
+        try:
+            return {'action': 'item_admin', 'arguments': shlex.split(text)[1:]}
+        except ValueError:
+            return {'action': 'item_admin', 'arguments': []}
+    item_command = parse_item_command(text)
+    if item_command is not None:
+        return item_command
 
     if command == "/world":
         description_parts = text.split(maxsplit=2)
-        if len(description_parts) >= 2 and description_parts[1].casefold() in {"describe", "rename", "generate", "interaction"}:
+        if len(description_parts) >= 2 and description_parts[1].casefold() in {"describe", "rename", "generate", "interaction", "insert"}:
             return {"action": "world_admin", "arguments": [description_parts[1].casefold(), *description_parts[2:]]}
         world_parts = text.split(maxsplit=3)
         arguments = [part.casefold() for part in world_parts[1:3]]
@@ -80,6 +89,7 @@ def parse_command(raw: str):
             ),
             "raw": text,
         }
+
 
     if command == "put" and len(parts) > 1 and parts[1] == "out":
         return {
