@@ -2,6 +2,7 @@
 
 from copy import deepcopy
 from uuid import uuid4
+from app.domain.directions import OPPOSITE
 
 from app.domain.item_context import (
     describe,
@@ -303,7 +304,18 @@ def execute_item_command(command, player, world):
     }:
         if not has_light(player, world):
             return result("It is too dark to search here.")
+        room = world["rooms"][player.current_room_id]
         found = []
+        for direction, door in list(room.hidden_doors.items()):
+            destination_id = door.destination_room_id if room.id == door.room_id else door.room_id
+            other = world["rooms"][destination_id]
+            reverse = OPPOSITE[direction]
+            door.is_hidden = False
+            room.doors[direction] = room.hidden_doors.pop(direction)
+            other.doors[reverse] = other.hidden_doors.pop(reverse)
+            room.exits[direction] = destination_id
+            other.exits[reverse] = room.id
+            found.append(f"a concealed {door.name} to the {direction}")
         for obj in items.values():
             if obj.room_id == player.current_room_id:
                 if obj.discovery.get("hidden"):

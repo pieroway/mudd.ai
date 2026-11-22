@@ -14,6 +14,7 @@ class Room:
     items: list[str] = field(default_factory=list)
     doors: dict[str, Door] = field(default_factory=dict)
     conditions: dict = field(default_factory=dict)
+    hidden_doors: dict[str, Door] = field(default_factory=dict)
 
     def look(self, items_in_room: list[str] | None = None) -> str:
         """Return a human-readable description for the room, including items."""
@@ -25,7 +26,7 @@ class Room:
         description = f"{self.name}\n{self.description}\nExits: {exits_text}"
         if self.doors:
             description += '\nDoors: ' + ', '.join(
-                f"{direction}: {door.name} ({'open' if door.is_open else 'closed'})"
+                f"{direction}: {door.name} ({door.status()})"
                 for direction, door in sorted(self.doors.items()))
 
         if items_in_room:

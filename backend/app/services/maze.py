@@ -7,14 +7,16 @@ from secrets import randbits
 import shlex
 from uuid import uuid4
 
+from app.domain.catalogue import CATALOGUE
 from app.domain.directions import OPPOSITE
-from app.models import ExitRecord, RoomRecord
+from app.domain.item import Item
+from app.models import ExitRecord, ItemRecord, RoomRecord
 from app.repositories.world_proposals import WorldProposalRepository
 from app.models.game import DoorRecord
 
 HELP = (
     '/world generate maze [--theme abandoned-mine] [--rooms 250] [--levels 5] '
-    '[--seed 7421] [--loops 15] [--direction down]'
+    '[--seed 7421] [--loops 15] [--secrets 15] [--locks 20] [--jams 10] [--direction down]'
 )
 
 STEPS = {
@@ -38,12 +40,16 @@ class MazeConfig:
     seed: int = 0
     loops: int = 15
     direction: str = "down"
+    secrets: int = 15
+    locks: int = 20
+    jams: int = 10
 
 
 def options(raw: str) -> MazeConfig:
     parts = shlex.split(raw)
     values = dict(zip(parts[::2], parts[1::2]))
-    allowed = {"--theme", "--rooms", "--levels", "--seed", "--loops", "--direction"}
+    allowed = {"--theme", "--rooms", "--levels", "--seed", "--loops", "--direction",
+               "--secrets", "--locks", "--jams"}
     if len(parts) != 2 * len(values) or values.keys() - allowed:
         raise ValueError(HELP)
     try:
@@ -54,6 +60,9 @@ def options(raw: str) -> MazeConfig:
             seed=int(values["--seed"]) if "--seed" in values else randbits(63),
             loops=int(values.get("--loops", "15")),
             direction=values.get("--direction", "down"),
+            secrets=int(values.get("--secrets", "15")),
+            locks=int(values.get("--locks", "20")),
+            jams=int(values.get("--jams", "10")),
         )
     except ValueError:
         raise ValueError(HELP) from None
@@ -61,8 +70,10 @@ def options(raw: str) -> MazeConfig:
         raise ValueError("Choose abandoned-mine, natural-caves, or catacombs.")
     if not 1 <= config.rooms <= 500 or not 1 <= config.levels <= min(20, config.rooms):
         raise ValueError("Choose 1–500 rooms and 1–20 levels, with at least one room per level.")
-    if not 0 <= config.seed < 2**63 or not 0 <= config.loops <= 100:
-        raise ValueError("Choose a non-negative 63-bit seed and a loop percentage from 0 to 100.")
+    if not 0 <= config.seed < 2**63:
+        raise ValueError("Choose a non-negative 63-bit seed.")
+    if any(not 0 <= rate <= 100 for rate in (config.loops, config.secrets, config.locks, config.jams)):
+        raise ValueError("Choose percentages from 0 to 100.")
     if config.direction not in STEPS or config.direction == "up":
         raise ValueError("Choose down or a compass direction for the entrance.")
     return config
@@ -120,6 +131,19 @@ def topology(config: MazeConfig) -> tuple[list[Coord], list[Passage]]:
     return cells, passages
 
 
+def place_item(repo: WorldProposalRepository, room_id: str, template_id: str, *,
+               name: str | None = None, opens: list[str] | None = None) -> None:
+    item = Item.from_template(str(uuid4()), CATALOGUE[template_id], room_id=room_id)
+    if opens:
+        item.relationships["opens"] = opens
+    repo.session.add(ItemRecord(
+        id=item.id, room_id=room_id, template_id=template_id, name=name or item.name,
+        description=item.description, portable=item.portable, can_open=item.can_open,
+        can_use=item.can_use, state_data=item.state, relationships=item.relationships,
+        provenance={"source": "maze_generation"},
+    ))
+
+
 async def publish(repo: WorldProposalRepository, source_id: str, config: MazeConfig) -> dict:
     cells, passages = topology(config)
     await repo.lock_world()
@@ -142,21 +166,45 @@ async def publish(repo: WorldProposalRepository, source_id: str, config: MazeCon
             description=f"{material} lines the chamber {abs(z) + 1} levels below ground. {detail}",
             conditions={"maze": {
                 "region_id": region_id, "x": x, "y": y, "z": z - 1,
-                "version": 1, "config": asdict(config),
+                "version": 2, "config": asdict(config),
             }},
         ))
     await repo.session.flush()
     links = [(source_id, config.direction, room_ids[cells[0]])]
     links.extend((room_ids[start], direction, room_ids[end]) for start, direction, end in passages)
     door_ids = {}
+    lock_ids = []
+    needs_crowbar = False
     for index, (start_id, direction, end_id) in enumerate(links):
-        if direction in {"up", "down"} and index % 3 == 0:
+        # The entrance and spanning tree precede every optional loop.
+        optional = index >= config.rooms
+        hidden = optional and rng.randrange(100) < config.secrets
+        locked = optional and rng.randrange(100) < config.locks
+        jammed = optional and rng.randrange(100) < config.jams
+        vertical = direction in {"up", "down"}
+        if hidden or locked or jammed or (vertical and index % 3 == 0):
             door_id = str(uuid4())
             door_ids[index] = door_id
-            repo.session.add(DoorRecord(
-                id=door_id, name="iron trapdoor", description="An iron trapdoor covers the opening.",
-                room_id=start_id, destination_room_id=end_id, is_open=False,
+            if locked:
+                lock_ids.append(door_id)
+            needs_crowbar |= jammed
+            name = "iron trapdoor" if vertical else rng.choice((
+                "wooden door", "iron door", "reinforced gate", "portcullis",
             ))
+            repo.session.add(DoorRecord(
+                id=door_id, name=name, description=f"The {name} is set into the passage.",
+                room_id=start_id, destination_room_id=end_id, is_open=False,
+                lock_id=door_id if locked else None, is_locked=locked,
+                is_hidden=hidden, is_jammed=jammed,
+            ))
+    entrance = room_ids[cells[0]]
+    if lock_ids:
+        place_item(repo, entrance, "key_brass_ornate", name=f"{title.lower()} passage key", opens=lock_ids)
+    if needs_crowbar:
+        place_item(repo, entrance, "tool_crowbar")
+    for cell in cells:
+        if cell[:2] == (0, 0):
+            place_item(repo, room_ids[cell], "container_crate_wooden")
     await repo.session.flush()
     for index, (start_id, direction, end_id) in enumerate(links):
         repo.session.add_all([

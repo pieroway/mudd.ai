@@ -1,7 +1,7 @@
 from __future__ import annotations
 from app.domain.directions import HORIZONTAL, resolve_direction
 from app.domain.help import format_help, player_help_groups
-from app.domain.item_context import visible, has_light
+from app.domain.item_context import find_item, visible, has_light
 from app.engine.item_rules import execute_item_command
 
 
@@ -33,33 +33,70 @@ def _is_accessible(item, player):
     )
 
 
+def _door_command(command, player, world, room):
+    action = command.get("action")
+    if action not in {"open", "close", "examine", "unlock", "pry"}:
+        return None
+    target = (command.get("target") or "").casefold()
+    matches = [door for direction, door in room.doors.items()
+               if target in {door.id.casefold(), door.name.casefold(), "door", f"{direction} door"}]
+    if not matches:
+        return None
+    if len(matches) > 1:
+        return {"success": False, "output": "Which door? Use its direction, such as open north door."}
+    door = matches[0]
+    if action == "examine":
+        return {"success": True, "output": f"{door.description} It is {door.status()}."}
+    if action == "unlock":
+        if not door.is_locked:
+            return {"success": False, "output": f"The {door.name} is already unlocked."}
+        tool = find_item(command.get("tool"), player, world, owned=True)
+        if (not tool or tool.state.get("broken") or tool.condition.get("broken")
+                or door.lock_id not in tool.relationships.get("opens", [])):
+            return {"success": False, "output": f"You need a matching key for the {door.name}."}
+        door.is_locked = False
+        change = "unlocks"
+    elif action == "pry":
+        if not door.is_jammed:
+            return {"success": False, "output": f"The {door.name} does not need to be pried free."}
+        tool = find_item(command.get("tool"), player, world, owned=True)
+        if (not tool or tool.state.get("broken") or tool.condition.get("broken")
+                or tool.template_id != "tool_crowbar"):
+            return {"success": False, "output": f"You need a usable crowbar to free the {door.name}."}
+        door.is_jammed = False
+        change = "comes free"
+    else:
+        opened = action == "open"
+        if opened and (door.is_locked or door.is_jammed):
+            return {"success": False, "output": f"The {door.name} is {door.status()}."}
+        if door.is_open == opened:
+            return {"success": False, "output": f"The {door.name} is already {door.status()}."}
+        door.is_open = opened
+        change = f"{action}s"
+    notice = f"The {door.name} {change}."
+    output = f"You {action} the {door.name}." if action in {"open", "close"} else notice
+    return {"success": True, "output": output,
+            "_door_rooms": [door.room_id, door.destination_room_id], "_door_notice": notice}
+
+
 def execute_command(command, player, world):
     """Execute a parsed command against a deterministic test world."""
     action = command.get("action")
     room = world['rooms'][player.current_room_id]
+    if action in {"unlock", "pry"}:
+        door_result = _door_command(command, player, world, room)
+        if door_result is not None:
+            return door_result
     extended = execute_item_command(command, player, world)
     if extended is not None:
         if extended.get('success'):
             world.setdefault('item_events', []).append({'action': action, 'player_id': player.id,
                                                         'target': command.get('target')})
         return extended
-    if action in {'open', 'close', 'examine'}:
-        target = (command.get('target') or '').casefold()
-        matches = [door for direction, door in room.doors.items()
-                   if target in {door.id.casefold(), door.name.casefold(), 'door', f'{direction} door'}]
-        if len(matches) > 1:
-            return {'success': False, 'output': 'Which door? Use its direction, such as open north door.'}
-        if matches:
-            door = matches[0]
-            if action == 'examine':
-                return {'success': True, 'output': f"{door.description} It is {'open' if door.is_open else 'closed'}."}
-            opened = action == 'open'
-            if door.is_open == opened:
-                return {'success': False, 'output': f"The {door.name} is already {'open' if opened else 'closed'}."}
-            door.is_open = opened
-            return {'success': True, 'output': f'You {action} the {door.name}.',
-                    '_door_rooms': [door.room_id, door.destination_room_id],
-                    '_door_notice': f"The {door.name} {'opens' if opened else 'closes'}."}
+    if action in {"open", "close", "examine"}:
+        door_result = _door_command(command, player, world, room)
+        if door_result is not None:
+            return door_result
 
     if action == "look":
         room = world["rooms"][player.current_room_id]

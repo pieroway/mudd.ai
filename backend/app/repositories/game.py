@@ -34,12 +34,15 @@ class GameRepository:
         )
         rooms = (await self.session.scalars(select(RoomRecord).where(
             RoomRecord.id.in_(known)).order_by(RoomRecord.id))).all()
+        hidden = select(DoorRecord.id).where(DoorRecord.is_hidden.is_(True))
+        visible_exit = ExitRecord.door_id.is_(None) | ExitRecord.door_id.not_in(hidden)
         exits = (await self.session.scalars(select(ExitRecord).where(
+            visible_exit,
             ExitRecord.room_id.in_(known), ExitRecord.destination_room_id.in_(known)
         ).order_by(ExitRecord.room_id, ExitRecord.direction))).all()
         # Exit availability is visible locally; undiscovered destination data stays private.
         vertical = set((await self.session.execute(select(ExitRecord.room_id, ExitRecord.direction).where(
-            ExitRecord.room_id.in_(known), ExitRecord.direction.in_(['up', 'down'])
+            visible_exit, ExitRecord.room_id.in_(known), ExitRecord.direction.in_(['up', 'down'])
         ))).all())
         return MapState(
             rooms=[MapRoom(id=room.id, name=room.name, building_id=room.building_id,
@@ -125,7 +128,8 @@ class GameRepository:
             door_statement = door_statement.with_for_update()
         door_records = (await self.session.scalars(door_statement)).all()
         doors = {record.id: Door(record.id, record.name, record.description, record.room_id,
-                                record.destination_room_id, record.is_open) for record in door_records}
+                                record.destination_room_id, record.is_open, record.lock_id,
+                                record.is_locked, record.is_hidden, record.is_jammed) for record in door_records}
         item_statement = select(ItemRecord).order_by(ItemRecord.id)
         if lock_items:
             item_statement = item_statement.with_for_update()
@@ -168,9 +172,14 @@ class GameRepository:
             for record in room_records
         }
         for record in exit_records:
-            rooms[record.room_id].exits[record.direction] = record.destination_room_id
+            room = rooms[record.room_id]
             if record.door_id:
-                rooms[record.room_id].doors[record.direction] = doors[record.door_id]
+                door = doors[record.door_id]
+                if door.is_hidden:
+                    room.hidden_doors[record.direction] = door
+                    continue
+                room.doors[record.direction] = door
+            room.exits[record.direction] = record.destination_room_id
 
         items: dict[str, Item] = {}
         for item_record in item_records:
@@ -259,10 +268,15 @@ class GameRepository:
             return
 
         rooms: dict[str, Room] = world['rooms']  # type: ignore[assignment]
-        domain_doors = {door.id: door for room in rooms.values() for door in room.doors.values()}
+        domain_doors = {door.id: door for room in rooms.values()
+                        for door in (*room.doors.values(), *room.hidden_doors.values())}
         door_records = (await self.session.scalars(select(DoorRecord).where(DoorRecord.id.in_(domain_doors)))).all()
         for door_record in door_records:
-            door_record.is_open = domain_doors[door_record.id].is_open
+            door = domain_doors[door_record.id]
+            door_record.is_open = door.is_open
+            door_record.is_locked = door.is_locked
+            door_record.is_hidden = door.is_hidden
+            door_record.is_jammed = door.is_jammed
 
         domain_items: dict[str, Item] = world["items"]  # type: ignore[assignment]
         item_records = list((await self.session.scalars(select(ItemRecord))).all())

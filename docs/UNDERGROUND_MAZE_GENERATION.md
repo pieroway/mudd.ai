@@ -16,6 +16,23 @@ generated and reported in the command response. Region-relative coordinates,
 configuration, and generator version are saved on the rooms. Vertical routes
 can include shared, operable trapdoors.
 
+Use `--secrets`, `--locks`, and `--jams` to set the percentage of optional
+loops with concealed, locked, and jammed doors. The defaults are 15, 20, and
+10 respectively. These conditions can overlap. Required passages are free of
+these obstacles. Chamber entrances and level landings contain wooden crates.
+
+Search a room to reveal both sides of a concealed passage for everyone. If
+the maze generates locked or jammed doors, its entry chamber contains a
+passage key or crowbar as needed. For example, in an abandoned mine:
+
+```text
+search
+unlock east door with mine passage key
+pry east door with iron crowbar
+open east door
+east
+```
+
 The phases below describe the complete feature specification.
 
 ## Objective
