@@ -70,6 +70,47 @@ def test_help_sends_grouped_command_tables(game_client):
     assert any(entry["command"] == "inventory / i" for entry in groups["LOOKING AND STATUS"])
 
 
+def test_role_help_and_live_moderation(game_client):
+    game_client.admin_usernames.add("roleadmin")
+    with (
+        game_client.websocket_connect("/ws?username=RoleAdmin") as admin,
+        game_client.websocket_connect("/ws?username=RoleUser") as user,
+        game_client.websocket_connect("/ws?username=RoleTarget") as target,
+    ):
+        for socket in (admin, user, target):
+            socket.receive_json()
+
+        def command(socket, message):
+            socket.send_text(message)
+            return socket.receive_json()
+
+        assert not command(user, "/role grant RoleUser creator")["success"]
+        assert not command(admin, "/role grant RoleUser admin")["success"]
+        assert command(admin, "/role grant RoleUser creator")["success"]
+        help_text = command(user, "help")["text"]
+        assert "/world generate" in help_text and "/item catalogue" in help_text
+        for denied in ("/world delete", "/mod warn", "/role grant", "/ai credits"):
+            assert denied not in help_text
+        assert not command(user, "/world delete east")["success"]
+        assert command(user, "/item catalogue")["success"]
+
+        assert command(admin, "/role grant RoleUser moderator")["success"]
+        assert "/mod warn" in command(user, "help")["text"]
+        assert command(user, '/mod warn RoleTarget "Keep chat civil"')["success"]
+        assert "Keep chat civil" in target.receive_json()["text"]
+        assert "Available commands" in command(admin, "help")["text"]
+        assert command(user, '/mod announce "Market opens soon"')["success"]
+        for socket in (admin, target):
+            assert "Market opens soon" in socket.receive_json()["text"]
+        assert command(user, '/mod boot RoleTarget "Please reconnect later"')["success"]
+        assert "Please reconnect later" in target.receive_json()["text"]
+        with pytest.raises(WebSocketDisconnect):
+            target.receive_json()
+        assert command(admin, "/role revoke RoleUser moderator")["success"]
+        assert "/mod warn" not in command(user, "help")["text"]
+        assert not command(user, "/mod announce Hello")["success"]
+
+
 def test_npc_dialogue_is_private_and_memory_survives_reconnect(game_client, monkeypatch):
     provider = FakeAIProvider()
     monkeypatch.setattr(websocket_api.game_service.npc_service, "provider", provider)

@@ -4,15 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.models import AccountRecord
-
-
-async def account_is_admin(
-    session_factory: async_sessionmaker[AsyncSession], account_id: str | None
-) -> bool:
-    async with session_factory() as session:
-        return bool(await session.scalar(select(AccountRecord.is_admin).where(
-            AccountRecord.id == account_id
-        )))
+from app.services.roles import change_role
 
 
 async def narration_allowed(
@@ -54,13 +46,4 @@ async def set_admin(
     session_factory: async_sessionmaker[AsyncSession], username: str, enabled: bool
 ) -> None:
     """Local operator operation; never exposed as a player command or HTTP route."""
-    async with session_factory() as session:
-        async with session.begin():
-            account = await session.scalar(select(AccountRecord).where(
-                AccountRecord.normalized_username == username.strip().casefold()
-            ).with_for_update())
-            if account is None:
-                raise ValueError("Account not found.")
-            account.is_admin = enabled
-            if not enabled:
-                account.ai_narration_enabled = False
+    await change_role(session_factory, None, username, "admin", enabled)

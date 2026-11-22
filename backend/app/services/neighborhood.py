@@ -164,9 +164,9 @@ async def generate(service: 'WorldGenerationService', player_id: str, account_id
     try:
         async with service.factory() as session, session.begin():
             repo = WorldProposalRepository(session)
-            player = await repo.admin_player(account_id, player_id)
+            player = await repo.creator_player(account_id, player_id)
             if player is None or not await authorized():
-                return response('The /world command is available to admin users only.')
+                return response('The /world command requires creator or admin access.')
             if service.provider is None:
                 return response('World generation is currently disabled.')
             settings = options(raw)
@@ -209,7 +209,7 @@ async def generate(service: 'WorldGenerationService', player_id: str, account_id
             return generation_failure(AIProviderFailure(AIFailureReason.INTERNAL), started, service.neighborhood_timeout_seconds)
         async with service.factory() as session, session.begin():
             repo = WorldProposalRepository(session)
-            player = await repo.admin_player(account_id, player_id)
+            player = await repo.creator_player(account_id, player_id)
             if player is None or not await authorized() or service.provider is None:
                 return response('Admin session or generation is no longer available.')
             if player.current_room_id != origin_id:

@@ -27,15 +27,15 @@ async def execute(factory, player_id, account_id, arguments, authorized) -> dict
     if not account_id or not await authorized():
         return {
             "success": False,
-            "output": "Item diagnostics and authoring require an active admin session.",
+            "output": "Item diagnostics and authoring require an authenticated account.",
         }
     try:
         async with factory() as session, session.begin():
-            record = await WorldProposalRepository(session).admin_player(account_id, player_id)
+            record = await WorldProposalRepository(session).creator_player(account_id, player_id)
             if record is None or not await authorized():
                 return {
                     "success": False,
-                    "output": "Item diagnostics and authoring are available to admin users only.",
+                    "output": "Item diagnostics and authoring require creator or admin access.",
                 }
             if not arguments:
                 return {"success": False, "output": ITEM_HELP}
@@ -57,7 +57,7 @@ async def execute(factory, player_id, account_id, arguments, authorized) -> dict
                     raise ValueError("Unsupported room terrain.")
                 room = await session.get(RoomRecord, record.current_room_id, with_for_update=True)
                 if room is None or not await authorized():
-                    raise ValueError("The room or admin session is no longer available.")
+                    raise ValueError("The room or editing session is no longer available.")
                 room.conditions = {**room.conditions, **data}
                 return {"success": True, "output": "Updated the current room conditions."}
             if operation == "catalogue":
@@ -259,7 +259,7 @@ async def execute(factory, player_id, account_id, arguments, authorized) -> dict
             validate_world_dependencies(items, rooms, world.get('_player_rooms'))
             if (
                 not await authorized()
-                or await WorldProposalRepository(session).admin_player(account_id, player_id)
+                or await WorldProposalRepository(session).creator_player(account_id, player_id)
                 is None
             ):
                 raise ValueError("Admin session expired; no changes were saved.")

@@ -13,7 +13,7 @@ from app.ai.factory import create_ai_provider
 from app.commands.parser import parse_command
 from app.config import Settings
 from app.services.game import GameService, InvalidUsernameError, UsernameInUseError
-from app.services.auth import resolve_session
+from app.services.auth import resolve_session, revoke_session
 from app.services.ai_usage import usage_status
 from app.services.narration import NarrationService
 from app.api.auth import COOKIE_NAME
@@ -236,6 +236,14 @@ async def websocket_endpoint(websocket: WebSocket):
                 for event in events:
                     recipient = connections_by_session.get(event["session_id"])
                     if recipient is not None:
+                        if event.get("boot"):
+                            await revoke_session(authenticated_tokens.get(recipient))
+                            if await _send_json(recipient, {"type": "error", "text": event["text"]}):
+                                try:
+                                    await recipient.close(code=1008)
+                                except (RuntimeError, WebSocketDisconnect):
+                                    pass
+                            continue
                         await _send_json(
                             recipient,
                             {

@@ -114,9 +114,9 @@ async def generate(
         return result("Usage: " + HELP)
     async with service.factory() as session, session.begin():
         repo = WorldProposalRepository(session)
-        player = await repo.admin_player(account_id, player_id)
+        player = await repo.creator_player(account_id, player_id)
         if player is None or not await authorized():
-            return result("The /world command is available to admin users only.")
+            return result("The /world command requires creator or admin access.")
         if service.provider is None:
             return result("World generation and approval are currently disabled.")
         direction = resolve_direction(parts[0].lower(), player.facing_direction)
@@ -165,7 +165,7 @@ async def generate(
     )
     async with service.factory() as session, session.begin():
         repo = WorldProposalRepository(session)
-        player = await repo.admin_player(account_id, player_id)
+        player = await repo.creator_player(account_id, player_id)
         if player is None or not await authorized() or service.provider is None:
             return result("Admin session or world generation is no longer available.")
         if player.current_room_id != source_id:

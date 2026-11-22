@@ -14,6 +14,14 @@ def parse_command(raw: str):
     parts = text.lower().split()
     command = parts[0]
     target = " ".join(parts[1:]) if len(parts) > 1 else None
+    if command in {"/role", "/mod"}:
+        try:
+            arguments = shlex.split(text)[1:]
+        except ValueError:
+            arguments = []
+        if arguments:
+            arguments[0] = arguments[0].casefold()
+        return {"action": command[1:], "arguments": arguments}
     if command == '/item':
         try:
             return {'action': 'item_admin', 'arguments': shlex.split(text)[1:]}

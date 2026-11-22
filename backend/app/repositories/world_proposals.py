@@ -16,10 +16,10 @@ class WorldProposalRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def admin_player(self, account_id: str, player_id: str) -> PlayerRecord | None:
+    async def creator_player(self, account_id: str, player_id: str, *, admin_only: bool = False) -> PlayerRecord | None:
         account = await self.session.scalar(select(AccountRecord).where(
             AccountRecord.id == account_id).with_for_update())
-        if account is None or not account.is_admin or account.player_id != player_id:
+        if account is None or not (account.is_admin if admin_only else account.can_create) or account.player_id != player_id:
             return None
         return (await self.session.scalars(select(PlayerRecord).where(
             PlayerRecord.id == player_id).with_for_update())).one_or_none()

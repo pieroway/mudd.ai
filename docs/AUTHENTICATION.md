@@ -1,14 +1,49 @@
 # Player authentication
 
-## Administrator access and narration
+## Account roles
 
-New and existing accounts default to non-admin with narration off. Only a local
-operator can assign an admin role to an existing account:
+New accounts start as regular players with narration off. Admins can assign
+creator and moderator independently, and changes apply on the next command
+even if the target is already connected.
+
+```text
+/role list Alan
+/role grant "Market Builder" creator
+/role grant "Market Builder" moderator
+/role revoke "Market Builder" moderator
+/mod warn "Market Builder" "Keep chat civil."
+/mod announce "The market opens soon."
+/mod boot "Market Builder" "Please sign in again when ready."
+```
+
+A warning is private. An area announcement reaches connected players in the
+moderator's room and rooms directly connected by compass exits. Boot ends the
+active browser session. The player may sign in again. Admin accounts can only
+be moderated by other admins.
+
+Creators can generate, review, and publish world proposals, edit rooms, and
+author items. World branch deletion is admin-only. In-game `help` lists commands
+according to the account's current permissions.
+
+Migration `0021` binds the God role to the existing Alan account when present.
+God has every role permission and can also grant and revoke admin in-game. The
+account cannot be reassigned, deleted, or moderated through game commands or
+the account CLI. For a fresh installation, once the operator has verified
+ownership of the existing Alan account, run:
 
 ```bash
-docker compose exec backend python -m app.account_admin "Alan" --admin on
-docker compose exec backend python -m app.account_admin "Alan" --admin off
+docker compose exec backend python -m app.account_admin Alan --bootstrap-god
 ```
+
+The local operator can assign admin, moderator, and creator to other existing
+accounts. Role changes are recorded in the database.
+
+```bash
+docker compose exec backend python -m app.account_admin "Market Builder" --admin on
+docker compose exec backend python -m app.account_admin "Market Builder" --admin off
+```
+
+## Administrator access and narration
 
 Granting admin access does not enable narration. Revocation turns narration off
 and takes effect on active connections without signing in again. Registration and

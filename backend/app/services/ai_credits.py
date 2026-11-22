@@ -43,6 +43,8 @@ async def grant_credits(
         recipient = accounts.get(target_id or "")
         if recipient is None:
             return {"success": False, "output": "Account not found."}
+        if recipient.is_god and recipient.id != admin.id:
+            return {"success": False, "output": "The God account is protected."}
         if recipient.ai_bonus_credits + units > 1_000_000:
             return {"success": False, "output": "Grant would exceed the account's 1,000,000 bonus-credit limit."}
         recipient.ai_bonus_credits += units

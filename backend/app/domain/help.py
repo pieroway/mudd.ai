@@ -151,6 +151,7 @@ _ADMIN_HELP: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
         "WORLD BUILDING",
         (
             ("/world generate [options]", "Propose a neighborhood."),
+            ("/world insert <direction> --theme \"brief\"", "Propose a new room along an existing outdoor route."),
             ("/item catalogue / spawn / inspect / lock / place / configure", "Author and diagnose item instances; use /item for syntax."),
             ("/world generate building <direction> --floors N --rooms-per-floor N [--main-rooms N] [--basement-levels N] --theme \"brief\"",
              "Propose one complete building, up to 24 rooms."),
@@ -200,8 +201,27 @@ def player_help_groups() -> list[HelpGroup]:
     return _groups(_BASE_HELP)
 
 
-def admin_help_groups() -> list[HelpGroup]:
-    return _groups(_ADMIN_HELP)
+def role_help_groups(*, admin: bool, creator: bool, moderator: bool, god: bool) -> list[HelpGroup]:
+    definitions = []
+    for title, entries in _ADMIN_HELP:
+        if title == "WORLD BUILDING" and creator:
+            definitions.append((title, entries if admin else entries[:-2]))
+        elif title != "WORLD BUILDING" and admin:
+            definitions.append((title, entries))
+    if moderator:
+        definitions.append(("MODERATION", (
+            ("/mod warn <player> <message>", "Send a private warning."),
+            ("/mod boot <player> <reason>", "End the player's active session."),
+            ("/mod announce <message>", "Announce to players in the area."),
+        )))
+    if admin:
+        roles = "admin|moderator|creator" if god else "moderator|creator"
+        definitions.append(("ACCOUNT ROLES", (
+            ("/role list <username>", "List assigned account roles."),
+            (f"/role grant <username> <{roles}>", "Grant an account role."),
+            (f"/role revoke <username> <{roles}>", "Revoke an account role."),
+        )))
+    return _groups(definitions)
 
 
 def format_help(groups: Iterable[HelpGroup]) -> str:

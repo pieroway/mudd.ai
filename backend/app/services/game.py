@@ -17,13 +17,16 @@ from app.domain.player import Player
 from app.domain.client_state import ClientState
 from app.domain.room import Room
 from app.domain.directions import resolve_direction
-from app.domain.help import admin_help_groups, format_help
+from app.domain.help import format_help, role_help_groups
 from app.engine.executor import execute_command
 from app.engine.item_rules import ITEM_MUTATIONS
 from app.repositories.game import GameRepository
 from app.services.ai_usage import reserve_attempt, usage_status
 from app.services.ai_credits import grant_credits
-from app.services.ai_preferences import account_is_admin, configure_narration, narration_allowed
+from app.models import AccountRecord
+from app.services.ai_preferences import configure_narration, narration_allowed
+from app.services.moderation import moderate
+from app.services.roles import role_command
 from app.repositories.npc import NPCRepository
 from app.services.npc import NPCService
 from app.services.world_generation import WorldGenerationService
@@ -136,6 +139,13 @@ class GameService:
 
         command = parse_command(raw_command)
         command_source = "classic"
+        if command.get("action") in {"role", "mod"}:
+            if authorization_check is not None and not await authorization_check():
+                return {"success": False, "output": "Session expired. Please sign in again."}
+            if command["action"] == "role":
+                return await role_command(self.session_factory, account_id, command["arguments"])
+            return await moderate(self.session_factory, account_id, session_id,
+                                  dict(self._session_players), command["arguments"])
         if command.get('action') == 'item_admin':
             from app.services.items import execute as execute_items
 
@@ -245,10 +255,15 @@ class GameService:
             )
             result = await self._execute_locked(session_id, player_id, command, narrate=narrate)
         result["metadata"] = {"command_source": command_source}
-        if command.get("action") == "help" and await account_is_admin(self.session_factory, account_id):
-            groups = [*result.get("help_groups", []), *admin_help_groups()]
-            result["help_groups"] = groups
-            result["output"] = format_help(groups)
+        if command.get("action") == "help" and account_id is not None:
+            async with self.session_factory() as session:
+                account = await session.get(AccountRecord, account_id)
+            if account is not None:
+                groups = [*result.get("help_groups", []), *role_help_groups(
+                    admin=account.is_admin, creator=account.can_create,
+                    moderator=account.can_moderate, god=account.is_god)]
+                result["help_groups"] = groups
+                result["output"] = format_help(groups)
         return result
 
     async def _execute_locked(

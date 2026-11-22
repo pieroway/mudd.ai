@@ -95,7 +95,7 @@ class WorldGenerationService:
     async def execute(self, player_id: str, arguments: list[str], *, account_id: str | None,
                       authorization_check: Callable[[], Awaitable[bool]]) -> dict[str, Any]:
         if account_id is None or not await authorization_check():
-            return result("The /world command requires an active admin session.")
+            return result("The /world command requires an authenticated account.")
         try:
             if arguments[:1] == ["insert"]:
                 return await world_insertion.generate(self, player_id, account_id,
@@ -107,9 +107,11 @@ class WorldGenerationService:
                 return await self._propose(player_id, account_id, arguments, authorization_check)
             async with self.factory() as session, session.begin():
                 repo = WorldProposalRepository(session)
-                player = await repo.admin_player(account_id, player_id)
+                admin_only = arguments[:1] in (["delete"], ["confirm-delete"])
+                player = await repo.creator_player(account_id, player_id, admin_only=admin_only)
                 if player is None or not await authorization_check():
-                    return result("The /world command is available to admin users only.")
+                    return result("World deletion requires admin access." if admin_only
+                                  else "The /world command requires creator or admin access.")
                 if arguments[:1] == ['delete']:
                     if len(arguments) != 2 or arguments[1] not in DIRECTIONS:
                         return result('Usage: /world delete <direction>')
@@ -269,9 +271,9 @@ class WorldGenerationService:
                        authorized: Callable[[], Awaitable[bool]]) -> dict[str, Any]:
         async with self.factory() as session, session.begin():
             repo = WorldProposalRepository(session)
-            player = await repo.admin_player(account_id, player_id)
+            player = await repo.creator_player(account_id, player_id)
             if player is None or not await authorized():
-                return result("The /world command is available to admin users only.")
+                return result("The /world command requires creator or admin access.")
             if self.provider is None:
                 return result("World generation and approval are currently disabled.")
             if len(arguments) != 3 or arguments[1] not in DIRECTIONS:
@@ -308,7 +310,7 @@ class WorldGenerationService:
         content = RoomProposalContent.model_validate(payload)
         async with self.factory() as session, session.begin():
             repo = WorldProposalRepository(session)
-            player = await repo.admin_player(account_id, player_id)
+            player = await repo.creator_player(account_id, player_id)
             if player is None or not await authorized() or self.provider is None:
                 return result("Admin session or world generation is no longer available.")
             if player.current_room_id != source_id:
