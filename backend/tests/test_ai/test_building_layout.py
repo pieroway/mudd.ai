@@ -133,7 +133,7 @@ async def test_engine_layout_preserves_generated_lock_and_key_references():
             "name": "oak chest",
             "description": "An oak chest stands here.",
             "kind": "container",
-            "room": "room_16",
+            "room": "room_14",  # One corridor exit and two stair exits from room_3.
             "container": None,
             "interaction_target": None,
             "template_id": "container_chest_wooden",
