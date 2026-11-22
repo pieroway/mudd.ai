@@ -37,7 +37,6 @@
 .game-layout.with-inventory { grid-template-columns: minmax(25vw, 1fr) var(--inventory-width); }
 .game-layout.with-map.with-inventory { grid-template-columns: minmax(25vw, 1fr) var(--map-width) var(--inventory-width); }
 .game-layout.map-expanded { --map-width: 40%; }
-.game-layout.map-minimized { --map-width: min(30%, 12rem); }
 .context-panels { display: contents; }
 .context-panels > .context-panel { min-width: 0; min-height: 0; }
 .map-panel { display: flex; flex-direction: column; }
@@ -63,8 +62,6 @@
 .map-heading h3 { flex: 1; margin-bottom: calc(0.5rem * var(--ui-spacing)); }
 .map-size-controls { display: flex; gap: 0.25rem; margin-bottom: calc(0.5rem * var(--ui-spacing)); }
 .map-panel .map-size-controls button { min-width: 2rem; min-height: 2rem; padding: calc(0.125rem * var(--ui-spacing)) calc(0.25rem * var(--ui-spacing)); }
-.map-panel--minimized { align-self: start; }
-.map-panel--minimized .map-heading h3 { flex-basis: 0; }
 .map-full-page {
   position: fixed;
   inset: 0;
@@ -122,7 +119,6 @@
   .terminal-header h2 { font-size: 1rem; }
   .game-layout.with-panel, .game-layout.with-map.with-inventory { grid-template-columns: minmax(25vw, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 45%); }
   .game-layout.with-panel.map-expanded { grid-template-rows: minmax(0, 1fr) minmax(0, 40dvh); }
-  .game-layout.with-map.map-minimized:not(.with-inventory) { grid-template-rows: minmax(0, 1fr) auto; }
   .context-panels { display: grid; grid-template-columns: minmax(0, 1fr); min-height: 0; overflow: hidden; }
   .with-map.with-inventory .context-panels { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
   .with-map.with-inventory #inventory-panel { border-left: 1px solid var(--border-color); }

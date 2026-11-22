@@ -49,10 +49,7 @@ test('map discovers rooms, persists visits, and supports desktop and mobile cont
     return [Math.round(x + width / 2), Math.round(y + height / 2)]
   }
   const expandedCenter = await viewCenter()
-  await panel.getByRole('button', { name: 'Minimize map' }).click()
-  await expect(svg).toHaveCount(0)
-  await panel.getByRole('button', { name: 'Restore minimized map' }).click()
-  await expect.poll(viewCenter).toEqual(expandedCenter)
+  await expect(panel.getByRole('group', { name: 'Map size' }).getByRole('button')).toHaveCount(2)
   const maximize = panel.getByRole('button', { name: 'Maximize map' })
   await maximize.click()
   const fullPage = page.getByRole('dialog', { name: 'Discovered world' })

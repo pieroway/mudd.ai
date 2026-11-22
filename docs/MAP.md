@@ -11,7 +11,7 @@ background to pan (or focus the map and use your keyboard arrow keys), and **Cen
 view. **Fit map** frames every displayed floor and continues
 to fit when the panel resizes or nearby levels are toggled. Zooming or panning
 returns to manual control. The map header has icons to expand or collapse the
-panel, minimize it to its header, and open it full-page. Press Escape or use the
+panel and open it full-page. Press Escape or use the
 restore icon to leave the full-page view.
 Scroll over the map to zoom. Hold Ctrl while scrolling to browse the levels
 available in the current map mode. Use the reset icon to return the map to your

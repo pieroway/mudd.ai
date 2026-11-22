@@ -24,15 +24,13 @@ export function isMapState(value: unknown): value is MapState {
     && typeof edge.direction === 'string' && ids.has(edge.room_id) && ids.has(edge.destination_room_id))
 }
 
-export default function MapPanel({ state, connected, expanded, onExpand, minimized = false, onMinimize }: {
+export default function MapPanel({ state, connected, expanded, onExpand }: {
   state?: ClientState; connected: boolean; expanded: boolean; onExpand: () => void
-  minimized?: boolean; onMinimize?: () => void
 }) {
   const [fullPage, setFullPage] = useState(false)
   const dialogRef = useRef<HTMLDialogElement>(null)
   const openFullPageRef = useRef<HTMLButtonElement>(null)
   const restoreFocus = useRef(false)
-  const collapsedToHeader = minimized && !fullPage
   useEffect(() => {
     const dialog = dialogRef.current
     if (fullPage && dialog) {
@@ -105,7 +103,7 @@ export default function MapPanel({ state, connected, expanded, onExpand, minimiz
   const viewportRef = useRef<SVGSVGElement>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
   const [viewport, setViewport] = useState({ width: 400, height: 280 })
-  const ready = connected && !!map && !collapsedToHeader
+  const ready = connected && !!map
   useFloorTransition(viewportRef, ready ? state?.room_id : undefined, map)
   useEffect(() => {
     const svg = viewportRef.current
@@ -274,21 +272,16 @@ export default function MapPanel({ state, connected, expanded, onExpand, minimiz
     </g>
   }
 
-  const panel = <aside id="map-panel" className={`context-panel map-panel${collapsedToHeader ? ' map-panel--minimized' : ''}`}
+  const panel = <aside id="map-panel" className="context-panel map-panel"
     aria-labelledby="map-heading" data-testid="map-panel">
     <div className="map-heading"><h3 id="map-heading">Discovered world</h3>
       <div className="map-size-controls" role="group" aria-label="Map size">
         {fullPage ? <button type="button" title="Exit full-page map" aria-label="Exit full-page map"
           onClick={() => setFullPage(false)}><span aria-hidden="true">❐</span></button> : <>
-          {!minimized && <button type="button" onClick={onExpand} aria-expanded={expanded}
+          <button type="button" onClick={onExpand} aria-expanded={expanded}
             title={expanded ? 'Collapse map' : 'Expand map'} aria-label={expanded ? 'Collapse map' : 'Expand map'}>
             <span aria-hidden="true">{expanded ? '⇥⇤' : '⇤⇥'}</span>
-          </button>}
-          {onMinimize && <button type="button" onClick={onMinimize} aria-expanded={!minimized}
-            title={minimized ? 'Restore minimized map' : 'Minimize map'}
-            aria-label={minimized ? 'Restore minimized map' : 'Minimize map'}>
-            <span aria-hidden="true">{minimized ? '▣' : '−'}</span>
-          </button>}
+          </button>
           <button type="button" ref={openFullPageRef} title="Maximize map" aria-label="Maximize map"
             onClick={() => { restoreFocus.current = true; setFullPage(true) }}>
             <span aria-hidden="true">⛶</span>
@@ -296,7 +289,7 @@ export default function MapPanel({ state, connected, expanded, onExpand, minimiz
         </>}
       </div>
     </div>
-    {collapsedToHeader ? null : !connected ? <p role="status">Disconnected. Reconnect to refresh your map.</p>
+    {!connected ? <p role="status">Disconnected. Reconnect to refresh your map.</p>
       : !map ? <p role="status">Waiting for map…</p>
         : <>
           <div className="map-controls" role="group" aria-label="Map controls">

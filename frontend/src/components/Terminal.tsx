@@ -49,7 +49,6 @@ export default function Terminal({ username, onSignOut }: TerminalProps) {
   const [mapVisible, setMapVisible] = useState(() => window.localStorage.getItem('mudd-map-visible') !== 'false')
   const [mapExpanded, setMapExpanded] = useState(true)
   const [mazeMap, setMazeMap] = useState(false)
-  const [mapMinimized, setMapMinimized] = useState(false)
   const [inventoryVisible, setInventoryVisible] = useState(() =>
     window.localStorage.getItem('mudd-inventory-visible') !== 'false')
   const [aiUsage, setAIUsage] = useState<GameMessage['ai_usage']>()
@@ -199,7 +198,6 @@ export default function Terminal({ username, onSignOut }: TerminalProps) {
       const valid = args.length <= 1 && ['show', 'hide', 'expand', 'collapse', 'maze'].includes(action)
       if (valid) {
         setMapVisible(action !== 'hide')
-        if (action !== 'hide') setMapMinimized(false)
         if (action === 'maze' || action === 'show') setMazeMap(action === 'maze')
         if (action === 'expand' || action === 'collapse') setMapExpanded(action === 'expand')
       }
@@ -278,18 +276,17 @@ export default function Terminal({ username, onSignOut }: TerminalProps) {
       <nav className="panel-toolbar" aria-label="Game panels">
         <span>Adventure</span>
         <button type="button" aria-expanded={mapVisible} aria-controls="map-panel"
-          onClick={() => { setMapVisible(!mapVisible); setMapMinimized(false) }}>Map</button>
+          onClick={() => setMapVisible(value => !value)}>Map</button>
         <button type="button" aria-expanded={inventoryVisible} aria-controls="inventory-panel"
           onClick={() => setInventoryVisible(visible => !visible)}>Inventory</button>
       </nav>
-      <div className={`game-layout ${inventoryVisible || mapVisible ? 'with-panel' : ''} ${mapVisible ? 'with-map' : ''} ${inventoryVisible ? 'with-inventory' : ''} ${mapVisible && mapExpanded ? 'map-expanded' : ''} ${mapVisible && !mazeMap && mapMinimized ? 'map-minimized' : ''}`}>
+      <div className={`game-layout ${inventoryVisible || mapVisible ? 'with-panel' : ''} ${mapVisible ? 'with-map' : ''} ${inventoryVisible ? 'with-inventory' : ''} ${mapVisible && mapExpanded ? 'map-expanded' : ''}`}>
         <Transcript lines={transcript} ref={transcriptEndRef} />
         {(inventoryVisible || mapVisible) && <div className="context-panels">
           {mapVisible && (mazeMap && connected
             ? <MazeMapPanel roomId={state?.room_id} onBack={() => setMazeMap(false)} />
             : <MapPanel state={state} connected={connected} expanded={mapExpanded}
-              onExpand={() => setMapExpanded(value => !value)} minimized={mapMinimized}
-              onMinimize={() => setMapMinimized(value => !value)} />)}
+              onExpand={() => setMapExpanded(value => !value)} />)}
           {inventoryVisible && <InventoryPanel state={state} connected={connected} />}
         </div>}
       </div>
