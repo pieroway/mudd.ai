@@ -143,7 +143,7 @@ describe('Map', () => {
     expect(window.localStorage.getItem('mudd-map-nearby')).toBe('false')
   })
 
-  it('keeps labels at screen size and exposes unknown vertical exits without destination names', () => {
+  it('scales labels with the map and exposes unknown vertical exits without destination names', () => {
     const view = render(<MapPanel state={{ ...state, map: {
       rooms: [{ id: 'town', name: 'Town Square', has_up: true, has_down: true }], exits: [],
     } }} connected expanded={false} onExpand={() => {}} />)
@@ -151,9 +151,10 @@ describe('Map', () => {
     expect(view.container.querySelectorAll('.map-exit-badges rect')).toHaveLength(0)
     expect(screen.getByText('YOU')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Pan / })).not.toBeInTheDocument()
-    expect(view.container.querySelector('.map-label')).toHaveAttribute('transform', 'scale(1)')
+    const label = view.container.querySelector('.map-label')
+    expect(label).not.toHaveAttribute('transform')
     fireEvent.click(screen.getByRole('button', { name: 'Zoom out' }))
-    expect(view.container.querySelector('.map-label')).toHaveAttribute('transform', 'scale(1.25)')
+    expect(label).not.toHaveAttribute('transform')
     expect(view.container.querySelectorAll('[data-room]')).toHaveLength(1)
   })
 
@@ -200,8 +201,8 @@ describe('Map', () => {
       expect(box).toHaveAttribute('width', '176')
       expect(box).toHaveAttribute('height', '80')
     }
-    expect(view.container.querySelector('[data-room="upper"] .map-label')).toHaveAttribute('transform', 'translate(0, -30) scale(1)')
-    expect(view.container.querySelector('[data-room="lower"] .map-label')).toHaveAttribute('transform', 'translate(0, 30) scale(1)')
+    expect(view.container.querySelector('[data-room="upper"] .map-label')).toHaveAttribute('transform', 'translate(0, -30)')
+    expect(view.container.querySelector('[data-room="lower"] .map-label')).toHaveAttribute('transform', 'translate(0, 30)')
     const badgeY = (direction: string) => Number(current.querySelector(`[data-exit="${direction}"]`)!
       .getAttribute('transform')!.match(/translate\([^,]+, ([^)]+)\)/)![1])
     expect(badgeY('up')).toBeLessThan(0)

@@ -96,8 +96,7 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
     setPan({ x: center.x - current.x, y: center.y - current.y })
   }
   const priority = (id: string) => id === hovered || id === selected ? 0 : id === state?.room_id ? 1 : 2
-  const labelWidthFor = (id: string) => Math.max(48, Math.min(160,
-    ROOM_WIDTH * displayZoom - (depths.get(id) ? 34 : 12)))
+  const labelWidthFor = (id: string) => ROOM_WIDTH - (depths.get(id) ? 34 : 16)
   const labelOffset = (depth: number) => depth ? -Math.sign(depth) * ROOM_HEIGHT * 3 / 8 : 0
   const labelBoxes: { x: number; y: number; width: number; height: number }[] = []
   const labels = new Set<string>()
@@ -108,7 +107,7 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
     const depth = depths.get(room.id) ?? 0
     if (displayZoom < 0.2 || (depth ? displayZoom < 0.8 : priority(room.id) === 2 && displayZoom < 0.45)) continue
     const box = { x: point.x * displayZoom, y: (point.y + labelOffset(depth)) * displayZoom,
-      width: labelWidthFor(room.id), height: depth ? 14 : 34 }
+      width: labelWidthFor(room.id) * displayZoom, height: (depth ? 14 : 34) * displayZoom }
     if (labelBoxes.some(other => Math.abs(other.x - box.x) < (other.width + box.width) / 2 + 4
       && Math.abs(other.y - box.y) < (other.height + box.height) / 2)) continue
     labels.add(room.id)
@@ -126,7 +125,7 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
         const from = level.positions.get(edge.room_id)!
         const to = level.positions.get(edge.destination_room_id)!
         return <path key={key} d={`M ${from.x} ${from.y} H ${(from.x + to.x) / 2} V ${to.y} H ${to.x}`}
-          className="map-edge" vectorEffect="non-scaling-stroke" fill="none" />
+          className="map-edge" fill="none" />
       })}
       {level.map.rooms.map(room => {
         const point = level.positions.get(room.id)!
@@ -151,13 +150,13 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
           }}>
           <title>{room.name}{here ? ' — You are here' : ''}{exits.length ? ` — ${exits.join(' and ')} exits` : ''}</title>
           <rect className="map-room-box" x={-ROOM_WIDTH / 2} y={-ROOM_HEIGHT / 2}
-            width={ROOM_WIDTH} height={ROOM_HEIGHT} rx={5} vectorEffect="non-scaling-stroke" />
+            width={ROOM_WIDTH} height={ROOM_HEIGHT} rx={5} />
           {labels.has(room.id) && <g className="map-label" transform={ghost
-            ? `translate(0, ${labelOffset(level.depth)}) scale(${1 / displayZoom})` : `scale(${1 / displayZoom})`}>
+            ? `translate(0, ${labelOffset(level.depth)})` : undefined}>
             <rect className="map-label-background" x={-labelWidth / 2} y={ghost ? -7 : -17} width={labelWidth} height={ghost ? 14 : 34} rx={3} />
             <text textAnchor="middle">{lines.map((line, index) =>
               <tspan key={index} x={0} y={(lines.length === 1 ? 5 : -3 + index * 15) - (here ? 7 : 0)}>{line}</tspan>)}</text>
-            {here && displayZoom >= 0.6 && <g className="map-here" transform={`translate(0, ${26 * Math.min(1, displayZoom)}) scale(${Math.min(1, displayZoom)})`}>
+            {here && displayZoom >= 0.6 && <g className="map-here" transform="translate(0, 26)">
               <rect x={-20} y={-9} width={40} height={19} rx={3} />
               <text textAnchor="middle" y={5}>YOU</text>
             </g>}

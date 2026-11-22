@@ -96,7 +96,13 @@ test('visited floors stay ghosted, compact, and readable around the current neig
   await page.screenshot({ path: 'test-results/map-levels-desktop.png' })
   await panel.getByRole('button', { name: 'Center on me' }).click()
   await panel.getByRole('button', { name: 'Zoom out' }).click()
-  expect(await fontSize()).toBeCloseTo(initialFont, 1)
+  expect(await fontSize()).toBeCloseTo(initialFont / 1.25, 1)
+  const roomBox = (await hall.locator('.map-room-box').boundingBox())!
+  const roomLabel = (await hall.locator('.map-label text').first().boundingBox())!
+  expect(roomLabel.x).toBeGreaterThanOrEqual(roomBox.x)
+  expect(roomLabel.x + roomLabel.width).toBeLessThanOrEqual(roomBox.x + roomBox.width)
+  expect(roomLabel.y).toBeGreaterThanOrEqual(roomBox.y)
+  expect(roomLabel.y + roomLabel.height).toBeLessThanOrEqual(roomBox.y + roomBox.height)
   await panel.getByRole('button', { name: 'Nearby levels' }).click()
   await expect(panel.locator('[data-level]')).toHaveCount(1)
   await expect(hall).toHaveAttribute('transform', layout!)

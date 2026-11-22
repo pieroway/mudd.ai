@@ -13,8 +13,8 @@ to fit when the panel resizes or nearby levels are toggled. Zooming or panning
 returns to manual control. Expand provides more space while preserving the
 transcript and prompt.
 The same controls work on narrow screens, where map and inventory have independent
-scroll areas below the transcript. The viewport adapts to its available size so
-room labels retain their size. Open a room's known-exits disclosure for directions.
+scroll areas below the transcript. The viewport adapts to its available size.
+Open a room's known-exits disclosure for directions.
 
 The current level shows the horizontal neighborhood connected to your current
 room. **Nearby levels** adds visited neighborhoods up to two floors above and
@@ -39,8 +39,8 @@ through another floor do not pull in disconnected neighborhoods on this floor.
 Unboxed room-corner **↑ / ↓** arrows indicate available vertical exits, even before the
 destination is visited. Up badges sit at the top-right and down badges at the
 bottom-right. They reveal no destination identity or geography.
-Taller room boxes allow two-line names; labels retain their screen font size on
-zoom. At crowded zoom levels, secondary labels disappear before becoming tiny.
+Taller room boxes allow two-line names. Room labels, outlines, and connections
+scale together when zooming. At crowded zoom levels, secondary labels disappear.
 Hover or focus a room for its full name, or select it to see the full name and
 known exits below the map. Ghost rooms can be inspected but not used to travel.
 
