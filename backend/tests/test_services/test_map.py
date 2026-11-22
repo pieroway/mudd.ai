@@ -1,10 +1,39 @@
-from sqlalchemy import select
+from sqlalchemy import select, update
 
+from app.models import AccountRecord
 from app.models.game import PlayerDiscoveryRecord, RoomRecord, ExitRecord
 from app.services.game import GameService
 from app.services.ai_preferences import set_admin
 from tests.test_services.test_world_generation import command, connect
 from app.db import get_session_factory
+
+
+def test_world_map_requires_live_role_and_does_not_discover_rooms(test_client):
+    factory = get_session_factory()
+    game, _, identity = test_client.portal.call(connect, factory)
+
+    async def mapped_ids():
+        state = await game.client_state("admin")
+        return {room.id for room in state.map.rooms}
+
+    async def make_creator():
+        async with factory() as session, session.begin():
+            await session.execute(update(AccountRecord).where(AccountRecord.id == identity.account_id)
+                                  .values(is_creator=True))
+
+    assert test_client.get("/auth/world-map").status_code == 401
+    assert test_client.post("/auth/login", json={"username": "Builder", "password": "Password1!"},
+                            headers={"Origin": "http://localhost:5173"}).status_code == 200
+    before = test_client.portal.call(mapped_ids)
+    response = test_client.get("/auth/world-map")
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    assert {room["id"] for room in response.json()["rooms"]} > before
+    assert test_client.portal.call(mapped_ids) == before
+    test_client.portal.call(set_admin, factory, "Builder", False)
+    assert test_client.get("/auth/world-map").status_code == 403
+    test_client.portal.call(make_creator)
+    assert test_client.get("/auth/world-map").status_code == 200
 
 
 def test_maze_map_requires_live_admin_role_and_lists_unvisited_levels(test_client):

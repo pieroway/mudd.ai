@@ -8,6 +8,10 @@ from time import monotonic
 from fastapi import APIRouter, HTTPException, Request, Response
 
 from app.config import Settings
+from app.db import get_session_factory
+from app.domain.client_state import MapState
+from app.models import AccountRecord
+from app.repositories.game import GameRepository
 from app.services import auth
 
 router = APIRouter(prefix="/auth")
@@ -124,3 +128,17 @@ async def logout(request: Request):
         COOKIE_NAME, path="/", secure=settings.secure_auth_cookie, httponly=True, samesite="strict"
     )
     return response
+
+
+@router.get("/world-map")
+async def world_map(request: Request, response: Response) -> MapState:
+    no_store = {"Cache-Control": "no-store"}
+    identity = await auth.resolve_session(request.cookies.get(COOKIE_NAME))
+    if identity is None:
+        raise HTTPException(401, "Please sign in.", headers=no_store)
+    async with get_session_factory()() as session:
+        account = await session.get(AccountRecord, identity.account_id)
+        if account is None or not (account.is_god or account.can_create):
+            raise HTTPException(403, "The world map requires creator or admin access.", headers=no_store)
+        response.headers.update(no_store)
+        return await GameRepository(session).map_state(account.player_id, include_unvisited=True)

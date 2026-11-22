@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ClientState } from './InventoryPanel'
 import { useFloorTransition } from './useFloorTransition'
 import { buildMapScene } from './mapScene'
+import { apiUrl } from '../services/api'
 export { layoutMap } from './mapScene'
 import { ROOM_HEIGHT, ROOM_WIDTH, roomNameLines, type Point } from './mapGeometry'
 
@@ -26,11 +27,44 @@ export function isMapState(value: unknown): value is MapState {
 export default function MapPanel({ state, connected, expanded, onExpand }: {
   state?: ClientState; connected: boolean; expanded: boolean; onExpand: () => void
 }) {
-  const map = isMapState(state?.map) ? state.map : undefined
+  const discoveredMap = isMapState(state?.map) ? state.map : undefined
   const canViewAllLevels = state?.can_view_all_map_levels === true
   const [allLevels, setAllLevels] = useState(false)
-  const showAllLevels = canViewAllLevels && allLevels
-  useEffect(() => { if (!canViewAllLevels) setAllLevels(false) }, [canViewAllLevels])
+  const [allRooms, setAllRooms] = useState(false)
+  const [worldMap, setWorldMap] = useState<MapState>()
+  const [worldMapError, setWorldMapError] = useState('')
+  const requestWorldMap = connected && canViewAllLevels && allRooms
+  useEffect(() => {
+    if (!canViewAllLevels) {
+      setAllLevels(false)
+      setAllRooms(false)
+    }
+  }, [canViewAllLevels])
+  useEffect(() => {
+    if (!requestWorldMap) {
+      setWorldMap(undefined)
+      setWorldMapError('')
+      return
+    }
+    const controller = new AbortController()
+    setWorldMapError('')
+    fetch(apiUrl('/auth/world-map'), { credentials: 'include', signal: controller.signal })
+      .then(async response => {
+        if (!response.ok) throw new Error('The all-rooms map is unavailable.')
+        const body: unknown = await response.json()
+        if (!isMapState(body)) throw new Error('The all-rooms map is unavailable.')
+        if (!controller.signal.aborted) setWorldMap(body)
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return
+        setWorldMap(undefined)
+        setWorldMapError('The all-rooms map is unavailable. Switch the option off and on to retry.')
+      })
+    return () => controller.abort()
+  }, [requestWorldMap, state?.room_id])
+  const showAllRooms = requestWorldMap && worldMap !== undefined
+  const showAllLevels = canViewAllLevels && (allLevels || showAllRooms)
+  const map = showAllRooms ? worldMap : discoveredMap
   const scene = useMemo(() => map ? buildMapScene(map, state?.room_id ?? '', showAllLevels) : [],
     [map, state?.room_id, showAllLevels])
   const visibleMap = scene[0]?.map ?? { rooms: [], exits: [] }
@@ -188,10 +222,17 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
             {!mobile && <button type="button" aria-label="Nearby levels" aria-pressed={showNearby} onClick={() => {
               setNearby(!showNearby)
               setAllLevels(false)
+              setAllRooms(false)
             }}>Nearby levels <span className="map-toggle-dot" aria-hidden="true">{showNearby ? '●' : '○'}</span></button>}
-            {canViewAllLevels && <button type="button" aria-pressed={showAllLevels}
-              onClick={() => setAllLevels(value => !value)}>All levels <span className="map-toggle-dot" aria-hidden="true">{showAllLevels ? '●' : '○'}</span></button>}
+            {canViewAllLevels && <>
+              <button type="button" aria-pressed={allLevels && !requestWorldMap}
+                onClick={() => { setAllLevels(!allLevels || requestWorldMap); setAllRooms(false) }}>All levels <span className="map-toggle-dot" aria-hidden="true">{allLevels && !requestWorldMap ? '●' : '○'}</span></button>
+              <button type="button" aria-pressed={requestWorldMap}
+                onClick={() => setAllRooms(value => !value)}>All levels · All rooms <span className="map-toggle-dot" aria-hidden="true">{requestWorldMap ? '●' : '○'}</span></button>
+            </>}
           </div>
+          {requestWorldMap && (worldMapError ? <p role="alert">{worldMapError}</p>
+            : !worldMap && <p role="status">Loading all rooms…</p>)}
           <svg ref={viewportRef} className="map-viewport" role="group" tabIndex={0}
             onKeyDown={event => {
               if (event.target !== event.currentTarget) return
@@ -224,12 +265,13 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
 
           </svg>
           {selectedRoom && <details className="map-details" key={selectedRoom.id} open={selected !== undefined}>
-            <summary>{selectedRoom.name} — known exits</summary>
-            <ul>{map.exits.filter(edge => edge.room_id === selectedRoom.id).map(edge =>
+            <summary>{selectedRoom.name} — {showAllRooms ? 'mapped exits' : 'known exits'}</summary>
+            <ul>{map.exits.filter(edge => edge.room_id === selectedRoom.id
+              && (!showAllRooms || allPositions.has(edge.destination_room_id))).map(edge =>
               <li key={edge.direction}>{edge.direction} → {names.get(edge.destination_room_id)}</li>)}</ul>
           </details>}
           <p className="map-note">{visibleMap.rooms.length} visible {visibleMap.rooms.length === 1 ? 'room' : 'rooms'}. Drag to pan; select rooms for exits.</p>
-          <p className="map-legend">Visited rooms only · ↑ Up · ↓ Down{showAllLevels
+          <p className="map-legend">{showAllRooms ? 'Visited and unvisited rooms' : 'Visited rooms only'} · ↑ Up · ↓ Down{showAllLevels
             ? ' · All levels within 10 rooms' : showNearby ? ' · ↖ Above · ↘ Below · ±2 levels' : ''}</p>
         </>}
   </aside>

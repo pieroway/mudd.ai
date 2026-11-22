@@ -18,7 +18,11 @@ Open a room's known-exits disclosure for directions.
 
 The current level shows the horizontal neighborhood connected to your current
 room. **Nearby levels** adds visited neighborhoods up to two floors above and
-below it, and saves that toggle in this browser. All room boxes have the same
+below it, and saves that toggle in this browser. God, admin, and creator accounts
+also have **All levels** for visited rooms and **All levels · All rooms** for
+visited and unvisited rooms. Both cover a 10-room horizontal radius from the
+current room with no vertical cap. Viewing unvisited rooms preserves discovery
+progress. All room boxes have the same
 size. Each floor above is offset to the top-left by 1/8 room width and 1/4 room
 height; each floor below is offset to the bottom-right by the same amounts.
 Adjacent floors use 38% opacity and floors two steps away use 24%. Preview

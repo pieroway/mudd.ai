@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mapLevels } from '../../src/components/mapLevels'
 import MapPanel, { isMapState, layoutMap, MapState } from '../../src/components/MapPanel'
 
@@ -12,6 +12,27 @@ const state = { room_id: 'town', room_name: 'Town Square', inventory: [], map }
 
 describe('Map', () => {
   beforeEach(() => window.localStorage.clear())
+  afterEach(() => vi.unstubAllGlobals())
+  it('loads unvisited rooms only in the privileged all-rooms view', async () => {
+    const world = { rooms: [...map.rooms, { id: 'loft', name: 'Loft' }],
+      exits: [...map.exits, { room_id: 'town', direction: 'up', destination_room_id: 'loft' }] }
+    const fetchMap = vi.fn().mockResolvedValue({ ok: true, json: async () => world })
+    vi.stubGlobal('fetch', fetchMap)
+    const panel = (allowed: boolean) => <MapPanel state={{
+      ...state, can_view_all_map_levels: allowed,
+    }} connected expanded={false} onExpand={() => {}} />
+    const view = render(panel(false))
+    const button = { name: 'All levels · All rooms' }
+    expect(screen.queryByRole('button', button)).toBeNull()
+    expect(fetchMap).not.toHaveBeenCalled()
+    view.rerender(panel(true))
+    fireEvent.click(screen.getByRole('button', button))
+    expect(await screen.findByRole('button', { name: 'Loft, level +1' })).toBeInTheDocument()
+    expect(fetchMap).toHaveBeenCalledWith(expect.objectContaining({ pathname: '/auth/world-map' }),
+      expect.objectContaining({ credentials: 'include' }))
+    view.rerender(panel(false))
+    expect(screen.queryByRole('button', { name: 'Loft, level +1' })).toBeNull()
+  })
   it('gates All levels and measures its radius from the player across distant floors', () => {
     const tower: MapState = {
       rooms: Array.from({ length: 7 }, (_, i) => ({ id: `floor-${i}`, name: `Floor ${i}` })),

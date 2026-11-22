@@ -28,22 +28,27 @@ class GameRepository:
             player_id=player_id, room_id=room_id,
         ).on_conflict_do_nothing())
 
-    async def map_state(self, player_id: str) -> MapState:
-        known = select(PlayerDiscoveryRecord.room_id).where(
-            PlayerDiscoveryRecord.player_id == player_id
-        )
-        rooms = (await self.session.scalars(select(RoomRecord).where(
-            RoomRecord.id.in_(known)).order_by(RoomRecord.id))).all()
-        hidden = select(DoorRecord.id).where(DoorRecord.is_hidden.is_(True))
-        visible_exit = ExitRecord.door_id.is_(None) | ExitRecord.door_id.not_in(hidden)
-        exits = (await self.session.scalars(select(ExitRecord).where(
-            visible_exit,
-            ExitRecord.room_id.in_(known), ExitRecord.destination_room_id.in_(known)
-        ).order_by(ExitRecord.room_id, ExitRecord.direction))).all()
-        # Exit availability is visible locally; undiscovered destination data stays private.
-        vertical = set((await self.session.execute(select(ExitRecord.room_id, ExitRecord.direction).where(
-            visible_exit, ExitRecord.room_id.in_(known), ExitRecord.direction.in_(['up', 'down'])
-        ))).all())
+    async def map_state(self, player_id: str, *, include_unvisited: bool = False) -> MapState:
+        room_query = select(RoomRecord).order_by(RoomRecord.id)
+        exit_query = select(ExitRecord).order_by(ExitRecord.room_id, ExitRecord.direction)
+        if include_unvisited:
+            exits = (await self.session.scalars(exit_query)).all()
+            vertical = {(edge.room_id, edge.direction) for edge in exits if edge.direction in ('up', 'down')}
+        else:
+            known = select(PlayerDiscoveryRecord.room_id).where(
+                PlayerDiscoveryRecord.player_id == player_id
+            )
+            room_query = room_query.where(RoomRecord.id.in_(known))
+            hidden = select(DoorRecord.id).where(DoorRecord.is_hidden.is_(True))
+            visible_exit = ExitRecord.door_id.is_(None) | ExitRecord.door_id.not_in(hidden)
+            exits = (await self.session.scalars(exit_query.where(
+                visible_exit, ExitRecord.room_id.in_(known), ExitRecord.destination_room_id.in_(known)
+            ))).all()
+            # Exit availability is visible locally; undiscovered destination data stays private.
+            vertical = set((await self.session.execute(select(ExitRecord.room_id, ExitRecord.direction).where(
+                visible_exit, ExitRecord.room_id.in_(known), ExitRecord.direction.in_(['up', 'down'])
+            ))).tuples().all())
+        rooms = (await self.session.scalars(room_query)).all()
         return MapState(
             rooms=[MapRoom(id=room.id, name=room.name, building_id=room.building_id,
                            has_up=(room.id, 'up') in vertical, has_down=(room.id, 'down') in vertical)
