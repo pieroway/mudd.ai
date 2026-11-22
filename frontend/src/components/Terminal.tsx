@@ -26,6 +26,7 @@ interface GameMessage {
 
 interface TerminalProps {
   username: string
+  onSignOut?: () => void
 }
 
 type Theme = 'light' | 'dark' | 'techno'
@@ -38,7 +39,7 @@ function getSavedTheme(): Theme {
   return themes.includes(savedTheme as Theme) ? (savedTheme as Theme) : 'dark'
 }
 
-export default function Terminal({ username }: TerminalProps) {
+export default function Terminal({ username, onSignOut }: TerminalProps) {
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([])
   const [ws, setWs] = useState<WebSocket | null>(null)
   const [connected, setConnected] = useState(false)
@@ -177,6 +178,11 @@ export default function Terminal({ username }: TerminalProps) {
 
   const handleCommand = (command: string) => {
     const slashCommand = command.trim().toLowerCase().split(/\s+/)
+    if (['/signout', '/quit', '/exit'].includes(slashCommand[0])) {
+      if (slashCommand.length === 1) onSignOut?.()
+      else setTranscript(prev => [...prev, 'Usage: /signout, /quit, or /exit.'])
+      return
+    }
     if (['/map', 'map'].includes(slashCommand[0]) || (slashCommand[0] === '/panel' && slashCommand[1] === 'map')) {
       const args = slashCommand.slice(slashCommand[0] === '/panel' ? 2 : 1)
       const action = args[0] ?? 'show'
@@ -228,6 +234,8 @@ export default function Terminal({ username }: TerminalProps) {
     if (ws && connected) {
       setTranscript((prev) => [...prev, `> ${command}`])
       ws.send(command)
+    } else {
+      setTranscript(prev => [...prev, 'Disconnected from server.'])
     }
   }
 
@@ -270,7 +278,7 @@ export default function Terminal({ username }: TerminalProps) {
         </div>}
       </div>
 
-      <CommandPrompt onCommand={handleCommand} disabled={!connected} />
+      <CommandPrompt onCommand={handleCommand} disabled={!connected && !onSignOut} />
     </div>
   )
 }

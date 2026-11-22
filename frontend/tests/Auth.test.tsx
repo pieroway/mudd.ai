@@ -2,7 +2,11 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../src/App'
 
-vi.mock('../src/components/Terminal', () => ({ default: ({ username }: { username: string }) => <div>Character: {username}</div> }))
+vi.mock('../src/components/Terminal', () => ({
+  default: ({ username, onSignOut }: { username: string; onSignOut: () => void }) => (
+    <div>Character: {username}<button onClick={onSignOut}>Request sign-out</button></div>
+  ),
+}))
 
 describe('Account login', () => {
   const fetchMock = vi.fn()
@@ -47,9 +51,14 @@ describe('Account login', () => {
     await screen.findByText('Character: Alice')
     expect(fetchMock.mock.calls[1][0].pathname).toBe('/auth/register')
     fetchMock.mockResolvedValueOnce({ ok: true, status: 204 })
-    fireEvent.click(screen.getByTestId('logout-button'))
+    fireEvent.click(screen.getByRole('button', { name: 'Request sign-out' }))
     await waitFor(() => expect(screen.queryByText('Character: Alice')).not.toBeInTheDocument())
     expect(fetchMock.mock.calls[2][0].pathname).toBe('/auth/logout')
+    expect(screen.queryByTestId('username-input')).not.toBeInTheDocument()
+    const command = screen.getByTestId('command-input')
+    fireEvent.change(command, { target: { value: '/start' } })
+    fireEvent.submit(command.closest('form')!)
+    expect(screen.getByTestId('login-button')).toHaveTextContent('Sign in')
   })
 
   it('restores an existing session after page reload', async () => {

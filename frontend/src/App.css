@@ -4,4 +4,4 @@
 .login-container [role='alert'] { margin-top: 1rem; max-width: 360px; }
 .app { display: flex; flex-direction: column; }
 .app .terminal { flex: 1; min-height: 0; height: auto; }
-.logout-button { align-self: flex-end; margin: 0.5rem; padding: 0.35rem 0.7rem; }
+.login-container .command-prompt { flex-direction: row; }

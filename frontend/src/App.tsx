@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState } from 'react'
 import Terminal from './components/Terminal'
+import CommandPrompt from './components/CommandPrompt'
 import { authRequest } from './services/api'
 import './App.css'
 
@@ -11,6 +12,7 @@ function App() {
   const [checking, setChecking] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [showLogin, setShowLogin] = useState(true)
 
   useEffect(() => {
     let active = true
@@ -38,9 +40,12 @@ function App() {
   }
 
   const logout = async () => {
+    if (busy) return
     setBusy(true)
     try {
       await authRequest('/auth/logout', {})
+      setShowLogin(false)
+      setRegistering(false)
       setUsername(null)
       setError('')
     } catch {
@@ -49,6 +54,21 @@ function App() {
   }
 
   if (checking) return <div className="login-container">Checking session…</div>
+
+  if (username === null && !showLogin) {
+    return <div className="login-container">
+      <p>Signed out. Type /logon or /start to sign in.</p>
+      <CommandPrompt onCommand={command => {
+        if (['/logon', '/start'].includes(command.toLowerCase())) {
+          setError('')
+          setShowLogin(true)
+        } else {
+          setError('Use /logon or /start to sign in.')
+        }
+      }} />
+      {error && <p role="alert">{error}</p>}
+    </div>
+  }
 
   if (username === null) {
     return <div className="login-container">
@@ -79,9 +99,8 @@ function App() {
   }
 
   return <div className="app">
-    <button className="logout-button" onClick={logout} disabled={busy} data-testid="logout-button">Sign out</button>
     {error && <p role="alert">{error}</p>}
-    <Terminal username={username} />
+    <Terminal username={username} onSignOut={logout} />
   </div>
 }
 
