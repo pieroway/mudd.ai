@@ -3,6 +3,7 @@ from app.domain.directions import HORIZONTAL, resolve_direction
 from app.domain.help import format_help, player_help_groups
 from app.domain.item_context import find_item, visible, has_light
 from app.engine.item_rules import execute_item_command
+from app.engine.rail import execute_rail, rail_description
 
 
 def _find_item(items, target, player=None, *, room_only=False, owned_only=False, container_id=None, world=None):
@@ -83,6 +84,8 @@ def execute_command(command, player, world):
     """Execute a parsed command against a deterministic test world."""
     action = command.get("action")
     room = world['rooms'][player.current_room_id]
+    if action == "rail":
+        return execute_rail(command.get("arguments", []), player, world)
     if action in {"unlock", "pry"}:
         door_result = _door_command(command, player, world, room)
         if door_result is not None:
@@ -106,6 +109,7 @@ def execute_command(command, player, world):
             if item.is_in_room(player.current_room_id) and visible(item, player, world)
         ]
         output = room.look(items_here)
+        output += rail_description(room, player, world)
         output += f"\nFacing: {player.facing_direction}."
         has_lit_light = any(
             item.owned_by == player.id and item.is_light_source and item.is_lit

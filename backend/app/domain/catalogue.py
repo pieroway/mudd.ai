@@ -27,13 +27,30 @@ GROUPS = {
     "valuable": "gem_uncut gem_cut ring_gold goblet_silver statue_small pearl",
     "material": "wood_log wood_plank iron_ore iron_ingot leather cloth herb bone stone clay",
     "furniture": "table_wooden chair_wooden bed bookshelf cabinet desk rug mirror bench wardrobe weapon_rack painting",
-    "fixture": "fireplace door_wooden gate_iron trapdoor floorboard_loose wall_cracked window_glass lever button chain iron_ring ladder stairs well fountain statue altar tree rock bush hole loose_soil",
-    "vehicle": "rowboat fishing_skiff cart wagon canoe",
+    "fixture": "fireplace door_wooden gate_iron trapdoor floorboard_loose wall_cracked window_glass lever button chain iron_ring ladder stairs well fountain statue altar tree rock bush hole loose_soil rail_switch",
+    "vehicle": "rowboat fishing_skiff cart wagon canoe minecart",
     "mount": "saddle",
     "quest": "token relic package badge fragment evidence body_part sealed_letter",
     "remains": "corpse_humanoid skeleton bones_pile",
     "loot": "coin_purse satchel cache_hidden",
     "magic": "wand scroll ring orb stone portal_key potion weapon",
+}
+
+RAIL_TEMPLATES: dict[str, dict[str, Any]] = {
+    "vehicle_minecart": dict(
+        name="minecart",
+        material="iron",
+        weight=180,
+        size="huge",
+        portable=False,
+        capabilities={
+            "enterable": {"maximum_occupants": 1},
+            "container": {"capacity_litres": 160, "maximum_weight_kg": 200},
+            "repairable": {"compatible_materials": ["iron_ingot"]},
+            "breakable": {"hardness": 40, "maximum_durability": 120},
+        },
+        state={"braked": True},
+    ),
 }
 
 PRIORITY: dict[str, dict[str, Any]] = {
@@ -267,10 +284,11 @@ PRIORITY: dict[str, dict[str, Any]] = {
 
 def build_catalogue() -> ItemTemplateRegistry:
     templates: list[ItemTemplate] = []
+    overrides = {**PRIORITY, **RAIL_TEMPLATES}
     for group, names in GROUPS.items():
         for suffix in names.split():
             template_id = f"{group}_{suffix}"
-            override = deepcopy(PRIORITY.get(template_id, {}))
+            override = deepcopy(overrides.get(template_id, {}))
             name = override.get("name", suffix.replace("_", " "))
             portable = override.get(
                 "portable", group not in {"fixture", "furniture", "vehicle", "remains"}
@@ -317,7 +335,7 @@ def build_catalogue() -> ItemTemplateRegistry:
                     caps["lieable"] = {}
                 if suffix in {"table_wooden", "desk", "bookshelf", "weapon_rack"}:
                     caps["surface"] = {"maximum_weight_kg": 60}
-            if group == "vehicle":
+            if group == "vehicle" and template_id != "vehicle_minecart":
                 caps.update(
                     {"enterable": {"maximum_occupants": 2}, "movable": {"strength_required": 20}}
                 )

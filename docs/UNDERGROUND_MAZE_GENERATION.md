@@ -33,6 +33,31 @@ open east door
 east
 ```
 
+Add `--railways true --minecarts true --rail-density 65` to build a connected
+railway from the entry chamber and place one braked cart there. Density is the
+percentage of the maze's required passages to equip with track. Use
+`--minecarts false` for tracks without a cart.
+
+On a railway, use `/rail status` to see connected tracks, switch alignment,
+and the cart brake. At a junction, use `/rail switch east` (or another
+connected direction) before moving the cart.
+
+```text
+examine minecart
+put iron crowbar in minecart
+board minecart
+/rail brake off
+/rail ride east
+/rail brake on
+leave
+take iron crowbar from minecart
+```
+
+Use `/rail push up` or `/rail pull up` with an empty seat and the brake
+released to move the cart uphill. A cart carries one rider at a time. Shut
+doors, broken switches, other carts, and excess load block movement. Repair a
+damaged cart with a suitable carried tool, such as a hammer.
+
 The phases below describe the complete feature specification.
 
 ## Objective

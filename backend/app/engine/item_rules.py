@@ -711,6 +711,8 @@ def execute_item_command(command, player, world):
         item.state["tied"] = False
         return result(f"You {action} the {item.name}.", True)
     if action == "climb":
+        if player.state.get("occupied_item"):
+            return result("Leave your current place before climbing.")
         settings = item.capabilities.get("climbable")
         if settings is None:
             return result("You cannot climb that object.")

@@ -298,6 +298,7 @@ class GameService:
             "read",
             "reveal",
             "interact",
+            "rail",
         }
         async with self.session_factory() as session:
             async with session.begin():
@@ -450,6 +451,14 @@ class GameService:
         }
         events: list[dict[str, str]] = []
 
+        if action == "rail" and sender_before.current_room_id != player.current_room_id:
+            return [
+                {"session_id": sessions_by_player[record.id],
+                 "text": f"{player.name} {'arrives' if record.current_room_id == player.current_room_id else 'leaves'} with a minecart."}
+                for record in active_players
+                if record.id != player.id and record.id in sessions_by_player
+                and record.current_room_id in {sender_before.current_room_id, player.current_room_id}
+            ]
         if action == "move":
             direction_value = command.get("direction")
             direction = direction_value if isinstance(direction_value, str) else ""

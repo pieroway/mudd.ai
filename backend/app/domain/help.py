@@ -68,6 +68,8 @@ _BASE_HELP: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
             ("untie / detach / climb <item>", "Use a supported attachment."),
             ("sit / lie down / board <object>", "Occupy an appropriate object."),
             ("leave", "Stop occupying an object."),
+            ("/rail status / switch <direction>", "Inspect tracks or align a railway switch."),
+            ("/rail brake on|off / ride|push|pull <direction>", "Control a minecart on connected tracks."),
             ("pour <source> into <vessel> / fill <vessel> from <source>", "Transfer compatible liquids."),
             ("split <quantity> <stack> / combine <stack> with <stack>", "Manage matching stacks."),
             ("give / spend <quantity> <stack> to <player>", "Transfer a specified quantity."),
