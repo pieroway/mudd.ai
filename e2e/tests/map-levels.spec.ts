@@ -107,6 +107,31 @@ test('visited floors stay ghosted, compact, and readable around the current neig
   await expect(panel.locator('[data-level]')).toHaveCount(1)
   await expect(hall).toHaveAttribute('transform', layout!)
   await panel.getByRole('button', { name: 'Nearby levels' }).click()
+  const svg = panel.getByRole('group', { name: 'Discovered rooms and connections' })
+  const viewWidth = async () => Number((await svg.getAttribute('viewBox'))!.split(' ')[2])
+  await svg.hover({ position: { x: 15, y: 15 } })
+  const initialWidth = await viewWidth()
+  await page.mouse.wheel(0, -120)
+  await expect.poll(viewWidth).toBeLessThan(initialWidth)
+  await page.mouse.wheel(0, 120)
+  await expect.poll(viewWidth).toBeCloseTo(initialWidth)
+  const browse = async (delta: number, depth: string) => {
+    await page.keyboard.down('Control')
+    try {
+      await page.mouse.wheel(0, delta)
+      await expect(panel.locator('.map-main-layer')).toHaveAttribute('data-level', depth)
+    } finally {
+      await page.keyboard.up('Control')
+    }
+  }
+  await browse(-120, '1')
+  await expect(page.getByTestId('current-room')).toHaveText('Cedar Hall')
+  await expect(panel.getByRole('status')).toHaveText('Viewing level +1')
+  await browse(120, '0')
+  await expect(panel.getByRole('button', { name: 'Reset to my level' })).toHaveCount(0)
+  await browse(120, '-1')
+  await panel.getByRole('button', { name: 'Reset to my level' }).click()
+  await expect(panel.locator('.map-main-layer')).toHaveAttribute('data-level', '0')
   const command = page.getByTestId('command-input')
   await expect(page.locator('html')).not.toHaveAttribute('data-floor-animations')
   await command.fill('up')

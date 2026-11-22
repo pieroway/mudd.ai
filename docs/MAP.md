@@ -13,6 +13,9 @@ to fit when the panel resizes or nearby levels are toggled. Zooming or panning
 returns to manual control. The map header has icons to expand or collapse the
 panel, minimize it to its header, and open it full-page. Press Escape or use the
 restore icon to leave the full-page view.
+Scroll over the map to zoom. Hold Ctrl while scrolling to browse the levels
+available in the current map mode. Use the reset icon to return the map to your
+character's level.
 The same controls work on narrow screens, where map and inventory have independent
 scroll areas below the transcript. The viewport adapts to its available size.
 Open a room's known-exits disclosure for directions.

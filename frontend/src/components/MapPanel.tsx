@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ClientState } from './InventoryPanel'
 import { useFloorTransition } from './useFloorTransition'
 import { buildMapScene } from './mapScene'
@@ -84,7 +84,6 @@ export default function MapPanel({ state, connected, expanded, onExpand, minimiz
   const map = showAllRooms ? worldMap : discoveredMap
   const scene = useMemo(() => map ? buildMapScene(map, state?.room_id ?? '', showAllLevels) : [],
     [map, state?.room_id, showAllLevels])
-  const visibleMap = scene[0]?.map ?? { rooms: [], exits: [] }
   const positions = scene[0]?.positions ?? new Map<string, Point>()
   const [nearby, setNearby] = useState(() => window.localStorage.getItem('mudd-map-nearby') !== 'false')
   useEffect(() => { window.localStorage.setItem('mudd-map-nearby', String(nearby)) }, [nearby])
@@ -100,7 +99,11 @@ export default function MapPanel({ state, connected, expanded, onExpand, minimiz
   const [fitted, setFitted] = useState(false)
   const [selected, setSelected] = useState<string>()
   const [hovered, setHovered] = useState<string>()
+  const [browsedDepth, setBrowsedDepth] = useState(0)
+  const roomId = state?.room_id
+  useEffect(() => { setBrowsedDepth(0) }, [roomId])
   const viewportRef = useRef<SVGSVGElement>(null)
+  const canvasRef = useRef<HTMLDivElement>(null)
   const [viewport, setViewport] = useState({ width: 400, height: 280 })
   const ready = connected && !!map && !collapsedToHeader
   useFloorTransition(viewportRef, ready ? state?.room_id : undefined, map)
@@ -118,9 +121,24 @@ export default function MapPanel({ state, connected, expanded, onExpand, minimiz
   const current = positions.get(state?.room_id ?? '') ?? { x: 0, y: 0 }
   const displayed = useMemo(() => scene.filter(level => showAllLevels || showNearby || level.depth === 0),
     [scene, showAllLevels, showNearby])
+  const activeLevel = displayed.find(level => level.depth === browsedDepth) ?? displayed[0]
+  const activeDepth = activeLevel?.depth ?? 0
+  useEffect(() => { if (activeDepth === 0) setBrowsedDepth(0) }, [activeDepth])
+  let focusPoint = current
+  let focusRoom = roomId
+  if (activeDepth !== 0 && activeLevel) {
+    let bestDistance = Infinity
+    for (const [id, point] of activeLevel.positions) {
+      const distance = Math.hypot(point.x - current.x, point.y - current.y)
+      if (distance >= bestDistance) continue
+      focusPoint = point
+      focusRoom = id
+      bestDistance = distance
+    }
+  }
   const displayedRooms = displayed.flatMap(level => level.map.rooms)
   const selectedRoom = displayedRooms.find(room => room.id === selected)
-    ?? visibleMap.rooms.find(room => room.id === state?.room_id)
+    ?? displayedRooms.find(room => room.id === focusRoom)
   const names = new Map(map?.rooms.map(room => [room.id, room.name]))
   const allPositions = new Map(displayed.flatMap(level => [...level.positions]))
   const depths = new Map(displayed.flatMap(level => level.map.rooms.map(room => [room.id, level.depth] as const)))
@@ -140,22 +158,51 @@ export default function MapPanel({ state, connected, expanded, onExpand, minimiz
   const width = viewport.width / displayZoom
   const height = viewport.height / displayZoom
   const center = fitted ? { x: (geometry.left + geometry.right) / 2, y: (geometry.top + geometry.bottom) / 2 }
-    : { x: current.x + pan.x, y: current.y + pan.y }
-  const manualView = () => {
+    : { x: focusPoint.x + pan.x, y: focusPoint.y + pan.y }
+  const manualView = useCallback(() => {
     setFitted(false)
     setZoom(displayZoom)
-    setPan({ x: center.x - current.x, y: center.y - current.y })
-  }
+    setPan({ x: center.x - focusPoint.x, y: center.y - focusPoint.y })
+  }, [displayZoom, center.x, center.y, focusPoint.x, focusPoint.y])
+  const zoomBy = useCallback((factor: number) => {
+    if (factor > 1 ? displayZoom >= 3 : displayZoom <= 0.1) return
+    manualView()
+    setZoom(Math.max(0.1, Math.min(3, displayZoom * factor)))
+  }, [displayZoom, manualView])
+  const viewFloor = useCallback((depth: number) => {
+    setBrowsedDepth(depth)
+    setPan({ x: 0, y: 0 })
+    setSelected(undefined)
+  }, [])
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!ready || !canvas) return
+    const wheel = (event: WheelEvent) => {
+      if (!event.deltaY) return
+      event.preventDefault()
+      const up = event.deltaY < 0
+      if (!event.ctrlKey) {
+        zoomBy(up ? 1.25 : 1 / 1.25)
+        return
+      }
+      const depths = displayed.map(level => level.depth).sort((a, b) => a - b)
+      const next = depths[depths.indexOf(activeDepth) + (up ? 1 : -1)]
+      if (next !== undefined) viewFloor(next)
+    }
+    canvas.addEventListener('wheel', wheel, { passive: false })
+    return () => canvas.removeEventListener('wheel', wheel)
+  }, [ready, fullPage, displayed, activeDepth, zoomBy, viewFloor])
   const priority = (id: string) => id === hovered || id === selected ? 0 : id === state?.room_id ? 1 : 2
-  const labelWidthFor = (id: string) => ROOM_WIDTH - (depths.get(id) ? 34 : 16)
+  const labelWidthFor = (id: string) => ROOM_WIDTH - (depths.get(id) === activeDepth ? 16 : 34)
   const labelOffset = (depth: number) => depth ? -Math.sign(depth) * ROOM_HEIGHT * 3 / 8 : 0
   const labelBoxes: { x: number; y: number; width: number; height: number }[] = []
   const labels = new Set<string>()
   // Current labels take precedence, then the exposed strips of nearby floors.
   for (const room of [...displayedRooms].sort((a, b) =>
-    Math.abs(depths.get(a.id) ?? 0) - Math.abs(depths.get(b.id) ?? 0) || priority(a.id) - priority(b.id))) {
+    Math.abs((depths.get(a.id) ?? 0) - activeDepth) - Math.abs((depths.get(b.id) ?? 0) - activeDepth)
+      || priority(a.id) - priority(b.id))) {
     const point = allPositions.get(room.id)!
-    const depth = depths.get(room.id) ?? 0
+    const depth = (depths.get(room.id) ?? 0) - activeDepth
     if (displayZoom < 0.2 || (depth ? displayZoom < 0.8 : priority(room.id) === 2 && displayZoom < 0.45)) continue
     const box = { x: point.x * displayZoom, y: (point.y + labelOffset(depth)) * displayZoom,
       width: labelWidthFor(room.id) * displayZoom, height: (depth ? 14 : 34) * displayZoom }
@@ -167,8 +214,10 @@ export default function MapPanel({ state, connected, expanded, onExpand, minimiz
 
   const renderLevel = (level: typeof scene[number]) => {
     const drawn = new Set<string>()
-    const ghost = level.depth !== 0
-    return <g key={level.depth} data-level={level.depth} className={ghost ? 'map-ghost-layer' : 'map-main-layer'}>
+    const relativeDepth = level.depth - activeDepth
+    const ghost = relativeDepth !== 0
+    return <g key={level.depth} data-level={level.depth} data-distance={Math.abs(relativeDepth)}
+      className={ghost ? 'map-ghost-layer' : 'map-main-layer'}>
       {level.map.exits.map(edge => {
         const key = [edge.room_id, edge.destination_room_id].sort().join(':')
         if (drawn.has(key)) return null
@@ -190,7 +239,7 @@ export default function MapPanel({ state, connected, expanded, onExpand, minimiz
           : roomNameLines(room.name, characters)
         const badgeSize = Math.min(17, ROOM_HEIGHT * displayZoom / 4 - 2)
         return <g key={room.id} data-room={room.id} role="button" tabIndex={0}
-          aria-label={`${room.name}${here ? ', you are here' : ''}${ghost ? `, level ${level.depth > 0 ? '+' : ''}${level.depth}` : ''}`}
+          aria-label={`${room.name}${here ? ', you are here' : ''}${level.depth ? `, level ${level.depth > 0 ? '+' : ''}${level.depth}` : ''}`}
           aria-pressed={selectedRoom?.id === room.id}
           className={`map-room ${here ? 'map-current' : ''}`}
           transform={`translate(${point.x}, ${point.y})`}
@@ -203,11 +252,11 @@ export default function MapPanel({ state, connected, expanded, onExpand, minimiz
           <rect className="map-room-box" x={-ROOM_WIDTH / 2} y={-ROOM_HEIGHT / 2}
             width={ROOM_WIDTH} height={ROOM_HEIGHT} rx={5} />
           {labels.has(room.id) && <g className="map-label" transform={ghost
-            ? `translate(0, ${labelOffset(level.depth)})` : undefined}>
+            ? `translate(0, ${labelOffset(relativeDepth)})` : undefined}>
             <rect className="map-label-background" x={-labelWidth / 2} y={ghost ? -7 : -17} width={labelWidth} height={ghost ? 14 : 34} rx={3} />
             <text textAnchor="middle">{lines.map((line, index) =>
               <tspan key={index} x={0} y={(lines.length === 1 ? 5 : -3 + index * 15) - (here ? 7 : 0)}>{line}</tspan>)}</text>
-            {here && displayZoom >= 0.6 && <g className="map-here" transform="translate(0, 26)">
+            {here && !ghost && displayZoom >= 0.6 && <g className="map-here" transform="translate(0, 26)">
               <rect x={-20} y={-9} width={40} height={19} rx={3} />
               <text textAnchor="middle" y={5}>YOU</text>
             </g>}
@@ -251,9 +300,9 @@ export default function MapPanel({ state, connected, expanded, onExpand, minimiz
       : !map ? <p role="status">Waiting for map…</p>
         : <>
           <div className="map-controls" role="group" aria-label="Map controls">
-            <button type="button" aria-label="Zoom in" disabled={displayZoom >= 3} onClick={() => { manualView(); setZoom(Math.min(3, displayZoom * 1.25)) }}>+</button>
-            <button type="button" aria-label="Zoom out" disabled={displayZoom <= 0.1} onClick={() => { manualView(); setZoom(Math.max(0.1, displayZoom / 1.25)) }}>−</button>
-            <button type="button" onClick={() => { setFitted(false); setPan({ x: 0, y: 0 }); setZoom(1); setSelected(undefined) }}>Center on me</button>
+            <button type="button" aria-label="Zoom in" disabled={displayZoom >= 3} onClick={() => zoomBy(1.25)}>+</button>
+            <button type="button" aria-label="Zoom out" disabled={displayZoom <= 0.1} onClick={() => zoomBy(1 / 1.25)}>−</button>
+            <button type="button" onClick={() => { viewFloor(0); setFitted(false); setZoom(1) }}>Center on me</button>
             <button type="button" aria-pressed={fitted} onClick={() => setFitted(true)}>Fit map</button>
             {!mobile && <button type="button" aria-label="Nearby levels" aria-pressed={showNearby} onClick={() => {
               setNearby(!showNearby)
@@ -269,44 +318,50 @@ export default function MapPanel({ state, connected, expanded, onExpand, minimiz
           </div>
           {requestWorldMap && (worldMapError ? <p role="alert">{worldMapError}</p>
             : !worldMap && <p role="status">Loading all rooms…</p>)}
-          <svg ref={viewportRef} className="map-viewport" role="group" tabIndex={0}
-            onKeyDown={event => {
-              if (event.target !== event.currentTarget) return
-              const delta: Record<string, Point> = { ArrowUp: { x: 0, y: -80 }, ArrowDown: { x: 0, y: 80 },
-                ArrowLeft: { x: -80, y: 0 }, ArrowRight: { x: 80, y: 0 } }
-              const move = delta[event.key]
-              if (!move) return
-              event.preventDefault(); manualView()
-              setPan(p => ({ x: p.x + move.x / displayZoom, y: p.y + move.y / displayZoom }))
-            }} aria-label="Discovered rooms and connections"
-            viewBox={`${center.x - width / 2} ${center.y - height / 2} ${width} ${height}`}
-            onPointerDown={event => {
-              if (event.button !== 0 || (event.target as Element).closest('[data-room]')) return
-              event.currentTarget.setPointerCapture(event.pointerId)
-              manualView()
-              drag.current = { x: event.clientX, y: event.clientY, pan: { x: center.x - current.x, y: center.y - current.y } }
-            }}
-            onPointerMove={event => {
-              if (!drag.current) return
-              const bounds = event.currentTarget.getBoundingClientRect()
-              const scale = Math.max(width / bounds.width, height / bounds.height)
-              setPan({ x: drag.current.pan.x - (event.clientX - drag.current.x) * scale,
-                y: drag.current.pan.y - (event.clientY - drag.current.y) * scale })
-            }}
-            onPointerUp={() => { drag.current = undefined }}
-            onPointerCancel={() => { drag.current = undefined }}
-            onLostPointerCapture={() => { drag.current = undefined }}>
-            {displayed.filter(level => level.depth !== 0).sort((a, b) => Math.abs(b.depth) - Math.abs(a.depth)).map(renderLevel)}
-            {scene[0] && renderLevel(scene[0])}
+          <div className="map-canvas" ref={canvasRef}>
+            <svg ref={viewportRef} className="map-viewport" role="group" tabIndex={0}
+              onKeyDown={event => {
+                if (event.target !== event.currentTarget) return
+                const delta: Record<string, Point> = { ArrowUp: { x: 0, y: -80 }, ArrowDown: { x: 0, y: 80 },
+                  ArrowLeft: { x: -80, y: 0 }, ArrowRight: { x: 80, y: 0 } }
+                const move = delta[event.key]
+                if (!move) return
+                event.preventDefault(); manualView()
+                setPan(p => ({ x: p.x + move.x / displayZoom, y: p.y + move.y / displayZoom }))
+              }} aria-label="Discovered rooms and connections"
+              viewBox={`${center.x - width / 2} ${center.y - height / 2} ${width} ${height}`}
+              onPointerDown={event => {
+                if (event.button !== 0 || (event.target as Element).closest('[data-room]')) return
+                event.currentTarget.setPointerCapture(event.pointerId)
+                manualView()
+                drag.current = { x: event.clientX, y: event.clientY, pan: { x: center.x - focusPoint.x, y: center.y - focusPoint.y } }
+              }}
+              onPointerMove={event => {
+                if (!drag.current) return
+                const bounds = event.currentTarget.getBoundingClientRect()
+                const scale = Math.max(width / bounds.width, height / bounds.height)
+                setPan({ x: drag.current.pan.x - (event.clientX - drag.current.x) * scale,
+                  y: drag.current.pan.y - (event.clientY - drag.current.y) * scale })
+              }}
+              onPointerUp={() => { drag.current = undefined }}
+              onPointerCancel={() => { drag.current = undefined }}
+              onLostPointerCapture={() => { drag.current = undefined }}>
+              {[...displayed].sort((a, b) => Math.abs(b.depth - activeDepth) - Math.abs(a.depth - activeDepth)).map(renderLevel)}
 
-          </svg>
+            </svg>
+            {activeDepth !== 0 && <div className="map-level-indicator">
+              <span role="status">Viewing level {activeDepth > 0 ? '+' : ''}{activeDepth}</span>
+              <button type="button" aria-label="Reset to my level" title="Reset to my level"
+                onClick={() => viewFloor(0)}><span aria-hidden="true">↺</span></button>
+            </div>}
+          </div>
           {selectedRoom && <details className="map-details" key={selectedRoom.id} open={selected !== undefined}>
             <summary>{selectedRoom.name} — {showAllRooms ? 'mapped exits' : 'known exits'}</summary>
             <ul>{map.exits.filter(edge => edge.room_id === selectedRoom.id
               && (!showAllRooms || allPositions.has(edge.destination_room_id))).map(edge =>
               <li key={edge.direction}>{edge.direction} → {names.get(edge.destination_room_id)}</li>)}</ul>
           </details>}
-          <p className="map-note">{visibleMap.rooms.length} visible {visibleMap.rooms.length === 1 ? 'room' : 'rooms'}. Drag to pan; select rooms for exits.</p>
+          <p className="map-note">{activeLevel?.map.rooms.length ?? 0} visible {activeLevel?.map.rooms.length === 1 ? 'room' : 'rooms'}. Drag to pan; select rooms for exits.</p>
           <p className="map-legend">{showAllRooms ? 'Visited and unvisited rooms' : 'Visited rooms only'} · ↑ Up · ↓ Down{showAllLevels
             ? ' · All levels within 10 rooms' : showNearby ? ' · ↖ Above · ↘ Below · ±2 levels' : ''}</p>
         </>}
