@@ -181,7 +181,6 @@ The final browser stage was rerun after a test-only correction; application code
 was unchanged from its passing unit checks. Both pre-migration archives were restored
 successfully in isolated containers. The agent made no live-provider requests.
 
-
 ## Renaming a room
 
 Admins can use `/world rename <new name>` to rename their current room, for example
