@@ -100,9 +100,9 @@ def test_teleport_requires_a_role_and_discovers_the_destination(game_client):
         assert not command(user, "/teleport town_square")["success"]
 
 
-def test_teleport_resolves_room_names_with_apostrophes_and_punctuation(game_client, test_client):
+@pytest.mark.parametrize("room_name", ["O'Brien's Lantern & Café (East)", "The Library --with Archive"])
+def test_teleport_resolves_room_names_with_apostrophes_and_punctuation(game_client, test_client, room_name):
     room_id = "lantern_cafe"
-    room_name = "O'Brien's Lantern & Café (East)"
 
     async def add_room():
         async with get_session_factory()() as session, session.begin():
@@ -117,6 +117,42 @@ def test_teleport_resolves_room_names_with_apostrophes_and_punctuation(game_clie
         assert arrived["success"] is True
         assert arrived["state"]["room_id"] == room_id
         assert arrived["state"]["room_name"] == room_name
+
+
+def test_group_teleport_moves_and_discovers_for_every_companion(game_client):
+    game_client.admin_usernames.add("groupadmin")
+    with (
+        game_client.websocket_connect("/ws?username=GroupAdmin") as admin,
+        game_client.websocket_connect("/ws?username=Travel%2C%20Guide") as guide,
+        game_client.websocket_connect("/ws?username=FellowTraveler") as fellow,
+        game_client.websocket_connect("/ws?username=TownResident") as resident,
+    ):
+        for socket in (admin, guide, fellow, resident):
+            socket.receive_json()
+
+        admin.send_text('/teleport Forest --with "Travel, Guide", Missing')
+        failed = admin.receive_json()
+        assert not failed["success"]
+        assert failed["state"]["room_id"] == "town_square"
+        guide.send_text("look")
+        assert guide.receive_json()["state"]["room_id"] == "town_square"
+
+        admin.send_text('/teleport Forest --with "travel, guide", FellowTraveler')
+        moved = admin.receive_json()
+        assert moved["success"]
+        assert moved["state"]["room_id"] == "forest"
+        for socket in (guide, fellow):
+            arrived = socket.receive_json()
+            assert arrived["text"] == "GroupAdmin teleports you to Forest."
+            assert arrived["state"]["room_id"] == "forest"
+            assert "forest" in {room["id"] for room in arrived["state"]["map"]["rooms"]}
+
+        admin.send_text("/teleport town_square --with TownResident")
+        failed = admin.receive_json()
+        assert not failed["success"]
+        assert failed["state"]["room_id"] == "forest"
+        resident.send_text("look")
+        assert resident.receive_json()["state"]["room_id"] == "town_square"
 
 
 def test_role_help_and_live_moderation(game_client):

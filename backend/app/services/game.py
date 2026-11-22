@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import csv
+import re
 from secrets import choice
 from typing import Any
 from collections.abc import Awaitable, Callable
@@ -25,7 +27,7 @@ from app.repositories.game import GameRepository
 from app.repositories.world_proposals import WorldProposalRepository
 from app.services.ai_usage import reserve_attempt, usage_status
 from app.services.ai_credits import grant_credits
-from app.models import AccountRecord, RoomRecord
+from app.models import AccountRecord, PlayerRecord, RoomRecord
 from app.services.ai_preferences import configure_narration, narration_allowed
 from app.services.moderation import moderate
 from app.services.roles import role_command
@@ -142,7 +144,7 @@ class GameService:
         command = parse_command(raw_command)
         command_source = "classic"
         if command.get("action") == "teleport":
-            async with self._command_lock:
+            async with self._command_lock, self._connection_lock:
                 result = await self._teleport(session_id, player_id, account_id,
                                               command["destination"], authorization_check)
             return {**result, "metadata": {"command_source": command_source}}
@@ -281,36 +283,76 @@ class GameService:
     ) -> dict[str, Any]:
         if account_id is None:
             return {"success": False, "output": "Teleport requires creator or admin access."}
+        usage = "Usage: /teleport <room name or ID> [--with <player>, <player>]."
         async with self.session_factory() as session, session.begin():
             world = WorldProposalRepository(session)
             player = await world.creator_player(account_id, player_id)
             if player is None:
                 return {"success": False, "output": "Teleport requires creator or admin access."}
             if not destination:
-                return {"success": False, "output": "Usage: /teleport <room name or ID>."}
+                return {"success": False, "output": usage}
             if player.state_data.get("occupied_item"):
                 return {"success": False, "output": "Leave the item you occupy before teleporting."}
+            companions: list[tuple[str, PlayerRecord]] = []
+            parts = re.split(r"\s+--with(?:\s+|$)", destination, maxsplit=1, flags=re.IGNORECASE)
+            # A complete room name or ID, even one containing the option text, takes precedence.
+            if len(parts) == 2 and not await self._teleport_room_matches(session, destination):
+                destination, names = parts
+                try:
+                    names_list = next(csv.reader([names], skipinitialspace=True, strict=True))
+                except csv.Error:
+                    return {"success": False, "output": usage}
+                requested = list(dict.fromkeys(name.strip().casefold() for name in names_list))
+                if not requested or "" in requested:
+                    return {"success": False, "output": usage}
+                online = {name: sid for sid, name in self._session_usernames.items() if sid != session_id}
+                if any(name not in online for name in requested):
+                    return {"success": False, "output": "Name other online players to bring with you."}
+                companions_by_session = {online[name]: self._session_players[online[name]] for name in requested}
+                records = {record.id: record for record in await session.scalars(select(PlayerRecord)
+                    .where(PlayerRecord.id.in_(companions_by_session.values())).order_by(PlayerRecord.id)
+                    .with_for_update())}
+                for sid, companion_id in companions_by_session.items():
+                    companion = records.get(companion_id)
+                    if companion is None or companion.current_room_id != player.current_room_id:
+                        return {"success": False, "output": "Everyone must be in your room to teleport together."}
+                    if companion.state_data.get("occupied_item"):
+                        return {"success": False, "output": f"{companion.username} must leave the item they occupy first."}
+                    companions.append((sid, companion))
             await world.lock_world()
-            room = await session.get(RoomRecord, destination)
-            if room is None:
-                rooms = await session.execute(select(RoomRecord.id, RoomRecord.name))
-                normalized = destination.casefold()
-                matches = [(room_id, name) for room_id, name in rooms
-                           if name.casefold() == normalized]
-                if not matches:
-                    return {"success": False, "output": "No room matches that name or ID."}
-                if len(matches) > 1:
-                    return {"success": False, "output": "Multiple rooms share that name. Use a room ID."}
-                room_id, room_name = matches[0]
-            else:
-                room_id, room_name = room.id, room.name
+            matches = await self._teleport_room_matches(session, destination)
+            if not matches:
+                return {"success": False, "output": "No room matches that name or ID."}
+            if len(matches) > 1:
+                return {"success": False, "output": "Multiple rooms share that name. Use a room ID."}
+            room_id, room_name = matches[0]
             if self._session_players.get(session_id) != player_id or (
                 authorization_check is not None and not await authorization_check()
             ):
                 return {"success": False, "output": "Session expired. Please sign in again."}
-            player.current_room_id = room_id
-            await GameRepository(session).discover_room(player_id, room_id)
-            return {"success": True, "output": f"You teleport to {room_name}."}
+            repository = GameRepository(session)
+            for traveler in [player, *(companion for _, companion in companions)]:
+                traveler.current_room_id = room_id
+                await repository.discover_room(traveler.id, room_id)
+            if not companions:
+                return {"success": True, "output": f"You teleport to {room_name}."}
+            names = ", ".join(companion.username for _, companion in companions)
+            return {
+                "success": True,
+                "output": f"You teleport to {room_name} with {names}.",
+                "events": [{"session_id": sid, "text": f"{player.username} teleports you to {room_name}."}
+                           for sid, _ in companions],
+            }
+
+    @staticmethod
+    async def _teleport_room_matches(session: AsyncSession, destination: str) -> list[tuple[str, str]]:
+        columns = select(RoomRecord.id, RoomRecord.name)
+        exact = (await session.execute(columns.where(RoomRecord.id == destination))).one_or_none()
+        if exact is not None:
+            return [(exact.id, exact.name)]
+        normalized = destination.casefold()
+        return [(room_id, name) for room_id, name in await session.execute(columns)
+                if name.casefold() == normalized]
 
     async def _execute_locked(
         self, session_id: str, player_id: str, command: dict[str, Any], *,

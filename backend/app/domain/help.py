@@ -215,6 +215,8 @@ def role_help_groups(*, admin: bool, creator: bool, moderator: bool, god: bool) 
     if creator or admin or god:
         definitions.append(("TELEPORT", (
             ("/teleport <room name or ID>", "Move your character directly to an existing room."),
+            ("/teleport <room> --with <player>, <player>",
+             "Bring players from your room. Use double quotes around names containing commas."),
         )))
     if moderator:
         definitions.append(("MODERATION", (
