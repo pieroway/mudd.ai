@@ -260,7 +260,9 @@ class GameService:
             narrate = self.narration_enabled and (
                 account_id is None or await narration_allowed(self.session_factory, account_id)
             )
-            result = await self._execute_locked(session_id, player_id, command, narrate=narrate)
+            result = await self._execute_locked(
+                session_id, player_id, command, narrate=narrate, account_id=account_id
+            )
         result["metadata"] = {"command_source": command_source}
         if command.get("action") == "help" and account_id is not None:
             async with self.session_factory() as session:
@@ -311,7 +313,8 @@ class GameService:
             return {"success": True, "output": f"You teleport to {room_name}."}
 
     async def _execute_locked(
-        self, session_id: str, player_id: str, command: dict[str, Any], *, narrate: bool = False
+        self, session_id: str, player_id: str, command: dict[str, Any], *,
+        narrate: bool = False, account_id: str | None = None,
     ) -> dict[str, Any]:
         active_sessions = dict(self._session_players)
         active_player_ids = list(active_sessions.values())
@@ -322,7 +325,7 @@ class GameService:
             )
 
         if command.get("action") == "who":
-            return await self._who_result(command, active_player_ids)
+            return await self._who_result(command, active_player_ids, player_id, account_id)
 
         lock_items = command.get("action") in ITEM_MUTATIONS or command.get("action") in {
             "take",
@@ -443,40 +446,61 @@ class GameService:
                 return result
 
     async def _who_result(
-        self, command: dict[str, Any], active_player_ids: list[str]
+        self, command: dict[str, Any], active_player_ids: list[str],
+        viewer_player_id: str, viewer_account_id: str | None,
     ) -> dict[str, Any]:
         raw_page = command.get("page")
         try:
             page = int(raw_page) if raw_page is not None else 1
         except (TypeError, ValueError):
-            return {"success": False, "output": "Usage: who [page]."}
+            return {"success": False, "output": "Usage: /who [page]."}
         if page < 1:
             return {"success": False, "output": "Page number must be at least 1."}
 
         async with self.session_factory() as session:
             repository = GameRepository(session)
             records = await repository.load_players(active_player_ids)
-            room_names = await repository.room_names({record.current_room_id for record in records})
+            records.sort(key=lambda record: record.username.casefold())
+            page_size = 25
+            page_count = max(1, (len(records) + page_size - 1) // page_size)
+            if page > page_count:
+                return {
+                    "success": False,
+                    "output": f"There are only {page_count} pages of connected players.",
+                }
+            start = (page - 1) * page_size
+            visible_records = records[start : start + page_size]
+            room_names = await repository.room_names({record.current_room_id for record in visible_records})
+            account_player_ids = {record.id for record in visible_records}
+            account_player_ids.add(viewer_player_id)
+            accounts = {account.player_id: account for account in await session.scalars(
+                select(AccountRecord).where(AccountRecord.player_id.in_(account_player_ids))
+            )}
 
-        records.sort(key=lambda record: record.username.casefold())
-        page_size = 25
-        page_count = max(1, (len(records) + page_size - 1) // page_size)
-        if page > page_count:
-            return {
-                "success": False,
-                "output": f"There are only {page_count} pages of connected players.",
-            }
+        viewer = accounts.get(viewer_player_id)
+        if viewer is not None and viewer.id != viewer_account_id:
+            viewer = None
+        can_see_staff = viewer is not None and (viewer.is_god or viewer.can_create)
 
-        start = (page - 1) * page_size
-        visible_records = records[start : start + page_size]
         heading = f"Players online ({len(records)})"
         if page_count > 1:
             heading += f" — page {page}/{page_count}"
         lines = [f"{heading}:"]
-        lines.extend(
-            f"- {record.username} — {room_names[record.current_room_id]}"
-            for record in visible_records
-        )
+        for record in visible_records:
+            account = accounts.get(record.id)
+            labels: list[str] = []
+            if account is not None:
+                if account.is_god and viewer is account:
+                    labels.append("God")
+                if can_see_staff:
+                    if account.is_admin and not account.is_god:
+                        labels.append("Admin")
+                    if account.is_creator:
+                        labels.append("Creator")
+                if account.is_moderator:
+                    labels.append("Moderator")
+            name = f"{record.username} ({', '.join(labels)})" if labels else record.username
+            lines.append(f"- {name} — {room_names[record.current_room_id]}")
         return {"success": True, "output": "\n".join(lines)}
 
     @staticmethod

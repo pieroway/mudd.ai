@@ -42,7 +42,7 @@ _BASE_HELP: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
             ("examine / inspect <target>", "Examine an object or door."),
             ("look in <container>", "View the contents of an open container."),
             ("inventory / i", "List what you are carrying."),
-            ("who [page]", "List connected players."),
+            ("/who [page]", "List connected players and the roles you can see."),
         ),
     ),
     (

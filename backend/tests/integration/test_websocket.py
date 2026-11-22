@@ -551,3 +551,39 @@ def test_who_lists_only_connected_players_and_their_rooms(game_client):
             assert result["text"] == (
                 "Players online (2):\n" "- Alan — Town Square\n" "- Robin — Forest"
             )
+
+
+def test_who_filters_role_labels_for_each_viewer(game_client):
+    game_client.admin_usernames.add("listadmin")
+    with (
+        game_client.websocket_connect("/ws?username=ListAdmin") as admin,
+        game_client.websocket_connect("/ws?username=ListCreator") as creator,
+        game_client.websocket_connect("/ws?username=ListModerator") as moderator,
+        game_client.websocket_connect("/ws?username=ListPlayer") as regular,
+    ):
+        for socket in (admin, creator, moderator, regular):
+            socket.receive_json()
+
+        def command(socket, message):
+            socket.send_text(message)
+            response = socket.receive_json()
+            assert response["success"]
+            return response["text"]
+
+        command(admin, "/role grant ListCreator creator")
+        command(admin, "/role grant ListModerator moderator")
+        for viewer in (admin, creator):
+            names = command(viewer, "/who")
+            assert "- ListAdmin (Admin) — Town Square" in names
+            assert "- ListCreator (Creator) — Town Square" in names
+            assert "- ListModerator (Moderator) — Town Square" in names
+        for viewer in (moderator, regular):
+            assert command(viewer, "who 1") == (
+                "Players online (4):\n"
+                "- ListAdmin — Town Square\n"
+                "- ListCreator — Town Square\n"
+                "- ListModerator (Moderator) — Town Square\n"
+                "- ListPlayer — Town Square"
+            )
+        command(admin, "/role revoke ListCreator creator")
+        assert "(Admin)" not in command(creator, "/who")

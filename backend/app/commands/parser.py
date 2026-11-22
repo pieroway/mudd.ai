@@ -80,7 +80,7 @@ def parse_command(raw: str):
             "message": " ".join(text.split()[1:]) or None,
             "raw": text,
         }
-    if command == "who":
+    if command in {"who", "/who"}:
         return {
             "action": "who",
             "page": parts[1] if len(parts) == 2 else None,

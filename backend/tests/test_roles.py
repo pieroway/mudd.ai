@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from app.db import engine
 from app.models import AccountRecord
 from app.services.auth import register_account
+from app.services.game import GameService
 from app.services.moderation import moderate
 from app.services.roles import bootstrap_god, change_role
 
@@ -21,6 +22,14 @@ async def test_god_is_bound_to_alan_and_protected():
         assert await change_role(factory, admin.account_id, "Alan", None, False) == (
             "Assigned roles: god, admin, moderator, creator."
         )
+        game = GameService(factory)
+        await game.connect_player("god", "Alan", player_id=alan.player_id)
+        await game.connect_player("admin", "OtherAdmin", player_id=admin.player_id)
+        god_list = await game.execute("god", "/who", account_id=alan.account_id)
+        admin_list = await game.execute("admin", "/who", account_id=admin.account_id)
+        assert "- Alan (God) — Town Square" in god_list["output"]
+        assert "- OtherAdmin (Admin) — Town Square" in god_list["output"]
+        assert "- Alan — Town Square" in admin_list["output"]
         for actor_id in (admin.account_id, None):
             with pytest.raises(ValueError, match="protected"):
                 await change_role(factory, actor_id, "Alan", "admin", False)
