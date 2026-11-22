@@ -14,6 +14,9 @@ def parse_command(raw: str):
     parts = text.lower().split()
     command = parts[0]
     target = " ".join(parts[1:]) if len(parts) > 1 else None
+    if command == "/teleport":
+        destination = text.split(maxsplit=1)[1] if len(parts) > 1 else ""
+        return {"action": "teleport", "destination": destination}
     if command == "/rail":
         return {"action": "rail", "arguments": parts[1:]}
     if command in {"/role", "/mod"}:

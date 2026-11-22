@@ -210,6 +210,10 @@ def role_help_groups(*, admin: bool, creator: bool, moderator: bool, god: bool) 
             definitions.append((title, entries if admin else entries[:-2]))
         elif title != "WORLD BUILDING" and admin:
             definitions.append((title, entries))
+    if creator or admin or god:
+        definitions.append(("TELEPORT", (
+            ("/teleport <room name or ID>", "Move your character directly to an existing room."),
+        )))
     if moderator:
         definitions.append(("MODERATION", (
             ("/mod warn <player> <message>", "Send a private warning."),

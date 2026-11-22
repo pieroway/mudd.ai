@@ -70,6 +70,35 @@ def test_help_sends_grouped_command_tables(game_client):
     assert any(entry["command"] == "inventory / i" for entry in groups["LOOKING AND STATUS"])
 
 
+def test_teleport_requires_a_role_and_discovers_the_destination(game_client):
+    game_client.admin_usernames.add("traveladmin")
+    with (
+        game_client.websocket_connect("/ws?username=TravelAdmin") as admin,
+        game_client.websocket_connect("/ws?username=TravelUser") as user,
+    ):
+        admin.receive_json()
+        user.receive_json()
+
+        def command(socket, message):
+            socket.send_text(message)
+            return socket.receive_json()
+
+        assert "/teleport" not in command(user, "help")["text"]
+        denied = command(user, "/teleport Forest")
+        assert not denied["success"]
+        assert denied["state"]["room_id"] == "town_square"
+        assert command(admin, "/role grant TravelUser creator")["success"]
+        assert "/teleport" in command(user, "help")["text"]
+        assert not command(user, "/teleport Missing Destination")["success"]
+        arrived = command(user, "/teleport fOrEsT")
+        assert arrived["success"]
+        assert arrived["state"]["room_id"] == "forest"
+        assert "forest" in {room["id"] for room in arrived["state"]["map"]["rooms"]}
+        assert command(admin, "/teleport forest")["state"]["room_id"] == "forest"
+        assert command(admin, "/role revoke TravelUser creator")["success"]
+        assert not command(user, "/teleport town_square")["success"]
+
+
 def test_role_help_and_live_moderation(game_client):
     game_client.admin_usernames.add("roleadmin")
     with (

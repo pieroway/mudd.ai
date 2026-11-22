@@ -6,6 +6,7 @@ from typing import Any
 from collections.abc import Awaitable, Callable
 
 from pydantic import ValidationError
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.ai.models import InterpretCommandRequest, InterpretCommandResponse
@@ -21,9 +22,10 @@ from app.domain.help import format_help, role_help_groups
 from app.engine.executor import execute_command
 from app.engine.item_rules import ITEM_MUTATIONS
 from app.repositories.game import GameRepository
+from app.repositories.world_proposals import WorldProposalRepository
 from app.services.ai_usage import reserve_attempt, usage_status
 from app.services.ai_credits import grant_credits
-from app.models import AccountRecord
+from app.models import AccountRecord, RoomRecord
 from app.services.ai_preferences import configure_narration, narration_allowed
 from app.services.moderation import moderate
 from app.services.roles import role_command
@@ -139,6 +141,11 @@ class GameService:
 
         command = parse_command(raw_command)
         command_source = "classic"
+        if command.get("action") == "teleport":
+            async with self._command_lock:
+                result = await self._teleport(session_id, player_id, account_id,
+                                              command["destination"], authorization_check)
+            return {**result, "metadata": {"command_source": command_source}}
         if command.get("action") in {"role", "mod"}:
             if authorization_check is not None and not await authorization_check():
                 return {"success": False, "output": "Session expired. Please sign in again."}
@@ -265,6 +272,43 @@ class GameService:
                 result["help_groups"] = groups
                 result["output"] = format_help(groups)
         return result
+
+    async def _teleport(
+        self, session_id: str, player_id: str, account_id: str | None, destination: str,
+        authorization_check: Callable[[], Awaitable[bool]] | None,
+    ) -> dict[str, Any]:
+        if account_id is None:
+            return {"success": False, "output": "Teleport requires creator or admin access."}
+        async with self.session_factory() as session, session.begin():
+            world = WorldProposalRepository(session)
+            player = await world.creator_player(account_id, player_id)
+            if player is None:
+                return {"success": False, "output": "Teleport requires creator or admin access."}
+            if not destination:
+                return {"success": False, "output": "Usage: /teleport <room name or ID>."}
+            if player.state_data.get("occupied_item"):
+                return {"success": False, "output": "Leave the item you occupy before teleporting."}
+            await world.lock_world()
+            room = await session.get(RoomRecord, destination)
+            if room is None:
+                rooms = await session.execute(select(RoomRecord.id, RoomRecord.name))
+                normalized = destination.casefold()
+                matches = [(room_id, name) for room_id, name in rooms
+                           if name.casefold() == normalized]
+                if not matches:
+                    return {"success": False, "output": "No room matches that name or ID."}
+                if len(matches) > 1:
+                    return {"success": False, "output": "Multiple rooms share that name. Use a room ID."}
+                room_id, room_name = matches[0]
+            else:
+                room_id, room_name = room.id, room.name
+            if self._session_players.get(session_id) != player_id or (
+                authorization_check is not None and not await authorization_check()
+            ):
+                return {"success": False, "output": "Session expired. Please sign in again."}
+            player.current_room_id = room_id
+            await GameRepository(session).discover_room(player_id, room_id)
+            return {"success": True, "output": f"You teleport to {room_name}."}
 
     async def _execute_locked(
         self, session_id: str, player_id: str, command: dict[str, Any], *, narrate: bool = False
