@@ -2,6 +2,9 @@ import type { MapState } from './MapPanel'
 import { mapLevels, type MapLevel } from './mapLevels'
 import { ROOM_HEIGHT, ROOM_WIDTH, type Point } from './mapGeometry'
 
+const COLUMN_SPACING = 208
+const ROW_SPACING = 116
+
 const offsets: Record<string, Point> = {
   north: { x: 0, y: -1 }, south: { x: 0, y: 1 },
   east: { x: 1, y: 0 }, west: { x: -1, y: 0 },
@@ -50,7 +53,7 @@ export function layoutMap(map: MapState): Map<string, Point> {
       }
     }
   }
-  return new Map([...positions].map(([id, point]) => [id, { x: point.x * 208, y: point.y * 116 }]))
+  return new Map([...positions].map(([id, point]) => [id, { x: point.x * COLUMN_SPACING, y: point.y * ROW_SPACING }]))
 }
 
 export interface MapSceneLevel extends MapLevel {
@@ -59,15 +62,15 @@ export interface MapSceneLevel extends MapLevel {
 
 // Each horizontal component is anchored to an actual stair connection. Different
 // components on the same floor must not inherit an unrelated staircase's origin.
-export function buildMapScene(map: MapState, currentId: string): MapSceneLevel[] {
-  const levels = mapLevels(map, currentId)
+export function buildMapScene(map: MapState, currentId: string, allLevels = false): MapSceneLevel[] {
+  const levels = mapLevels(map, currentId, allLevels ? Infinity : 2)
   const placed = new Map<string, Point>()
   const depths = new Map(levels.flatMap(level => level.map.rooms.map(room => [room.id, level.depth] as const)))
   const stairs = map.exits.filter(edge => edge.direction === 'up' || edge.direction === 'down')
     .flatMap(edge => [edge, { room_id: edge.destination_room_id, destination_room_id: edge.room_id,
       direction: edge.direction === 'up' ? 'down' : 'up' }])
     .sort((a, b) => `${a.room_id}:${a.destination_room_id}`.localeCompare(`${b.room_id}:${b.destination_room_id}`))
-  return levels.map(level => {
+  const scene = levels.map(level => {
     if (!level.depth) {
       const positions = layoutMap(level.map)
       for (const [id, point] of positions) placed.set(id, point)
@@ -92,7 +95,7 @@ export function buildMapScene(map: MapState, currentId: string): MapSceneLevel[]
       // another. Preserve their internal connections and shift only that component.
       while ([...local.values()].some(point => [...positions.values()].some(other =>
         Math.abs(point.x + offset.x - other.x) < ROOM_WIDTH + 8
-          && Math.abs(point.y + offset.y - other.y) < ROOM_HEIGHT + 8))) offset.x += 208
+          && Math.abs(point.y + offset.y - other.y) < ROOM_HEIGHT + 8))) offset.x += COLUMN_SPACING
       for (const [id, point] of local) {
         const translated = { x: point.x + offset.x, y: point.y + offset.y }
         positions.set(id, translated)
@@ -102,4 +105,17 @@ export function buildMapScene(map: MapState, currentId: string): MapSceneLevel[]
     }
     return { ...level, positions }
   })
+  const origin = placed.get(currentId)
+  if (!allLevels || !origin) return scene
+  return scene.map(({ depth, map: levelMap, positions }) => {
+    // Undo the visual floor offset before measuring horizontal distance.
+    const withinRadius = new Map([...positions].filter(([, point]) => Math.hypot(
+      (point.x - origin.x + depth * ROOM_WIDTH / 8) / COLUMN_SPACING,
+      (point.y - origin.y + depth * ROOM_HEIGHT / 4) / ROW_SPACING,
+    ) <= 10))
+    return { depth, positions: withinRadius, map: {
+      rooms: levelMap.rooms.filter(room => withinRadius.has(room.id)),
+      exits: levelMap.exits.filter(edge => withinRadius.has(edge.room_id) && withinRadius.has(edge.destination_room_id)),
+    } }
+  }).filter(level => level.positions.size > 0)
 }

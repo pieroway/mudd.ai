@@ -17,6 +17,7 @@ export interface ClientState {
   inventory: ItemView[]
   visible_objects?: ItemView[]
   map?: MapState
+  can_view_all_map_levels?: boolean
 }
 
 function isItemView(value: unknown, depth = 0): value is ItemView {
@@ -37,6 +38,7 @@ export function isClientState(value: unknown): value is ClientState {
   if (!value || typeof value !== 'object') return false
   const state = value as Partial<ClientState>
   return typeof state.room_id === 'string' && typeof state.room_name === 'string'
+    && (state.can_view_all_map_levels === undefined || typeof state.can_view_all_map_levels === 'boolean')
     && Array.isArray(state.inventory) && state.inventory.every(item => isItemView(item))
     && (state.visible_objects === undefined || Array.isArray(state.visible_objects)
       && state.visible_objects.every(item => isItemView(item)))

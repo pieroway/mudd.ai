@@ -44,3 +44,4 @@ class ClientState(BaseModel):
     inventory: list[InventoryEntry]
     visible_objects: list[InventoryEntry] = Field(default_factory=list)
     map: MapState
+    can_view_all_map_levels: bool = False

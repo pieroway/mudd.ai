@@ -16,7 +16,7 @@ from app.models.game import DoorRecord
 from app.domain.door import Door
 from app.domain.player import Player
 from app.domain.room import Room
-from app.models import ExitRecord, ItemRecord, ItemTemplateRecord, PlayerRecord, RoomRecord
+from app.models import AccountRecord, ExitRecord, ItemRecord, ItemTemplateRecord, PlayerRecord, RoomRecord
 
 
 class GameRepository:
@@ -67,6 +67,7 @@ class GameRepository:
                           if depth < 8 and child.container_id == item.id and visible(child, player, world)])
 
         rooms: dict[str, Room] = world['rooms']  # type: ignore[assignment]
+        account = await self.session.scalar(select(AccountRecord).where(AccountRecord.player_id == player_id))
         return ClientState(
             room_id=player.current_room_id,
             room_name=rooms[player.current_room_id].name,
@@ -75,6 +76,7 @@ class GameRepository:
             visible_objects=[entry(item) for item in sorted(items.values(), key=lambda obj: obj.id)
                              if item.room_id == player.current_room_id and visible(item, player, world)],
             map=await self.map_state(player_id),
+            can_view_all_map_levels=account is not None and (account.is_god or account.can_create),
         )
 
     async def get_or_create_player(self, username: str, normalized_username: str) -> PlayerRecord:

@@ -7,7 +7,7 @@ export interface MapLevel {
 
 // A horizontal connected component is one neighborhood on one floor. Expand
 // monotonically above/below it: going up then down must not reveal a remote floor 0.
-export function mapLevels(map: MapState, currentId: string): MapLevel[] {
+export function mapLevels(map: MapState, currentId: string, maxDepth = 2): MapLevel[] {
   const neighbors = new Map(map.rooms.map(room => [room.id, new Set<string>()]))
   const horizontal = map.exits.filter(edge => edge.direction !== 'up' && edge.direction !== 'down')
   for (const edge of horizontal) {
@@ -46,7 +46,7 @@ export function mapLevels(map: MapState, currentId: string): MapLevel[] {
   for (let i = 0; i < queue.length; i += 1) {
     const from = queue[i]
     const depth = depths.get(from)!
-    if (Math.abs(depth) === 2) continue
+    if (Math.abs(depth) >= maxDepth) continue
     for (const edge of vertical.get(from) ?? []) {
       if (depth && Math.sign(depth) !== edge.step) continue
       if (depths.has(edge.destination)) continue
@@ -54,7 +54,7 @@ export function mapLevels(map: MapState, currentId: string): MapLevel[] {
       queue.push(edge.destination)
     }
   }
-  return [0, 1, -1, 2, -2].flatMap(depth => {
+  return [...new Set(depths.values())].sort((a, b) => Math.abs(a) - Math.abs(b) || b - a).flatMap(depth => {
     const rooms = map.rooms.filter(room => depths.get(component.get(room.id)!) === depth)
     if (!rooms.length) return []
     const ids = new Set(rooms.map(room => room.id))

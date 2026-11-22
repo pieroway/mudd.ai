@@ -27,7 +27,12 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
   state?: ClientState; connected: boolean; expanded: boolean; onExpand: () => void
 }) {
   const map = isMapState(state?.map) ? state.map : undefined
-  const scene = useMemo(() => map ? buildMapScene(map, state?.room_id ?? '') : [], [map, state?.room_id])
+  const canViewAllLevels = state?.can_view_all_map_levels === true
+  const [allLevels, setAllLevels] = useState(false)
+  const showAllLevels = canViewAllLevels && allLevels
+  useEffect(() => { if (!canViewAllLevels) setAllLevels(false) }, [canViewAllLevels])
+  const scene = useMemo(() => map ? buildMapScene(map, state?.room_id ?? '', showAllLevels) : [],
+    [map, state?.room_id, showAllLevels])
   const visibleMap = scene[0]?.map ?? { rooms: [], exits: [] }
   const positions = scene[0]?.positions ?? new Map<string, Point>()
   const [nearby, setNearby] = useState(() => window.localStorage.getItem('mudd-map-nearby') !== 'false')
@@ -38,7 +43,7 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
     window.addEventListener('resize', resize)
     return () => window.removeEventListener('resize', resize)
   }, [])
-  const showNearby = nearby && !mobile
+  const showNearby = nearby && !mobile && !showAllLevels
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState<Point>({ x: 0, y: 0 })
   const [fitted, setFitted] = useState(false)
@@ -60,7 +65,8 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
   }, [ready])
   const drag = useRef<{ x: number; y: number; pan: Point }>()
   const current = positions.get(state?.room_id ?? '') ?? { x: 0, y: 0 }
-  const displayed = scene.filter(level => showNearby || level.depth === 0)
+  const displayed = useMemo(() => scene.filter(level => showAllLevels || showNearby || level.depth === 0),
+    [scene, showAllLevels, showNearby])
   const displayedRooms = displayed.flatMap(level => level.map.rooms)
   const selectedRoom = displayedRooms.find(room => room.id === selected)
     ?? visibleMap.rooms.find(room => room.id === state?.room_id)
@@ -68,8 +74,7 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
   const allPositions = new Map(displayed.flatMap(level => [...level.positions]))
   const depths = new Map(displayed.flatMap(level => level.map.rooms.map(room => [room.id, level.depth] as const)))
   const geometry = useMemo(() => {
-    const shown = scene.filter(level => showNearby || level.depth === 0)
-    const points = shown.flatMap(level => [...level.positions.values()].flatMap(point => [
+    const points = displayed.flatMap(level => [...level.positions.values()].flatMap(point => [
       { x: point.x - ROOM_WIDTH / 2, y: point.y - ROOM_HEIGHT / 2 },
       { x: point.x + ROOM_WIDTH / 2, y: point.y + ROOM_HEIGHT / 2 },
     ]))
@@ -77,7 +82,7 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
       left: Math.min(0, ...points.map(p => p.x)), right: Math.max(0, ...points.map(p => p.x)),
       top: Math.min(0, ...points.map(p => p.y)), bottom: Math.max(0, ...points.map(p => p.y)),
     }
-  }, [scene, showNearby])
+  }, [displayed])
   const fitZoom = Math.min(1, (viewport.width - Math.min(96, viewport.width * 0.25)) / Math.max(1, geometry.right - geometry.left),
     (viewport.height - Math.min(96, viewport.height * 0.25)) / Math.max(1, geometry.bottom - geometry.top))
   const displayZoom = fitted ? fitZoom : zoom
@@ -181,7 +186,12 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
             <button type="button" aria-label="Zoom out" disabled={displayZoom <= 0.1} onClick={() => { manualView(); setZoom(Math.max(0.1, displayZoom / 1.25)) }}>−</button>
             <button type="button" onClick={() => { setFitted(false); setPan({ x: 0, y: 0 }); setZoom(1); setSelected(undefined) }}>Center on me</button>
             <button type="button" aria-pressed={fitted} onClick={() => setFitted(true)}>Fit map</button>
-            {!mobile && <button type="button" aria-label="Nearby levels" aria-pressed={nearby} onClick={() => setNearby(value => !value)}>Nearby levels <span className="map-toggle-dot" aria-hidden="true">{nearby ? '●' : '○'}</span></button>}
+            {!mobile && <button type="button" aria-label="Nearby levels" aria-pressed={showNearby} onClick={() => {
+              setNearby(!showNearby)
+              setAllLevels(false)
+            }}>Nearby levels <span className="map-toggle-dot" aria-hidden="true">{showNearby ? '●' : '○'}</span></button>}
+            {canViewAllLevels && <button type="button" aria-pressed={showAllLevels}
+              onClick={() => setAllLevels(value => !value)}>All levels <span className="map-toggle-dot" aria-hidden="true">{showAllLevels ? '●' : '○'}</span></button>}
           </div>
           <svg ref={viewportRef} className="map-viewport" role="group" tabIndex={0}
             onKeyDown={event => {
@@ -220,7 +230,8 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
               <li key={edge.direction}>{edge.direction} → {names.get(edge.destination_room_id)}</li>)}</ul>
           </details>}
           <p className="map-note">{visibleMap.rooms.length} visible {visibleMap.rooms.length === 1 ? 'room' : 'rooms'}. Drag to pan; select rooms for exits.</p>
-          <p className="map-legend">Visited rooms only · ↑ Up · ↓ Down{showNearby ? ' · ↖ Above · ↘ Below · ±2 levels' : ''}</p>
+          <p className="map-legend">Visited rooms only · ↑ Up · ↓ Down{showAllLevels
+            ? ' · All levels within 10 rooms' : showNearby ? ' · ↖ Above · ↘ Below · ±2 levels' : ''}</p>
         </>}
   </aside>
 }

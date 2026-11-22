@@ -12,6 +12,34 @@ const state = { room_id: 'town', room_name: 'Town Square', inventory: [], map }
 
 describe('Map', () => {
   beforeEach(() => window.localStorage.clear())
+  it('gates All levels and measures its radius from the player across distant floors', () => {
+    const tower: MapState = {
+      rooms: Array.from({ length: 7 }, (_, i) => ({ id: `floor-${i}`, name: `Floor ${i}` })),
+      exits: Array.from({ length: 6 }, (_, i) => ({
+        room_id: `floor-${i}`, direction: 'up', destination_room_id: `floor-${i + 1}`,
+      })),
+    }
+    for (let i = 1; i <= 11; i += 1) {
+      tower.rooms.push({ id: `wing-${i}`, name: `Wing ${i}` })
+      tower.exits.push({ room_id: i === 1 ? 'floor-6' : `wing-${i - 1}`,
+        direction: 'east', destination_room_id: `wing-${i}` })
+    }
+    const panel = (allowed: boolean) => <MapPanel state={{
+      ...state, room_id: 'floor-0', map: tower, can_view_all_map_levels: allowed,
+    }} connected expanded={false} onExpand={() => {}} />
+    const view = render(panel(false))
+    expect(screen.queryByRole('button', { name: 'All levels' })).toBeNull()
+    view.rerender(panel(true))
+    const toggle = screen.getByRole('button', { name: 'All levels' })
+    expect(screen.queryByRole('button', { name: 'Floor 6, level +6' })).toBeNull()
+    fireEvent.click(toggle)
+    expect(screen.getByRole('button', { name: 'Floor 6, level +6' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Wing 10, level +6' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Wing 11, level +6' })).toBeNull()
+    fireEvent.click(toggle)
+    expect(screen.getByRole('button', { name: 'Nearby levels' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByRole('button', { name: 'Floor 6, level +6' })).toBeNull()
+  })
   it('maps only the current horizontal neighborhood and switches views when changing levels', () => {
     const neighborhood: MapState = {
       rooms: [

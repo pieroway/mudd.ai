@@ -77,8 +77,9 @@ def test_role_help_and_live_moderation(game_client):
         game_client.websocket_connect("/ws?username=RoleUser") as user,
         game_client.websocket_connect("/ws?username=RoleTarget") as target,
     ):
-        for socket in (admin, user, target):
-            socket.receive_json()
+        assert admin.receive_json()["state"]["can_view_all_map_levels"] is True
+        for socket in (user, target):
+            assert socket.receive_json()["state"]["can_view_all_map_levels"] is False
 
         def command(socket, message):
             socket.send_text(message)
@@ -87,7 +88,9 @@ def test_role_help_and_live_moderation(game_client):
         assert not command(user, "/role grant RoleUser creator")["success"]
         assert not command(admin, "/role grant RoleUser admin")["success"]
         assert command(admin, "/role grant RoleUser creator")["success"]
-        help_text = command(user, "help")["text"]
+        creator_help = command(user, "help")
+        assert creator_help["state"]["can_view_all_map_levels"] is True
+        help_text = creator_help["text"]
         assert "/world generate" in help_text and "/item catalogue" in help_text
         for denied in ("/world delete", "/mod warn", "/role grant", "/ai credits"):
             assert denied not in help_text
@@ -443,6 +446,7 @@ def test_client_state_tracks_inventory_failures_movement_and_reconnect(game_clie
         state = socket.receive_json()["state"]
         assert sorted(item["id"] for item in state["visible_objects"]) == ["chest", "torch"]
         assert {key: value for key, value in state.items() if key != "visible_objects"} == {"room_id": "town_square", "room_name": "Town Square", "inventory": [],
+                         "can_view_all_map_levels": False,
                          "map": {"rooms": [{"id": "town_square", "name": "Town Square", "building_id": None, "has_up": False, "has_down": False}], "exits": []}}
         socket.send_text("take torch")
         held = socket.receive_json()["state"]
