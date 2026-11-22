@@ -215,6 +215,9 @@ def role_help_groups(*, admin: bool, creator: bool, moderator: bool, god: bool) 
             ("/mod announce <message>", "Announce to players in the area."),
         )))
     if admin:
+        definitions.append(("UNDERGROUND GENERATION", (
+            ("/world generate maze [options]", "Generate a seeded underground maze. Use /world for options."),
+        )))
         roles = "admin|moderator|creator" if god else "moderator|creator"
         definitions.append(("ACCOUNT ROLES", (
             ("/role list <username>", "List assigned account roles."),

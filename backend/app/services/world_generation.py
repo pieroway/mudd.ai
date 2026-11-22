@@ -19,10 +19,11 @@ from app.models import ExitRecord, ItemRecord, RoomRecord
 from app.models.world_proposal import WorldDeletionPlanRecord, WorldProposalRecord
 from app.repositories.world_proposals import WorldProposalRepository
 from app.services.ai_usage import reserve_attempt
-from app.services import neighborhood, world_insertion
+from app.services import maze, neighborhood, world_insertion
 
 WORLD_HELP = (
     neighborhood.GENERATE_HELP + "\n"
+    + maze.HELP + "\n"
     "/world propose <direction> <brief> (up to 400 characters)\n"
     '/world insert <direction> --theme "brief" (up to 400 characters)\n'
     "/world proposals\n/world preview <proposal-id>\n"
@@ -101,8 +102,21 @@ class WorldGenerationService:
                 return await world_insertion.generate(self, player_id, account_id,
                     arguments[1] if len(arguments) == 2 else "", authorization_check)
             if arguments[:1] == ["generate"]:
+                raw = arguments[1] if len(arguments) == 2 else ""
+                subcommand = raw.split(maxsplit=1)
+                if subcommand and subcommand[0].casefold() == "maze":
+                    try:
+                        config = maze.options(subcommand[1] if len(subcommand) == 2 else "")
+                        async with self.factory() as session, session.begin():
+                            repo = WorldProposalRepository(session)
+                            player = await repo.creator_player(account_id, player_id, admin_only=True)
+                            if player is None or not await authorization_check():
+                                return result("Maze generation requires admin access.")
+                            return await maze.publish(repo, player.current_room_id, config)
+                    except ValueError as error:
+                        return result(str(error))
                 return await neighborhood.generate(self, player_id, account_id,
-                    arguments[1] if len(arguments) == 2 else "", authorization_check)
+                    raw, authorization_check)
             if arguments[:1] == ["propose"]:
                 return await self._propose(player_id, account_id, arguments, authorization_check)
             async with self.factory() as session, session.begin():
