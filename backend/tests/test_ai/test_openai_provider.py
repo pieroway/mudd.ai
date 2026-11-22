@@ -92,6 +92,29 @@ async def test_neighborhood_denied_allowance_and_invalid_response():
     assert len(calls) == 1 and adapter._active == 0
 
 
+async def test_neighborhood_repairs_conflicting_return_exit_without_moving_content():
+    request = NeighborhoodRequest(brief='Quiet', origin_name='Forest', anchor_name='Forest',
+        anchor_description='Trees.', direction='north', max_rooms=2, max_buildings=1)
+
+    async def allowed():
+        return True
+
+    original = await FakeAIProvider().generate_neighborhood(request, before_dispatch=allowed)
+    payload = original.model_dump()
+    payload['connections'][1]['direction'] = 'south'
+    # Use a registered container to exercise the case the flat fallback cannot repair.
+    payload['objects'][1]['template_id'] = 'container_chest_wooden'
+
+    def handler(_):
+        return httpx.Response(200, json=envelope(json.dumps(payload)))
+
+    repaired = await provider(handler).generate_neighborhood(request, before_dispatch=allowed)
+    assert repaired.connections == original.connections
+    assert repaired.rooms == original.rooms
+    assert repaired.buildings == original.buildings
+    assert [obj.model_dump() for obj in repaired.objects] == payload['objects']
+
+
 async def test_world_contract_budget_and_capacity_before_allowance():
     charges = []
     calls = []

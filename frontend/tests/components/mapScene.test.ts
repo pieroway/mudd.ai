@@ -16,6 +16,33 @@ const floors: MapState = {
   ],
 }
 
+it('keeps both market entrances on the lane when the south entrance overlaps the blacksmith', () => {
+  const rooms = ['0-town-square', 'north-street', 'inn', 'blacksmith', 'cobbled-lane',
+    'market-entry-nook', 'market-rear-storage', 'fishmonger-front', 'fishmonger-cutting-room']
+    .map(id => ({ id, name: id }))
+  const exits = [
+    ['0-town-square', 'north', 'north-street'],
+    ['0-town-square', 'east', 'inn'],
+    ['0-town-square', 'west', 'blacksmith'],
+    ['north-street', 'west', 'cobbled-lane'],
+    ['cobbled-lane', 'south', 'market-entry-nook'],
+    ['cobbled-lane', 'north', 'fishmonger-front'],
+    ['market-entry-nook', 'west', 'market-rear-storage'],
+    ['fishmonger-front', 'west', 'fishmonger-cutting-room'],
+  ].map(([room_id, direction, destination_room_id]) => ({ room_id, direction, destination_room_id }))
+  const positions = layoutMap({ rooms, exits })
+  const lane = positions.get('cobbled-lane')!
+  const market = positions.get('market-entry-nook')!
+  const fishmonger = positions.get('fishmonger-front')!
+  expect(market.x).toBe(lane.x)
+  expect(market.y - lane.y).toBe(116)
+  expect(positions.get('blacksmith')!.y).toBeGreaterThan(market.y)
+  expect(fishmonger.x).toBe(lane.x)
+  expect(fishmonger.y).toBeLessThan(lane.y)
+  expect(market.x).toBeLessThan(positions.get('inn')!.x)
+  expect(new Set([...positions.values()].map(({ x, y }) => `${x},${y}`)).size).toBe(rooms.length)
+})
+
 describe('Overlapping floors', () => {
   it('anchors each floor to its stair room with cumulative one-eighth/one-quarter offsets', () => {
     const scene = buildMapScene(floors, 'hall')

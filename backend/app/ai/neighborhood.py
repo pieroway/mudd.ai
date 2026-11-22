@@ -2,9 +2,9 @@
 import re
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator, model_validator
 from app.ai.world import plain_text, sentence_count
-from app.domain.directions import OPPOSITE
+from app.domain.directions import HORIZONTAL, OPPOSITE
 
 
 class DraftModel(BaseModel):
@@ -277,6 +277,32 @@ def _one_sentence(value: object) -> str | None:
         return None
     parts = [part.strip() for part in re.split(r'''[.!?…。！？]+["'”’»]*''', value) if part.strip()]
     return parts[0] if parts else None
+
+
+def repair_exit_directions(payload: dict, request: NeighborhoodRequest) -> NeighborhoodDraft:
+    """Resolve horizontal exit collisions while retaining the proposed connections."""
+    edges = TypeAdapter(list[ConnectionDraft]).validate_python(payload['connections'])
+    # Reserve the existing-world attachment and stairs before assigning horizontal exits.
+    order = sorted(range(len(edges)), key=lambda index: (
+        edges[index].source != 'anchor', edges[index].direction in HORIZONTAL,
+    ))
+    occupied: set[tuple[str, str]] = set()
+    for index in order:
+        edge = edges[index]
+        directions: tuple[str, ...] = (edge.direction,)
+        if edge.source != 'anchor' and edge.direction in HORIZONTAL:
+            directions += HORIZONTAL
+        for direction in directions:
+            slots = {(edge.source, direction), (edge.destination, OPPOSITE[direction])}
+            if occupied.isdisjoint(slots):
+                occupied.update(slots)
+                edges[index] = edge.model_copy(update={'direction': direction})
+                break
+        else:
+            raise ValueError('Conflicting exit directions')
+    repaired = NeighborhoodDraft.model_validate({**payload, 'connections': edges})
+    validate_budget(repaired, request)
+    return repaired
 
 
 def normalize_topology(payload: object, request: NeighborhoodRequest) -> NeighborhoodDraft | None:

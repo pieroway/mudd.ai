@@ -20,22 +20,32 @@ export function layoutMap(map: MapState): Map<string, Point> {
     adjacency.set(edge.destination_room_id, [...(adjacency.get(edge.destination_room_id) ?? []),
       { id: edge.room_id, offset: { x: -offset.x, y: -offset.y } }])
   }
-  const place = (id: string, point: Point) => {
-    const candidate = { ...point }
-    while (occupied.has(`${candidate.x},${candidate.y}`)) candidate.x += 1
-    positions.set(id, candidate)
-    occupied.add(`${candidate.x},${candidate.y}`)
+  const place = (id: string, point: Point, step: Point) => {
+    const key = `${point.x},${point.y}`
+    if (occupied.has(key)) {
+      // Open a row or column before the obstruction so the new connection stays
+      // on its compass line and does not run through the room it would overlap.
+      const axis = step.x === 0 ? 'y' : 'x'
+      const direction = step[axis]
+      occupied.clear()
+      for (const placed of positions.values()) {
+        if ((placed[axis] - point[axis]) * direction >= 0) placed[axis] += direction
+        occupied.add(`${placed.x},${placed.y}`)
+      }
+    }
+    positions.set(id, point)
+    occupied.add(key)
   }
   for (const room of [...map.rooms].sort((a, b) => a.id.localeCompare(b.id))) {
     if (positions.has(room.id)) continue
-    place(room.id, { x: positions.size * 2, y: 0 })
+    place(room.id, { x: positions.size * 2, y: 0 }, offsets.east)
     const queue = [room.id]
     for (let index = 0; index < queue.length; index += 1) {
       const id = queue[index]
       const origin = positions.get(id)!
       for (const neighbor of adjacency.get(id) ?? []) {
         if (positions.has(neighbor.id)) continue
-        place(neighbor.id, { x: origin.x + neighbor.offset.x, y: origin.y + neighbor.offset.y })
+        place(neighbor.id, { x: origin.x + neighbor.offset.x, y: origin.y + neighbor.offset.y }, neighbor.offset)
         queue.push(neighbor.id)
       }
     }
