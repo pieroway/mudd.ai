@@ -8,6 +8,7 @@ from app.ai.fake import FakeAIProvider
 from app.ai.provider import AIProviderFailure, AIFailureReason
 from app.api import websocket as websocket_api
 from app.db import get_session_factory
+from app.models import RoomRecord
 from app.services.ai_preferences import set_admin
 
 
@@ -97,6 +98,25 @@ def test_teleport_requires_a_role_and_discovers_the_destination(game_client):
         assert command(admin, "/teleport forest")["state"]["room_id"] == "forest"
         assert command(admin, "/role revoke TravelUser creator")["success"]
         assert not command(user, "/teleport town_square")["success"]
+
+
+def test_teleport_resolves_room_names_with_apostrophes_and_punctuation(game_client, test_client):
+    room_id = "lantern_cafe"
+    room_name = "O'Brien's Lantern & Café (East)"
+
+    async def add_room():
+        async with get_session_factory()() as session, session.begin():
+            session.add(RoomRecord(id=room_id, name=room_name, description="A quiet café."))
+
+    test_client.portal.call(add_room)
+    game_client.admin_usernames.add("punctuationadmin")
+    with game_client.websocket_connect("/ws?username=PunctuationAdmin") as socket:
+        socket.receive_json()
+        socket.send_text(f"/teleport {room_name.casefold()}")
+        arrived = socket.receive_json()
+        assert arrived["success"] is True
+        assert arrived["state"]["room_id"] == room_id
+        assert arrived["state"]["room_name"] == room_name
 
 
 def test_role_help_and_live_moderation(game_client):
