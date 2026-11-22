@@ -112,7 +112,7 @@ class FakeAIProvider(AIProvider):
             "You close the chest.": "You lower the chest's lid, closing it.",
         }
         return NarrationResponse(
-            text=fixtures.get(request.authoritative_text, request.authoritative_text)
+            flourishes=[fixtures.get(request.authoritative_text, request.authoritative_text)]
         )
 
     async def interpret_command(

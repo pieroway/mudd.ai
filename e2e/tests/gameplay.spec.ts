@@ -323,7 +323,7 @@ test('admin can enable narration, retain it on reload, and disable it', async ({
   await expect(page.getByText(/Online/)).toBeVisible()
   await send('look')
   await expect(transcript).not.toContainText('[AI narration]')
-  await expect(page.getByTestId('ai-allowance')).toContainText('48/50 remaining')
+  await expect(page.getByTestId('ai-allowance')).toContainText('49/50 remaining')
   const roomOutputs = transcript.locator('.transcript-line').filter({ hasText: 'Exits:' })
   await expect(roomOutputs).toHaveCount(1)
   await send('/ai narration off')
@@ -332,10 +332,10 @@ test('admin can enable narration, retain it on reload, and disable it', async ({
   await send('inventory')
   await expect(transcript).toContainText('Inventory: empty')
   await expect(roomOutputs).toHaveCount(2)
-  await expect(page.getByTestId('ai-allowance')).toContainText('48/50 remaining')
+  await expect(page.getByTestId('ai-allowance')).toContainText('49/50 remaining')
 })
 
-test('regular users cannot enable narration or spend allowance through /ai', async ({ page }) => {
+test('regular users can opt in to narration without admin access', async ({ page }) => {
   await page.goto('/')
   await page.getByTestId('register-toggle').click()
   await page.getByTestId('username-input').fill(`Regular-${Date.now()}`)
@@ -349,7 +349,7 @@ test('regular users cannot enable narration or spend allowance through /ai', asy
   await expect(page.getByRole('heading', { name: 'World Building' })).toHaveCount(0)
   await page.getByTestId('command-input').fill('/ai narration on')
   await page.getByTestId('command-input').press('Enter')
-  await expect(page.getByTestId('transcript')).toContainText('The /ai command is available to admin users only.')
+  await expect(page.getByTestId('transcript')).toContainText('AI narration is on for your account.')
   await expect(page.getByTestId('ai-allowance')).toContainText('50/50 remaining')
 })
 

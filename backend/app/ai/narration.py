@@ -2,7 +2,7 @@
 
 from typing import Annotated, Literal, get_args
 
-from pydantic import ConfigDict, StringConstraints
+from pydantic import ConfigDict, Field, StringConstraints
 
 from app.ai.models import StrictModel
 
@@ -22,4 +22,7 @@ class NarrationRequest(StrictModel):
 
 
 class NarrationResponse(StrictModel):
-    text: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2000)]
+    flourishes: Annotated[
+        list[Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2000)]],
+        Field(min_length=1, max_length=5),
+    ]

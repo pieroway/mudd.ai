@@ -13,7 +13,6 @@ async def narration_allowed(
     async with session_factory() as session:
         return bool(await session.scalar(select(AccountRecord.id).where(
             AccountRecord.id == account_id,
-            AccountRecord.is_admin.is_(True),
             AccountRecord.ai_narration_enabled.is_(True),
         )))
 
@@ -30,7 +29,7 @@ async def configure_narration(
             account = await session.scalar(select(AccountRecord).where(
                 AccountRecord.id == account_id
             ).with_for_update())
-            if account is None or not account.is_admin:
+            if account is None or (not account.is_admin and arguments[:1] != ["narration"]):
                 return {"success": False, "output": "The /ai command is available to admin users only."}
             if (len(arguments) != 2 or arguments[0] not in {"narration"}
                     or arguments[1] not in {"on", "off"}):

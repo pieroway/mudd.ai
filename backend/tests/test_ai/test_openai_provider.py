@@ -175,7 +175,7 @@ async def test_npc_contract_and_shared_request_limit():
 
 
 @pytest.mark.parametrize("text", [
-    '{"text":"ok","inventory":["gold"]}', '{"text":""}',
+    '{"flourishes":["ok"],"inventory":["gold"]}', '{"flourishes":[]}',
     json.dumps({"text": "x" * 601}), '{"text":42}', 'not json',
 ])
 async def test_npc_rejects_invalid_provider_text(text):
@@ -197,21 +197,22 @@ async def test_narration_contract_and_shared_request_limit():
         }
         assert body["text"]["format"]["name"] == "mud_narration"
         assert body["text"]["format"]["schema"]["additionalProperties"] is False
-        return httpx.Response(200, json=envelope('{"text":"You lift the chest lid."}'))
+        return httpx.Response(200, json=envelope('{"flourishes":["You lift the chest lid."]}'))
 
     adapter = provider(handler, ai_command_max_requests=1)
     result = await adapter.narrate_result(NarrationRequest(
         action="open", success=True, authoritative_text="You open the chest."
     ))
-    assert result.text == "You lift the chest lid."
+    assert result.flourishes == ["You lift the chest lid."]
     with pytest.raises(AIProviderError, match="limit"):
         await adapter.interpret_command(InterpretCommandRequest(raw_input="head north please"))
     assert len(calls) == 1
 
 
 @pytest.mark.parametrize("text", [
-    '{"text":"ok","inventory":["gold"]}', '{"text":""}',
-    json.dumps({"text": "x" * 2001}), '{"text":42}', 'not json',
+    '{"flourishes":["ok"],"inventory":["gold"]}', '{"flourishes":[]}',
+    json.dumps({"flourishes": ["x" * 2001]}), '{"flourishes":[42]}',
+    json.dumps({"flourishes": ["ok"] * 6}), 'not json',
 ])
 async def test_narration_rejects_invalid_provider_text(text):
     adapter = provider(lambda request: httpx.Response(200, json=envelope(text)))
@@ -304,13 +305,13 @@ async def test_zero_lifetime_limit_allows_requests_after_previous_cap():
 
     def handler(request):
         calls.append(request)
-        return httpx.Response(200, json=envelope('{"text":"The square is quiet."}'))
+        return httpx.Response(200, json=envelope('{"flourishes":["The square is quiet."]}'))
 
     adapter = provider(handler, ai_command_max_requests=0)
     adapter._requests = 1000
     request = NarrationRequest(action='look', success=True, authoritative_text='A quiet square.')
     for _ in range(2):
-        assert (await adapter.narrate_result(request)).text == 'The square is quiet.'
+        assert (await adapter.narrate_result(request)).flourishes == ['The square is quiet.']
     assert len(calls) == 2
 
 

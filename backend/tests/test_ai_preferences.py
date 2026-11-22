@@ -34,7 +34,7 @@ async def test_new_accounts_default_to_non_admin_and_narration_off(session_facto
 async def test_help_includes_admin_commands_only_for_current_admins(session_factory):
     identity, _, game = await connect(session_factory)
     player_help = await game.execute("Alan", "help", account_id=identity.account_id)
-    assert "/ai" not in player_help["output"]
+    assert "/ai narration on / off" in player_help["output"]
     assert "AI ADMINISTRATION" not in {
         group["title"] for group in player_help["help_groups"]
     }
@@ -51,11 +51,11 @@ async def test_help_includes_admin_commands_only_for_current_admins(session_fact
         for entry in admin_groups["WORLD BUILDING"]
     )
     await set_admin(session_factory, "Alan", False)
-    assert "/ai" not in (await game.execute("Alan", "help", account_id=identity.account_id))["output"]
+    assert "/ai credits" not in (await game.execute("Alan", "help", account_id=identity.account_id))["output"]
 
 
-@pytest.mark.parametrize("command", ["/ai", "/ai narration on", "/AI narration off", "/ai other"])
-async def test_entire_ai_namespace_is_admin_only_and_never_sent_to_provider(session_factory, command):
+@pytest.mark.parametrize("command", ["/ai", "/ai other"])
+async def test_other_ai_commands_are_admin_only_and_never_sent_to_provider(session_factory, command):
     identity, provider, game = await connect(session_factory)
     result = await game.execute("Alan", command, account_id=identity.account_id)
     assert result["success"] is False
@@ -116,13 +116,12 @@ async def test_admin_revocation_stops_narration_and_resets_preference(session_fa
     class RevokingProvider(FakeAIProvider):
         async def narrate_result(self, request):
             await set_admin(session_factory, "Alan", False)
-            return NarrationResponse(text="This must not be delivered.")
+            return NarrationResponse(flourishes=["This must not be delivered."])
 
     narrator = NarrationService(session_factory, RevokingProvider())
     request = NarrationRequest(action="look", success=True, authoritative_text="Town Square")
     assert await narrator.narrate(request, account_id=identity.account_id) is None
     assert not await narration_allowed(session_factory, identity.account_id)
-    assert not (await game.execute("Alan", "/ai narration on", account_id=identity.account_id))["success"]
     await set_admin(session_factory, "Alan", True)
     assert not await narration_allowed(session_factory, identity.account_id)
 

@@ -130,6 +130,7 @@ _BASE_HELP: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
             ),
             ("/theme light / dark / techno", "Change the interface theme."),
             ("/theme compact / normal", "Change the interface margins and padding."),
+            ("/ai narration on / off", "Enable or disable optional narration for your account."),
             ("/signout / /quit / /exit", "End your session. Use /logon or /start to reopen the sign-in form."),
             ("/debug on / off", "Show or hide connection diagnostics."),
             ("help", "Display this command reference."),
@@ -141,10 +142,6 @@ _ADMIN_HELP: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
     (
         "AI ADMINISTRATION",
         (
-            (
-                "/ai narration on / off",
-                "Enable or disable narration for your account.",
-            ),
             (
                 "/ai credits add <username> [units]",
                 "Grant AI credits; defaults to 50 units.",

@@ -1,15 +1,54 @@
 import asyncio
 
 import pytest
+from sqlalchemy import select
 
 from app.ai.fake import FakeAIProvider
 from app.ai.narration import NarrationRequest, NarrationResponse
 from app.ai.provider import AIProviderFailure, AIFailureReason
+from app.models import NarrationLibraryRecord
 from app.services.game import GameService
 from app.services.narration import NarrationService
 from app.services.auth import register_account
 from app.services.ai_usage import usage_status
 from app.services.ai_preferences import set_admin, configure_narration
+
+
+async def test_narration_library_shares_distinct_flourishes_without_charging_hits(session_factory):
+    class MultipleFlourishes(FakeAIProvider):
+        async def narrate_result(self, request):
+            self.narration_requests.append(request)
+            await asyncio.sleep(0)
+            return NarrationResponse(flourishes=["The lid swings up.", "The chest creaks open."] * 2)
+
+    first = await register_account("Alice", "Password1!")
+    second = await register_account("Kim", "Password1!")
+    for identity in (first, second):
+        configured = await configure_narration(
+            session_factory, identity.account_id, ["narration", "on"], available=True
+        )
+        assert configured["success"]
+    request = NarrationRequest(action="open", success=True, authoritative_text="You open the chest.")
+    provider = MultipleFlourishes()
+    narrator = NarrationService(session_factory, provider, daily_request_limit=1)
+    results = await asyncio.gather(*(narrator.narrate(request, account_id=identity.account_id)
+                                     for identity in (first, second)))
+    assert all(text in {"The lid swings up.", "The chest creaks open."} for text in results)
+    assert provider.narration_requests == [request]
+    first_usage = await usage_status(session_factory, first.account_id, 1)
+    second_usage = await usage_status(session_factory, second.account_id, 1)
+    assert first_usage["used"] + second_usage["used"] == 1
+    async with session_factory() as session:
+        record = (await session.scalars(select(NarrationLibraryRecord))).one()
+        assert record.flourishes == ["The lid swings up.", "The chest creaks open."]
+
+    restarted = NarrationService(session_factory, None, daily_request_limit=1)
+    assert await restarted.narrate(request, account_id=second.account_id) in {
+        "The lid swings up.", "The chest creaks open.",
+    }
+    failed = request.model_copy(update={"success": False})
+    assert await restarted.narrate(failed, account_id=second.account_id) is None
+    assert await usage_status(session_factory, second.account_id, 1) == second_usage
 
 
 async def test_narration_shares_allowance_and_failure_does_not_refund(session_factory):
@@ -51,18 +90,18 @@ async def test_narration_receives_committed_outcome_without_mutating_world(sessi
 
     class InventingProvider(FakeAIProvider):
         async def narrate_result(self, request):
-            return NarrationResponse(text="You receive a thousand gold coins and teleport away.")
+            return NarrationResponse(flourishes=["You receive a thousand gold coins and teleport away."])
 
-    narrator = NarrationService(session_factory, InventingProvider())
-    assert await narrator.narrate(request) is not None
-    assert (await game.room_for_player(player.id)).id == "town_square"
-    assert await game.inventory_for_player(player.id) == ["torch"]
-    assert result["output"] == "You take the torch."
-    failed = await game.execute("one", "take missing")
-    assert failed["_narration_request"].success is False
     narrator = NarrationService(session_factory, provider)
     assert await narrator.narrate(request) == "You gather up the torch."
     assert provider.narration_requests == [request]
+    failed = await game.execute("one", "take missing")
+    assert failed["_narration_request"].success is False
+    narrator = NarrationService(session_factory, InventingProvider())
+    assert await narrator.narrate(failed["_narration_request"]) is not None
+    assert (await game.room_for_player(player.id)).id == "town_square"
+    assert await game.inventory_for_player(player.id) == ["torch"]
+    assert result["output"] == "You take the torch."
 
 
 @pytest.mark.parametrize("failure", ["timeout", "exception", "extra_fields", "empty", "oversized"])
@@ -75,7 +114,7 @@ async def test_narration_failures_preserve_completed_action(session_factory, fai
                 raise RuntimeError("private-provider-content")
             if failure == "extra_fields":
                 return {"text": "Done", "success": True, "inventory": ["gold"]}
-            return NarrationResponse.model_construct(text="" if failure == "empty" else "x" * 2001)
+            return NarrationResponse.model_construct(flourishes=["" if failure == "empty" else "x" * 2001])
 
     game = GameService(session_factory, narration_enabled=True)
     player = await game.connect_player("one", "Alan")
@@ -119,7 +158,7 @@ async def test_narration_does_not_hold_game_lock(session_factory):
         async def narrate_result(self, request):
             started.set()
             await release.wait()
-            return NarrationResponse(text="You gather up the torch.")
+            return NarrationResponse(flourishes=["You gather up the torch."])
 
     game = GameService(session_factory, narration_enabled=True)
     await game.connect_player("one", "Alan")
@@ -137,7 +176,7 @@ async def test_narration_does_not_hold_game_lock(session_factory):
 
 
 async def test_narration_rechecks_authorization_after_provider(session_factory):
-    checks = iter([True, False])
+    checks = iter([True, True, False])
 
     async def authorized():
         return next(checks)
