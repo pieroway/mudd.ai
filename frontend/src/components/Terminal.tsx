@@ -30,8 +30,10 @@ interface TerminalProps {
 }
 
 type Theme = 'light' | 'dark' | 'techno'
+type Spacing = 'compact' | 'normal'
 
 const THEME_STORAGE_KEY = 'mudd-theme'
+const SPACING_STORAGE_KEY = 'mudd-spacing'
 const themes: Theme[] = ['light', 'dark', 'techno']
 
 function getSavedTheme(): Theme {
@@ -52,6 +54,8 @@ export default function Terminal({ username, onSignOut }: TerminalProps) {
     window.localStorage.getItem('mudd-inventory-visible') !== 'false')
   const [aiUsage, setAIUsage] = useState<GameMessage['ai_usage']>()
   const [theme, setTheme] = useState<Theme>(getSavedTheme)
+  const [spacing, setSpacing] = useState<Spacing>(() =>
+    window.localStorage.getItem(SPACING_STORAGE_KEY) === 'compact' ? 'compact' : 'normal')
   const [commandSource, setCommandSource] = useState<'classic' | 'ai' | null>(null)
   const [debugEnabled, setDebugEnabled] = useState(false)
   const debugEnabledRef = useRef(false)
@@ -69,6 +73,11 @@ export default function Terminal({ username, onSignOut }: TerminalProps) {
     document.documentElement.dataset.theme = theme
     window.localStorage.setItem(THEME_STORAGE_KEY, theme)
   }, [theme])
+
+  useEffect(() => {
+    document.documentElement.dataset.spacing = spacing
+    window.localStorage.setItem(SPACING_STORAGE_KEY, spacing)
+  }, [spacing])
 
   useEffect(() => {
     // Connect to WebSocket
@@ -213,8 +222,11 @@ export default function Terminal({ username, onSignOut }: TerminalProps) {
       if (slashCommand.length === 2 && themes.includes(requestedTheme as Theme)) {
         setTheme(requestedTheme as Theme)
         setTranscript((prev) => [...prev, `Theme changed to ${requestedTheme}.`])
+      } else if (slashCommand.length === 2 && (requestedTheme === 'compact' || requestedTheme === 'normal')) {
+        setSpacing(requestedTheme)
+        setTranscript((prev) => [...prev, `Spacing changed to ${requestedTheme}.`])
       } else {
-        setTranscript((prev) => [...prev, 'Usage: /theme light|dark|techno'])
+        setTranscript((prev) => [...prev, 'Usage: /theme light|dark|techno|compact|normal'])
       }
       return
     }

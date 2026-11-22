@@ -1,4 +1,5 @@
 :root {
+  --ui-spacing: 1;
   --primary-color: #0d7377;
   --secondary-color: #14919b;
   --bg-dark: #0a0e27;
@@ -7,6 +8,10 @@
   --text-muted: #888;
   --border-color: #333;
   --accent-color: #00d4ff;
+}
+
+:root[data-spacing='compact'] {
+  --ui-spacing: 0.5;
 }
 
 :root[data-theme='light'] {
@@ -60,7 +65,7 @@ body {
 }
 
 .login-container h1 {
-  margin-bottom: 2rem;
+  margin-bottom: calc(2rem * var(--ui-spacing));
   color: var(--accent-color);
   text-shadow: 0 0 10px var(--accent-color);
 }
@@ -71,7 +76,7 @@ body {
 }
 
 .login-container input {
-  padding: 0.75rem;
+  padding: calc(0.75rem * var(--ui-spacing));
   border: 1px solid var(--primary-color);
   background-color: var(--bg-light);
   color: var(--text-light);
@@ -81,7 +86,7 @@ body {
 }
 
 .login-container button {
-  padding: 0.75rem 1.5rem;
+  padding: calc(0.75rem * var(--ui-spacing)) calc(1.5rem * var(--ui-spacing));
   background-color: var(--primary-color);
   color: white;
   border: none;

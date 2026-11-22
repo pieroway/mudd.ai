@@ -343,7 +343,7 @@ describe('Terminal', () => {
     fireEvent.change(screen.getByTestId('command-input'), { target: { value: '/theme sepia' } })
     fireEvent.submit(screen.getByTestId('command-input').closest('form')!)
 
-    expect(screen.getByText('Usage: /theme light|dark|techno')).toBeInTheDocument()
+    expect(screen.getByText('Usage: /theme light|dark|techno|compact|normal')).toBeInTheDocument()
     expect(MockWebSocket.instances[0].send).not.toHaveBeenCalled()
   })
 
