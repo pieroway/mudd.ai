@@ -24,9 +24,26 @@ export function isMapState(value: unknown): value is MapState {
     && typeof edge.direction === 'string' && ids.has(edge.room_id) && ids.has(edge.destination_room_id))
 }
 
-export default function MapPanel({ state, connected, expanded, onExpand }: {
+export default function MapPanel({ state, connected, expanded, onExpand, minimized = false, onMinimize }: {
   state?: ClientState; connected: boolean; expanded: boolean; onExpand: () => void
+  minimized?: boolean; onMinimize?: () => void
 }) {
+  const [fullPage, setFullPage] = useState(false)
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  const openFullPageRef = useRef<HTMLButtonElement>(null)
+  const restoreFocus = useRef(false)
+  const collapsedToHeader = minimized && !fullPage
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (fullPage && dialog) {
+      dialog.showModal()
+      return () => dialog.close()
+    }
+    if (restoreFocus.current) {
+      openFullPageRef.current?.focus()
+      restoreFocus.current = false
+    }
+  }, [fullPage])
   const discoveredMap = isMapState(state?.map) ? state.map : undefined
   const canViewAllLevels = state?.can_view_all_map_levels === true
   const [allLevels, setAllLevels] = useState(false)
@@ -85,7 +102,7 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
   const [hovered, setHovered] = useState<string>()
   const viewportRef = useRef<SVGSVGElement>(null)
   const [viewport, setViewport] = useState({ width: 400, height: 280 })
-  const ready = connected && !!map
+  const ready = connected && !!map && !collapsedToHeader
   useFloorTransition(viewportRef, ready ? state?.room_id : undefined, map)
   useEffect(() => {
     const svg = viewportRef.current
@@ -96,7 +113,7 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
     })
     observer.observe(svg)
     return () => observer.disconnect()
-  }, [ready])
+  }, [ready, fullPage])
   const drag = useRef<{ x: number; y: number; pan: Point }>()
   const current = positions.get(state?.room_id ?? '') ?? { x: 0, y: 0 }
   const displayed = useMemo(() => scene.filter(level => showAllLevels || showNearby || level.depth === 0),
@@ -208,10 +225,29 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
     </g>
   }
 
-  return <aside id="map-panel" className="context-panel map-panel" aria-labelledby="map-heading" data-testid="map-panel">
+  const panel = <aside id="map-panel" className={`context-panel map-panel${collapsedToHeader ? ' map-panel--minimized' : ''}`}
+    aria-labelledby="map-heading" data-testid="map-panel">
     <div className="map-heading"><h3 id="map-heading">Discovered world</h3>
-      <button type="button" onClick={onExpand} aria-expanded={expanded}>{expanded ? 'Collapse map' : 'Expand map'}</button></div>
-    {!connected ? <p role="status">Disconnected. Reconnect to refresh your map.</p>
+      <div className="map-size-controls" role="group" aria-label="Map size">
+        {fullPage ? <button type="button" title="Exit full-page map" aria-label="Exit full-page map"
+          onClick={() => setFullPage(false)}><span aria-hidden="true">❐</span></button> : <>
+          {!minimized && <button type="button" onClick={onExpand} aria-expanded={expanded}
+            title={expanded ? 'Collapse map' : 'Expand map'} aria-label={expanded ? 'Collapse map' : 'Expand map'}>
+            <span aria-hidden="true">{expanded ? '⇥⇤' : '⇤⇥'}</span>
+          </button>}
+          {onMinimize && <button type="button" onClick={onMinimize} aria-expanded={!minimized}
+            title={minimized ? 'Restore minimized map' : 'Minimize map'}
+            aria-label={minimized ? 'Restore minimized map' : 'Minimize map'}>
+            <span aria-hidden="true">{minimized ? '▣' : '−'}</span>
+          </button>}
+          <button type="button" ref={openFullPageRef} title="Maximize map" aria-label="Maximize map"
+            onClick={() => { restoreFocus.current = true; setFullPage(true) }}>
+            <span aria-hidden="true">⛶</span>
+          </button>
+        </>}
+      </div>
+    </div>
+    {collapsedToHeader ? null : !connected ? <p role="status">Disconnected. Reconnect to refresh your map.</p>
       : !map ? <p role="status">Waiting for map…</p>
         : <>
           <div className="map-controls" role="group" aria-label="Map controls">
@@ -275,4 +311,6 @@ export default function MapPanel({ state, connected, expanded, onExpand }: {
             ? ' · All levels within 10 rooms' : showNearby ? ' · ↖ Above · ↘ Below · ±2 levels' : ''}</p>
         </>}
   </aside>
+  return fullPage ? <dialog className="map-full-page" ref={dialogRef} aria-labelledby="map-heading"
+    onCancel={event => { event.preventDefault(); setFullPage(false) }}>{panel}</dialog> : panel
 }

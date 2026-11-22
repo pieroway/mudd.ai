@@ -10,8 +10,9 @@ its known outgoing directions and destinations. Use +/− to zoom, drag the
 background to pan (or focus the map and use your keyboard arrow keys), and **Center on me** to reset the
 view. **Fit map** frames every displayed floor and continues
 to fit when the panel resizes or nearby levels are toggled. Zooming or panning
-returns to manual control. Expand provides more space while preserving the
-transcript and prompt.
+returns to manual control. The map header has icons to expand or collapse the
+panel, minimize it to its header, and open it full-page. Press Escape or use the
+restore icon to leave the full-page view.
 The same controls work on narrow screens, where map and inventory have independent
 scroll areas below the transcript. The viewport adapts to its available size.
 Open a room's known-exits disclosure for directions.
