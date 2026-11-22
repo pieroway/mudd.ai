@@ -10,6 +10,7 @@ from app.db.seed import seed_world
 from app.api.websocket import router as ws_router
 from app.api.health import router as health_router
 from app.api.auth import router as auth_router
+from app.api.maze_map import router as maze_map_router
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,7 @@ def create_app() -> FastAPI:
     app.include_router(health_router, tags=["health"])
     app.include_router(ws_router, tags=["game"])
     app.include_router(auth_router, tags=["auth"])
+    app.include_router(maze_map_router, tags=["world"])
 
     return app
 

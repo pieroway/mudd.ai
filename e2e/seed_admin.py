@@ -49,6 +49,13 @@ async def main():
             await register_account(username, "A long test-only passphrase1!")
             await set_admin(get_session_factory(), username, True)
         await seed_map()
+        maze_admin = await register_account("MazeAdmin", "A long test-only passphrase1!")
+        await set_admin(get_session_factory(), "MazeAdmin", True)
+        async with get_session_factory()() as session, session.begin():
+            session.add(RoomRecord(id="maze_lot", name="Maze Lot", description="A rocky clearing."))
+            await session.flush()
+            player = await session.get(PlayerRecord, maze_admin.player_id)
+            player.current_room_id = "maze_lot"
         builder = await register_account('BuildingAdmin', 'A long test-only passphrase1!')
         await set_admin(get_session_factory(), 'BuildingAdmin', True)
         async with get_session_factory()() as session, session.begin():

@@ -58,6 +58,12 @@ released to move the cart uphill. A cart carries one rider at a time. Shut
 doors, broken switches, other carts, and excess load block movement. Repair a
 damaged cart with a suitable carried tool, such as a hammer.
 
+While inside a generated maze, admins can enter `/map maze` to view every
+depth, including undiscovered rooms, concealed and locked passages, tracks,
+and minecart positions. Use the depth and room selectors to inspect details.
+Use Refresh to check changes by other players, and `/map show` to return to
+the discovered map.
+
 The phases below describe the complete feature specification.
 
 ## Objective

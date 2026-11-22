@@ -1,0 +1,31 @@
+import { expect, test } from '@playwright/test'
+
+test('admin maze map switches between all levels, a single level, and discovery', async ({ page }) => {
+  await page.goto('/')
+  await page.getByTestId('username-input').fill('MazeAdmin')
+  await page.getByTestId('password-input').fill('A long test-only passphrase1!')
+  await page.getByTestId('login-button').click()
+  const room = page.getByTestId('current-room')
+  const input = page.getByTestId('command-input')
+  const transcript = page.getByTestId('transcript')
+  await expect(room).toHaveText('Maze Lot')
+  const send = async (command: string, expected: string) => {
+    await input.fill(command)
+    await input.press('Enter')
+    await expect(transcript).toContainText(expected)
+  }
+  await send('/world generate maze --rooms 12 --levels 2 --seed 42 --railways true', 'Generated 12 rooms')
+  await send('open down door', 'You open')
+  await send('down', 'Mine Chamber 1')
+  await expect(room).toHaveText('Mine Chamber 1')
+  await send('/map maze', 'Map: maze.')
+  const panel = page.getByTestId('map-panel')
+  await expect(panel.getByRole('region', { name: 'Level -1' })).toBeVisible()
+  await expect(panel.getByRole('region', { name: 'Level -2' })).toBeVisible()
+  await expect(panel.getByText('Coordinates (0, 0, -1) · Minecarts 1')).toBeVisible()
+  await panel.getByLabel('Depth').selectOption('-2')
+  await expect(panel.getByRole('region', { name: 'Level -1' })).toHaveCount(0)
+  await expect(panel.getByRole('region', { name: 'Level -2' })).toBeVisible()
+  await panel.getByRole('button', { name: 'Discovered map' }).click()
+  await expect(panel.getByRole('heading', { name: 'Discovered world' })).toBeVisible()
+})
